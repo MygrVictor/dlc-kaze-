@@ -1,0 +1,16 @@
+# ─────────────────────────────────────────────────
+# .htaccess pour o2switch / cPanel Node.js
+# ─────────────────────────────────────────────────
+# Ce fichier est géré automatiquement par cPanel
+# quand vous créez l'appli Node.js via l'interface.
+# Si besoin, vous pouvez le replacer manuellement.
+
+# Redirige tout le trafic vers l'app Node.js (Phusion Passenger)
+PassengerAppRoot "/home/VOTRE_USER/dlc-kaze"
+PassengerAppType node
+PassengerStartupFile app.js
+
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

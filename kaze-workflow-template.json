@@ -1,0 +1,1269 @@
+{
+  "id": "16fcd561-f3b8-4a20-9f05-5bd3b7edb279",
+  "title": "CONVOYAGE",
+  "icon": "driver",
+  "draft": false,
+  "white_label_id": null,
+  "watcher_ids": [],
+  "supervisor_users": [],
+  "workflow": {
+    "type": "workflow",
+    "id": "8e95c15d-f401-4cee-9f7c-661c399caa5b",
+    "access": 133,
+    "children": [
+      {
+        "type": "template_job_info",
+        "id": "job_info",
+        "label": "Résumé mission",
+        "access": 133,
+        "sms_send": true,
+        "sms_link": false,
+        "sms_sender": "Kaze",
+        "sms_body": "Votre demande de convoyage a bien été prise en compte",
+        "email_send": false,
+        "display_expanded": true,
+        "generate_documents": [],
+        "city": "Angers",
+        "state": "Pays de la Loire",
+        "country_code": "fr",
+        "zip_code": 49000,
+        "job_title": "Livraison ",
+        "job_reference": "R.22",
+        "job_start_date": 1771833600000,
+        "job_end_date": 1771862400000,
+        "job_location": "47.4889057,-0.5422779",
+        "performer_estimation": 60,
+        "files": [],
+        "rules": [],
+        "children": [
+          {
+            "type": "section",
+            "id": "1893e77c-fd9e-4af2-950a-7ff83a63b60a",
+            "label": "Plage de mission",
+            "access": 111,
+            "direction": "col",
+            "collapsible": false,
+            "children": [
+              {
+                "type": "widget_text",
+                "id": "320d66e9-2fa9-4b49-a46f-e28ce05ea971",
+                "label": "Plage horaire de récupération ",
+                "access": 113,
+                "data_type": "string",
+                "data": "Le // à"
+              },
+              {
+                "type": "widget_text",
+                "id": "3e23e9d6-5673-4eb9-b25e-96c954bf3bd9",
+                "label": "Plage horaire de livraison",
+                "access": 113,
+                "data_type": "string",
+                "data": "Le // entre et "
+              },
+              {
+                "type": "widget_text",
+                "id": "42ba4f33-0b59-4bea-a2e9-8f449fb8edf0",
+                "label": "Commentaire de mission",
+                "access": 113,
+                "data_type": "text"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "d60e7cdd-4a3a-4eef-ba38-0e356c3ddd1d",
+            "label": "Informations et documents du véhicule",
+            "access": 111,
+            "direction": "col",
+            "color": "#4a83b2ff",
+            "bold": true,
+            "collapsible": false,
+            "children": [
+              {
+                "type": "widget_text",
+                "id": "immat",
+                "label": "Immatriculation ou Vehicule Identification Number (VIN)",
+                "access": 113,
+                "data_type": "string",
+                "color": "#8babc5ff"
+              },
+              {
+                "type": "group",
+                "id": "3116faf8-0154-4674-896a-b39fc0b5915a",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_select",
+                    "id": "brand",
+                    "label": "Marque",
+                    "access": 113,
+                    "data_type": "select",
+                    "color": "#8babc5ff",
+                    "options_list": [
+                      "Abarth",
+                      "Alpha Roméo",
+                      "Alpine",
+                      "Aston Martin",
+                      "Audi",
+                      "Bentley",
+                      "BMW",
+                      "Bugatti",
+                      "Cadillac",
+                      "Chevrolet",
+                      "Chrysler",
+                      "Citroën",
+                      "Cupra",
+                      "Dacia",
+                      "DAF",
+                      "Dodge",
+                      "DS",
+                      "Ferrari",
+                      "Fiat",
+                      "Ford",
+                      "GMC",
+                      "Honda",
+                      "Hyundai",
+                      "Infinti",
+                      "Jaguar",
+                      "Jeep",
+                      "Kia",
+                      "Lamborghini",
+                      "Lancia",
+                      "Land Rover",
+                      "Lexus",
+                      "Lotus",
+                      "Maserati",
+                      "Maybach",
+                      "Mazda",
+                      "McLaren",
+                      "Mercedes",
+                      "MG Motor",
+                      "Mini",
+                      "Mitsubishi",
+                      "Nissan",
+                      "Opel",
+                      "Pagani",
+                      "Peugeot",
+                      "Polestar",
+                      "Porsche",
+                      "Renault",
+                      "Rolls Royce",
+                      "Saab",
+                      "Scania",
+                      "Seat",
+                      "Skoda",
+                      "Smart",
+                      "Ssangyong",
+                      "Subaru",
+                      "Suzuki",
+                      "Tesla",
+                      "Toyota",
+                      "Venturi",
+                      "Volkswagen",
+                      "Volvo",
+                      "Autre"
+                    ],
+                    "multiple": false
+                  },
+                  {
+                    "type": "widget_text",
+                    "id": "model",
+                    "label": "Modèle",
+                    "access": 113,
+                    "data_type": "string",
+                    "color": "#8babc5ff"
+                  }
+                ]
+              },
+              {
+                "type": "widget_text",
+                "id": "925b6c5e-254c-4722-83dc-0cb2b40fce0c",
+                "label": "Numéro de chassis",
+                "access": 113,
+                "data_type": "string"
+              },
+              {
+                "type": "widget_text",
+                "id": "4a18c284-d1e9-4446-ad91-485d22a4b59f",
+                "label": "Véhicule utilitaire >=12m3 ",
+                "access": 113,
+                "data_type": "string",
+                "data": "NON"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "f343e313-9875-4aca-ac9b-05b30962098d",
+            "label": "Information contact de départ",
+            "access": 111,
+            "direction": "col",
+            "color": "#4a83b2ff",
+            "bold": true,
+            "collapsible": false,
+            "children": [
+              {
+                "type": "widget_text",
+                "id": "f4f71351-99e0-4231-86c8-e8e0ae1966cc",
+                "label": "Structure",
+                "access": 113,
+                "data_type": "string",
+                "data": "SOCIETE"
+              },
+              {
+                "type": "widget_text",
+                "id": "3afb874b-1b48-42c5-a546-9c65cf95fb02",
+                "label": "Nom de la structure",
+                "access": 113,
+                "data_type": "string"
+              },
+              {
+                "type": "group",
+                "id": "c026b44d-2745-4886-9107-f2e7f2034534",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_text",
+                    "id": "start_contact",
+                    "label": "Contact à l'enlèvement",
+                    "access": 113,
+                    "data_type": "string",
+                    "color": "#8babc5ff"
+                  },
+                  {
+                    "type": "widget_text",
+                    "id": "tel_contact",
+                    "label": "Téléphone contact à l'enlèvement",
+                    "access": 113,
+                    "data_type": "phone",
+                    "data": 33,
+                    "color": "#8babc5ff"
+                  }
+                ]
+              },
+              {
+                "type": "widget_text",
+                "id": "76f43f34-f1f7-4428-b43a-718db56ebb60",
+                "label": "Email",
+                "access": 113,
+                "data_type": "email"
+              },
+              {
+                "type": "widget_text",
+                "id": "f860f2b2-4584-4683-95d4-38c699fa4422",
+                "label": "Remarques",
+                "access": 113,
+                "data_type": "text",
+                "color": "#8babc5ff"
+              },
+              {
+                "type": "widget_address",
+                "id": "start_address",
+                "label": "Adresse d'enlèvement",
+                "access": 113,
+                "color": "#8babc5ff",
+                "show_map": true
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "c24f2be8-8d32-4829-b1b7-26c83f0cfbf3",
+            "label": "Informations contact d'arrivée",
+            "access": 111,
+            "direction": "col",
+            "color": "#4a83b2ff",
+            "bold": true,
+            "collapsible": false,
+            "children": [
+              {
+                "type": "group",
+                "id": "fd762f25-069b-4149-afa6-382aa4e953d7",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_text",
+                    "id": "end_contact",
+                    "label": "Contact à la livraison",
+                    "access": 113,
+                    "data_type": "string",
+                    "color": "#8babc5ff"
+                  },
+                  {
+                    "type": "widget_text",
+                    "id": "end_tel",
+                    "label": "Téléphone contact à la livraison",
+                    "access": 113,
+                    "data_type": "phone",
+                    "data": 33,
+                    "color": "#8babc5ff"
+                  }
+                ]
+              },
+              {
+                "type": "widget_text",
+                "id": "0a1b5854-2535-416f-9650-264edd61ba7c",
+                "label": "Email",
+                "access": 113,
+                "data_type": "email"
+              },
+              {
+                "type": "widget_text",
+                "id": "c9489f7b-dcb8-4529-8387-2ef9a70c8fc9",
+                "label": "Remarques",
+                "access": 113,
+                "data_type": "text",
+                "color": "#8babc5ff"
+              },
+              {
+                "type": "widget_address",
+                "id": "end_address",
+                "label": "Adresse de livraison",
+                "access": 113,
+                "color": "#8babc5ff",
+                "show_map": true
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "31811e35-cc47-40cc-8491-561990117b5c",
+            "label": "Rétribution",
+            "access": 111,
+            "direction": "col",
+            "collapsible": false,
+            "children": [
+              {
+                "type": "widget_text",
+                "id": "85ea9290-9232-4066-bf87-2a481e85e43a",
+                "label": "Détails",
+                "access": 113,
+                "data_type": "string"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "de1523e1-5892-45bb-982a-04c1febc763c",
+            "label": "Service ",
+            "access": 111,
+            "direction": "col",
+            "collapsible": false,
+            "children": [
+              {
+                "type": "widget_text",
+                "id": "09014fe6-e71f-4c8e-b559-f65ee52a3c1c",
+                "label": "Carburant",
+                "access": 113,
+                "data_type": "string",
+                "data": "NON"
+              },
+              {
+                "type": "widget_text",
+                "id": "448e194d-82aa-4acb-8a71-e3dc747de6e5",
+                "label": "Gestion documentaire ",
+                "access": 113,
+                "data_type": "string",
+                "data": "NON"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "cd9c520b-1754-46c7-8091-c0362cd2c760",
+            "label": "Contact d'urgence",
+            "access": 111,
+            "direction": "col",
+            "collapsible": false,
+            "children": [
+              {
+                "type": "widget_text",
+                "id": "88a0b007-f16b-4420-bfd7-8b07c5e35f33",
+                "label": "Nom du contact",
+                "access": 113,
+                "data_type": "string",
+                "data": "Drive Line Connect"
+              },
+              {
+                "type": "widget_text",
+                "id": "fa105cea-4f16-4dc9-aeb3-2b206c4c4baf",
+                "label": "Numéro de téléphone",
+                "access": 113,
+                "data_type": "phone",
+                "data": 33669583430
+              },
+              {
+                "type": "widget_text",
+                "id": "6d15e944-f878-4e2c-ba59-932dc08b1442",
+                "label": "Email",
+                "access": 133,
+                "data_type": "email",
+                "data": "drivelineconnect@gmail.com"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "template_navigation",
+        "id": "start_navigation",
+        "label": "Navigation vers l'enlèvement",
+        "access": 133,
+        "sms_send": true,
+        "sms_link": true,
+        "sms_sender": "Kaze",
+        "sms_body": "Le véhicule est sur le départ, retrouvez l'état des lieux de départ et suivez son avancement ici : ",
+        "display_expanded": true,
+        "generate_documents": []
+      },
+      {
+        "type": "template_blank",
+        "id": "0d6474cd-7dd4-4a97-a8da-39a629854e7d",
+        "label": "Etat des lieux à l'enlèvement",
+        "access": 133,
+        "display_expanded": true,
+        "generate_documents": [],
+        "children": [
+          {
+            "type": "section",
+            "id": "70d18e2e-de81-4c69-ae2d-fe4d4f183e2c",
+            "label": "Véhicule",
+            "access": 111,
+            "direction": "col",
+            "color": "#825e95ff",
+            "bold": true,
+            "children": [
+              {
+                "type": "group",
+                "id": "f9b60c0f-796d-4a5d-b6d6-7150c91db152",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_select",
+                    "id": "level_fuel",
+                    "label": "Niveau de carburant à l'enlèvement",
+                    "access": 133,
+                    "data_type": "select",
+                    "color": "#a88ab7ff",
+                    "options_list": [
+                      "0%",
+                      "5%",
+                      "10%",
+                      "15%",
+                      "20%",
+                      "25%",
+                      "30%",
+                      "35%",
+                      "40%",
+                      "45%",
+                      "50%",
+                      "55%",
+                      "60%",
+                      "65%",
+                      "70%",
+                      "75%",
+                      "80%",
+                      "85%",
+                      "90%",
+                      "95%",
+                      "100%"
+                    ],
+                    "multiple": true
+                  },
+                  {
+                    "type": "widget_text",
+                    "id": "kilometrage",
+                    "label": "Kilométrage à l'enlèvement",
+                    "access": 133,
+                    "data_type": "integer",
+                    "color": "#a88ab7ff"
+                  }
+                ]
+              },
+              {
+                "type": "widget_text",
+                "id": "number_key",
+                "label": "Nombre de clés confiés",
+                "access": 133,
+                "data_type": "integer",
+                "color": "#a88ab7ff"
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "0651415e-a55a-4d71-a025-b65669e24b39",
+            "label": "Éléments présent dans le véhicule",
+            "access": 111,
+            "direction": "col",
+            "color": "#825e95ff",
+            "bold": true,
+            "children": [
+              {
+                "type": "group",
+                "id": "2c19efdc-2d05-47b3-ab1a-16861ca108f5",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_switch",
+                    "id": "383643ad-56d7-40cb-8dd5-be1964b0fafc",
+                    "label": "Documents du véhicule (assurance, carte grise)",
+                    "access": 133,
+                    "data_type": "switch",
+                    "color": "#a88ab7ff"
+                  },
+                  {
+                    "type": "widget_switch",
+                    "id": "dfae2ddf-4a1b-4c24-bed7-9bb296a5e641",
+                    "label": "Kit anti-crevaison",
+                    "access": 133,
+                    "data_type": "switch",
+                    "color": "#a88ab7ff"
+                  },
+                  {
+                    "type": "widget_switch",
+                    "id": "01bb5690-a3f9-4fad-954f-5cc97ff64deb",
+                    "label": "Roue de secours",
+                    "access": 133,
+                    "data_type": "switch",
+                    "color": "#a88ab7ff"
+                  },
+                  {
+                    "type": "widget_switch",
+                    "id": "dd7d737c-ce6d-4a39-82e9-ff5d7122693e",
+                    "label": "Kit de sécurité (Gilet + Triangle)",
+                    "access": 133,
+                    "data_type": "switch",
+                    "color": "#a88ab7ff"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "section",
+            "id": "71953793-a664-4c96-a62d-82dfc6c01707",
+            "label": "État et propreté du véhicule",
+            "access": 111,
+            "direction": "col",
+            "color": "#825e95ff",
+            "bold": true,
+            "children": [
+              {
+                "type": "group",
+                "id": "876466f8-3a6d-4a2e-ac64-2aebc5f20a55",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_select",
+                    "id": "894cff4c-1e9c-4bb7-b3d1-e841a265c77e",
+                    "label": "Intérieur",
+                    "access": 133,
+                    "data_type": "select",
+                    "data": [
+                      "Propre"
+                    ],
+                    "color": "#a88ab7ff",
+                    "options_list": [
+                      "Neuf",
+                      "Propre",
+                      "Sale",
+                      "Très sale"
+                    ]
+                  },
+                  {
+                    "type": "widget_select",
+                    "id": "7a7ed96d-68bc-4e1a-984d-dbb7d1ce63ad",
+                    "label": "Extérieur",
+                    "access": 133,
+                    "data_type": "select",
+                    "data": [
+                      "Propre"
+                    ],
+                    "color": "#a88ab7ff",
+                    "options_list": [
+                      "Neuf",
+                      "Propre",
+                      "Sale",
+                      "Très sale"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "widget_text",
+                "id": "656dc0d7-44f9-41c3-9bae-b1876084b6a7",
+                "label": "Remarques particulières",
+                "access": 133,
+                "data_type": "text",
+                "color": "#a88ab7ff"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "template_photo",
+        "id": "photo_start",
+        "label": "Photos du véhicule à l'enlèvement",
+        "access": 133,
+        "display_expanded": true,
+        "generate_documents": [],
+        "photo_count": 20,
+        "photos": [
+          {
+            "type": "widget_photo",
+            "id": "fc1a6053-ca31-4cbb-bf99-af78140b6401",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Compteur d'information ",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "9b976ec9-abd1-4744-921c-2f0b5a2f8df8",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "face avant",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "4d2820e5-dec5-4f23-8de5-13b702e23564",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Pare-brise",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "c1243569-5c0a-47cf-b78b-e3bdd88c454f",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle avant gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "4d3a2016-0448-437e-8a0c-476798a32051",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Face latérale gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "89c39d4a-10a4-42e0-b049-c91682193888",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Coque rétroviseur gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "83829f57-3598-49a3-98a1-90b6600a2b99",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue avant gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "047ddebc-ac13-4639-a9dc-40e7e2d880be",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue arrière gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "350e9ae3-3cd1-4154-9107-6ef4eb5d9c70",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle arrière gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "dae24b9a-5628-4a41-8f5e-41efdab5a588",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Face arrière",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "c9b7bf7e-60da-4999-b05c-3f948d564396",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle arrière droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "df4d6ac0-7492-4f6f-8703-3081273abd54",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Face latérale droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "6f2b61e8-8682-4d36-943f-bfca541a7886",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue arrière droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "aaf9eb5e-c45b-4bfe-8001-d8c0a18ad6a9",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue avant droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "128a5a22-f6a6-4f66-a025-98e43fef53dc",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle avant droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "c4105ee4-88ab-4c1a-b5f1-5006c200331b",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "coque rétroviseur droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "08c92887-8e4e-47b8-bef7-d1f0c6beae60",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Siège conducteur",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "c81cecb9-4f87-4ae4-a6dc-ab70bc0eb984",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Banquette arrière ",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "896097e8-64b0-44fa-935f-99a852afc81e",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Siège passager ",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "bfe8a0da-1833-47cc-a18b-e48328f65c17",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Coffre",
+            "overlay": [],
+            "force_landscape": true
+          }
+        ],
+        "annotation_tips": "Rayure\r\nEnfoncement/Bosselage\r\nCassure\r\nEclat/Bris\r\nPièce manquante\r\nAutre"
+      },
+      {
+        "type": "template_signature",
+        "id": "a232db4c-e496-47a3-a0ee-4b9e048a973f",
+        "label": "Signature contact de prélevement",
+        "access": 133,
+        "generate_documents": [],
+        "signature": [],
+        "terms": "Vous déclarez que l'état du véhicule est vérifié et accepté et que celui-ci fait foi. Aucune réclamation ne pourra être formulée suite à votre acceptation. Dans le cas où le véhicule est très sale à la prise en charge, Drive Line Connect décline toute responsabilité sur l'état précis du véhicule. \r\n\r\nSignature/",
+        "terms_file": []
+      },
+      {
+        "type": "template_signature",
+        "id": "859914b6-4f62-46ab-bc8d-fef6392d6925",
+        "label": "Signature Prestataire",
+        "access": 133,
+        "generate_documents": [],
+        "signature": [],
+        "terms": "Vous déclarez que l'état du véhicule est vérifié et accepté et que celui-ci fait foi. Aucune réclamation ne pourra être formulée suite à votre acceptation. Dans le cas où le véhicule est très sale à la prise en charge, Drive Line Connect décline toute responsabilité sur l'état précis du véhicule. \r\n\r\nSignature/",
+        "terms_file": []
+      },
+      {
+        "type": "template_navigation",
+        "id": "end_navigation",
+        "label": "Navigation vers la livraison",
+        "access": 133,
+        "display_expanded": true,
+        "generate_documents": []
+      },
+      {
+        "type": "template_blank",
+        "id": "fe6851f1-72f1-4cd3-8e62-4bb983faf3cc",
+        "label": "Etat des lieux à la livraison",
+        "access": 133,
+        "display_expanded": true,
+        "generate_documents": [],
+        "children": [
+          {
+            "type": "section",
+            "id": "a2ba6ec7-04d0-4e36-aff2-8e4430c6d0ad",
+            "label": "Etat des lieux à la livraison",
+            "access": 111,
+            "direction": "col",
+            "color": "#cc9132ff",
+            "bold": true,
+            "children": [
+              {
+                "type": "group",
+                "id": "27acd880-405d-43bc-9025-481da25edbe7",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_text",
+                    "id": "4cb94e6e-68bc-4ea6-93db-64f810ff77b1",
+                    "label": "Kilométrage à la livraison",
+                    "access": 133,
+                    "data_type": "integer",
+                    "color": "#cdb183ff"
+                  },
+                  {
+                    "type": "widget_select",
+                    "id": "8efe6d89-5c87-4ac1-ae98-05741e485319",
+                    "label": "Niveau de carburant à la livraison",
+                    "access": 133,
+                    "data_type": "select",
+                    "color": "#cdb183ff",
+                    "options_list": [
+                      "0%",
+                      "5%",
+                      "10%",
+                      "15%",
+                      "20%",
+                      "25%",
+                      "30%",
+                      "35%",
+                      "40%",
+                      "45%",
+                      "50%",
+                      "55%",
+                      "60%",
+                      "65%",
+                      "70%",
+                      "75%",
+                      "80%",
+                      "85%",
+                      "90%",
+                      "95%",
+                      "100%"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "group",
+                "id": "a4de4577-ef1f-4611-bf2c-279c748a0d1e",
+                "access": 111,
+                "direction": "row",
+                "children": [
+                  {
+                    "type": "widget_select",
+                    "id": "cee0c01d-cdfe-4ca1-adaf-f1dfb313efc7",
+                    "label": "Propreté intérieur",
+                    "access": 133,
+                    "data_type": "select",
+                    "color": "#cdb183ff",
+                    "options_list": [
+                      "Très sale",
+                      "Sale",
+                      "Propre",
+                      "Neuf"
+                    ]
+                  },
+                  {
+                    "type": "widget_select",
+                    "id": "100cac7d-5ea6-4a21-8f7d-27c77451027e",
+                    "label": "Propreté extérieur",
+                    "access": 133,
+                    "data_type": "select",
+                    "color": "#cdb183ff",
+                    "options_list": [
+                      "Très sale",
+                      "Sale",
+                      "Propre",
+                      "Neuf"
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "widget_text",
+                "id": "5306e978-e0e6-49e6-a96f-c55722bf0e15",
+                "label": "Remarques particulières",
+                "access": 133,
+                "data_type": "text",
+                "color": "#cdb183ff"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "template_photo",
+        "id": "end_photo",
+        "label": "Photos du véhicule à la livraison",
+        "access": 133,
+        "display_expanded": true,
+        "generate_documents": [],
+        "photo_count": 20,
+        "photos": [
+          {
+            "type": "widget_photo",
+            "id": "83e0cc49-87ff-4ccd-b1a8-6898e5b40808",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Compteur d'information",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "5871ecc9-7e4c-4021-b230-ee3f33fa26c3",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Face avant",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "202c0105-1625-43c1-a858-989f05e90914",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Pare-brise",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "38942f6c-dd61-4057-848d-9730ca18224e",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle avant gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "ff0f0770-7647-41eb-b3ee-22af124786e9",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Coque rétroviseur gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "08e1cc81-2a27-463f-8a91-f1005b2eca19",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Face latérale gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "7f7ebb2e-04c1-44eb-b07d-56cb01d0e4e4",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue avant gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "1e09862e-6a3d-4451-8573-dc173561405c",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue arrière gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "6fbaa2d2-059d-4132-a84d-8ca0fa17047f",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle arrière gauche",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "7a4b83a8-6113-4e71-afb9-7baf6a6a4181",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Face arrière ",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "347fc369-2a19-4ab7-9d82-078377f24acf",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue arrière droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "f44a1b3c-e07a-477b-b432-90b671f308c9",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Face latérale droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "21c5f92e-51b4-4adf-ab41-ae09658bcc4a",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Roue avant droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "c7e03746-bf02-4ce7-91b0-28c12ce1c8af",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Coque rétroviseur droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "adc07623-7313-4f4c-acf5-b109b2a566e2",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle arrière droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "40fca325-a450-4a6d-9226-334e4b4fc7f0",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Angle avant droit",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "0d82865d-92b2-48f9-8f38-9a1517372ddb",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Siège conducteur",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "3c9bf9f5-0e68-43eb-a253-2046d2317c04",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Siège passager",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "14082b05-fb3a-46b2-beb9-7fe319ff3fb3",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Banquette arrière",
+            "overlay": [],
+            "force_landscape": true
+          },
+          {
+            "type": "widget_photo",
+            "id": "1a5317e2-9dae-4dcf-9f03-832ea81969c9",
+            "access": 173,
+            "data_type": "image",
+            "data": [],
+            "instruction": "Coffre",
+            "overlay": [],
+            "force_landscape": true
+          }
+        ],
+        "annotation_tips": "Rayure\r\nEnfoncement/Bosselage\r\nCassure\r\nEclat/Bris\r\nPièce manquante\r\nAutre"
+      },
+      {
+        "type": "template_signature",
+        "id": "e319864c-907d-42ce-b406-579a59666e19",
+        "label": "Signature Client",
+        "access": 133,
+        "generate_documents": [],
+        "signature": [],
+        "terms": "Vous déclarez que l'état du véhicule est vérifié et accepté et que celui-ci fait foi. Aucune réclamation ne pourra être formulée suite à votre acceptation. Dans le cas où le véhicule est très sale à la prise en charge, Drive Line Connect décline toute responsabilité sur l'état précis du véhicule. \r\n\r\nSignature/",
+        "terms_file": []
+      },
+      {
+        "type": "template_signature",
+        "id": "553c8172-a21e-4f20-af87-a56f3e155968",
+        "label": "Signature prestataire",
+        "access": 133,
+        "generate_documents": [],
+        "signature": [],
+        "terms": "Vous déclarez que l'état du véhicule est vérifié et accepté et que celui-ci fait foi. Aucune réclamation ne pourra être formulée suite à votre acceptation. Dans le cas où le véhicule est très sale à la prise en charge, Drive Line Connect décline toute responsabilité sur l'état précis du véhicule. \r\n\r\nSignature/",
+        "terms_file": []
+      },
+      {
+        "type": "template_blank",
+        "id": "70ec8580-64ff-4834-b2f8-d3136607abb2",
+        "label": "Document CMR",
+        "access": 133,
+        "sms_send": false,
+        "email_send": false,
+        "display_expanded": false,
+        "generate_documents": [],
+        "children": [
+          {
+            "type": "section",
+            "id": "fdfc895e-b03a-40c8-99ce-fbb29eba9a1f",
+            "label": "Document CMR",
+            "access": 111,
+            "direction": "col",
+            "collapsible": false,
+            "children": [
+              {
+                "type": "widget_file",
+                "id": "307808fd-daab-4694-9668-7b8092f00500",
+                "label": "Document CMR",
+                "access": 133,
+                "data_type": "any",
+                "data": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "template_blank",
+        "id": "90b86e8f-e322-4f03-b4c0-48c66509dd71",
+        "label": "Notation",
+        "access": 303,
+        "display_expanded": true,
+        "generate_documents": [],
+        "children": [
+          {
+            "type": "section",
+            "id": "cc76094c-daab-4486-be0e-a56b5663ffef",
+            "label": "Avez-vous été satisfait de la prestation ?",
+            "access": 111,
+            "direction": "col",
+            "color": "#e9cd4aff",
+            "bold": true,
+            "collapsible": true,
+            "children": [
+              {
+                "type": "widget_rating",
+                "id": "691896af-51a2-4cb0-8f7e-f7dce7b3cf53",
+                "label": "Avis général",
+                "access": 301
+              },
+              {
+                "type": "widget_rating",
+                "id": "ed226c92-4791-4833-acb7-3c6a6bf56b84",
+                "label": "Amabilité du convoyeur",
+                "access": 301
+              },
+              {
+                "type": "widget_rating",
+                "id": "c72367a6-2d0a-402a-a1c1-46d4a09fe613",
+                "label": "Ponctualité du convoyeur",
+                "access": 301
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "created_at": 1718025118945,
+  "updated_at": 1771665672702
+}

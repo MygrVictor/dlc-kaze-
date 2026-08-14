@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+coverage/
+
+# Variables d'environnement — jamais versionnées
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Dumps de diagnostic Kaze : contiennent des données client réelles
+# (noms, adresses, immatriculations) et l'email du compte Kaze.
+*-dump.json
+.tmp_pdfenv
+
+# Fichiers téléversés par les utilisateurs (pièces d'identité, permis…)
+uploads/
+
+*.log
+.DS_Store
+
