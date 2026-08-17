@@ -15,6 +15,7 @@ import {
   User,
   MapPin,
   Zap,
+  Inbox,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import TelephoneRequis from "../components/TelephoneRequis";
@@ -49,6 +50,7 @@ const NAV_ITEMS = {
     { label: "Missions", path: "/admin/missions", icon: FileText },
     { label: "Carte", path: "/admin/carte", icon: MapPin },
     { label: "Utilisateurs", path: "/admin/utilisateurs", icon: Users },
+    { label: "Demandes", path: "/admin/demandes", icon: Inbox },
     { label: "Gestion Kaze", path: "/admin/kaze", icon: Zap },
   ],
   convoyeur: [

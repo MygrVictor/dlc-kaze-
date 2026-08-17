@@ -73,6 +73,16 @@ const PORT = process.env.PORT || 4000;
 
 const isProduction = process.env.NODE_ENV === "production";
 
+// ── Confiance dans le proxy ─────────────────────────────────
+// Derrière Passenger/Apache (o2switch), l'IP réelle du client n'arrive que
+// via X-Forwarded-For. Sans ce réglage, express-rate-limit refuse de démarrer
+// et req.ip vaudrait l'adresse du proxy — limitant tout le monde ensemble.
+// La valeur 1 ne fait confiance qu'au premier saut : un client ne peut donc
+// pas usurper son IP en forgeant l'en-tête lui-même.
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+
 // ── Sécurité — Headers ──────────────────────────────────────
 app.use(
   helmet({
@@ -80,7 +90,12 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        // Google Fonts : la feuille de style vient de fonts.googleapis.com,
+        // mais les fichiers de police (.woff2) sont servis par un autre
+        // domaine, fonts.gstatic.com. Les deux sont nécessaires — n'en
+        // autoriser qu'un donne un texte en police de repli, sans erreur
+        // visible dans la console.
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         // Fournisseurs de tuiles utilisés par la carte admin (AdminMap.jsx).
         // Toute nouvelle couche doit être ajoutée ici, sinon le navigateur
         // bloque silencieusement les images en production.
@@ -104,7 +119,7 @@ app.use(
           "https://*.tile.openstreetmap.fr",
           "https://*.tile.opentopomap.org",
         ].filter(Boolean),
-        fontSrc: ["'self'"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
         objectSrc: ["'none'"],
         frameSrc: ["'none'"],
       },
@@ -168,11 +183,14 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  // Une connexion réussie ne doit pas consommer le quota : sinon un
+  // utilisateur légitime qui se reconnecte plusieurs fois dans la journée
+  // finit bloqué au même titre qu'un attaquant.
+  skipSuccessfulRequests: true,
   message: { error: "Trop de tentatives de connexion. Réessayez plus tard." },
 });
 app.use("/api/", globalLimiter);
 app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
 
 // ── Routes ───────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);

@@ -158,6 +158,9 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Seuls les échecs comptent : une connexion réussie n'est pas une tentative
+  // suspecte, et la décompter pénaliserait les usages légitimes répétés.
+  skipSuccessfulRequests: true,
   keyGenerator: (req) => {
     // Utiliser X-Forwarded-For si derrière un proxy, sinon IP directe
     return req.ip;

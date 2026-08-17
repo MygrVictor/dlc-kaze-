@@ -1,20 +1,13 @@
 /**
- * Tests — Page d'inscription (RegisterPage.jsx)
+ * Tests — Page de demande de mise en relation (RegisterPage.jsx)
+ *
+ * Depuis la refonte, cette page ne crée plus de compte : elle enregistre
+ * une demande que l'administrateur traitera manuellement.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-
-const mockNavigate = vi.fn();
-
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
 
 vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
@@ -37,14 +30,17 @@ function renderRegisterPage() {
   );
 }
 
+const bouton = () =>
+  screen.getByRole("button", { name: /envoyer ma demande/i });
+
 describe("RegisterPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("affiche le titre Créer un compte", () => {
+  it("affiche le titre Nous rejoindre", () => {
     renderRegisterPage();
-    expect(screen.getByText("Créer un compte")).toBeInTheDocument();
+    expect(screen.getByText("Nous rejoindre")).toBeInTheDocument();
   });
 
   it("affiche les deux boutons de choix de rôle", () => {
@@ -53,17 +49,25 @@ describe("RegisterPage", () => {
     expect(screen.getByText("Convoyeur")).toBeInTheDocument();
   });
 
-  it("sélectionne Client par défaut", () => {
-    renderRegisterPage();
-    // Le champ Société est visible seulement pour les clients
-    expect(screen.getByPlaceholderText(/société/i)).toBeInTheDocument();
+  it("ne propose aucun champ mot de passe", () => {
+    const { container } = renderRegisterPage();
+    expect(container.querySelector('input[type="password"]')).toBeNull();
   });
 
-  it("cache le champ Société quand Convoyeur est sélectionné", async () => {
+  it("sélectionne Client par défaut et demande la structure", () => {
+    renderRegisterPage();
+    expect(
+      screen.getByPlaceholderText(/concession, garage, loueur/i),
+    ).toBeInTheDocument();
+  });
+
+  it("cache le champ Structure quand Convoyeur est sélectionné", async () => {
     renderRegisterPage();
     fireEvent.click(screen.getByText("Convoyeur"));
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText(/société/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText(/concession, garage, loueur/i),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -72,122 +76,130 @@ describe("RegisterPage", () => {
     expect(screen.getByText("Se connecter")).toBeInTheDocument();
   });
 
-  it("refuse si les mots de passe ne correspondent pas", async () => {
+  it("refuse un client sans email ni téléphone", async () => {
     const toast = await import("react-hot-toast");
     renderRegisterPage();
 
-    await userEvent.type(screen.getByPlaceholderText("Jean Dupont"), "Test");
     await userEvent.type(
-      screen.getByPlaceholderText("votre@email.fr"),
-      "test@test.com",
+      screen.getByPlaceholderText(/concession, garage, loueur/i),
+      "Garage Test",
     );
-
-    await userEvent.type(
-      screen.getByPlaceholderText("8 caractères minimum"),
-      "GoodPass#1",
-    );
-    await userEvent.type(
-      screen.getByPlaceholderText("••••••••"),
-      "DifferentPass#1",
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /créer mon compte/i }));
+    fireEvent.click(bouton());
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Les mots de passe ne correspondent pas.",
+        "Indiquez au moins un email ou un numéro à rappeler.",
       );
     });
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it("refuse si mot de passe trop court", async () => {
+  it("refuse un convoyeur avec un numéro fixe", async () => {
     const toast = await import("react-hot-toast");
     renderRegisterPage();
+    fireEvent.click(screen.getByText("Convoyeur"));
 
-    await userEvent.type(screen.getByPlaceholderText("Jean Dupont"), "Test");
+    await userEvent.type(screen.getByPlaceholderText("Jean"), "Marc");
+    await userEvent.type(screen.getByPlaceholderText("Dupont"), "Driver");
     await userEvent.type(
       screen.getByPlaceholderText("votre@email.fr"),
-      "test@test.com",
+      "marc@test.com",
     );
-
     await userEvent.type(
-      screen.getByPlaceholderText("8 caractères minimum"),
-      "short",
+      screen.getByPlaceholderText("+33 6 12 34 56 78"),
+      "0145678901",
     );
-    await userEvent.type(screen.getByPlaceholderText("••••••••"), "short");
 
-    fireEvent.click(screen.getByRole("button", { name: /créer mon compte/i }));
+    fireEvent.click(bouton());
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Le mot de passe doit contenir au moins 8 caractères.",
+        "Numéro de mobile invalide. Format attendu : 06 12 34 56 78.",
       );
     });
+    expect(api.post).not.toHaveBeenCalled();
   });
 
-  it("soumet le formulaire et redirige vers /login", async () => {
-    const toast = await import("react-hot-toast");
+  it("envoie une demande client et affiche la confirmation", async () => {
     api.post.mockResolvedValueOnce({ data: {} });
     renderRegisterPage();
 
     await userEvent.type(
-      screen.getByPlaceholderText("Jean Dupont"),
-      "Jean Test",
+      screen.getByPlaceholderText(/concession, garage, loueur/i),
+      "Garage Test",
     );
     await userEvent.type(
       screen.getByPlaceholderText("votre@email.fr"),
-      "jean@test.com",
+      "contact@garage.fr",
     );
 
-    await userEvent.type(
-      screen.getByPlaceholderText("8 caractères minimum"),
-      "GoodPass#1",
-    );
-    await userEvent.type(screen.getByPlaceholderText("••••••••"), "GoodPass#1");
-
-    fireEvent.click(screen.getByRole("button", { name: /créer mon compte/i }));
+    fireEvent.click(bouton());
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith(
-        "/auth/register-public",
+        "/auth/demande",
         expect.objectContaining({
-          email: "jean@test.com",
-          fullName: "Jean Test",
-          role: "client",
+          type: "client",
+          company: "Garage Test",
+          email: "contact@garage.fr",
         }),
       );
-      expect(mockNavigate).toHaveBeenCalledWith("/login");
+    });
+    expect(await screen.findByText("Demande envoyée")).toBeInTheDocument();
+  });
+
+  it("envoie une demande convoyeur complète", async () => {
+    api.post.mockResolvedValueOnce({ data: {} });
+    renderRegisterPage();
+    fireEvent.click(screen.getByText("Convoyeur"));
+
+    await userEvent.type(screen.getByPlaceholderText("Jean"), "Marc");
+    await userEvent.type(screen.getByPlaceholderText("Dupont"), "Driver");
+    await userEvent.type(
+      screen.getByPlaceholderText("votre@email.fr"),
+      "marc@test.com",
+    );
+    await userEvent.type(
+      screen.getByPlaceholderText("+33 6 12 34 56 78"),
+      "0612345678",
+    );
+
+    fireEvent.click(bouton());
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith(
+        "/auth/demande",
+        expect.objectContaining({
+          type: "convoyeur",
+          firstName: "Marc",
+          lastName: "Driver",
+          phone: "0612345678",
+        }),
+      );
     });
   });
 
-  it("affiche une erreur API si la création échoue", async () => {
+  it("affiche une erreur API si l'envoi échoue", async () => {
     const toast = await import("react-hot-toast");
     api.post.mockRejectedValueOnce({
-      response: { data: { error: "Un compte existe déjà avec cet email." } },
+      response: { data: { error: "Adresse email invalide." } },
     });
     renderRegisterPage();
 
     await userEvent.type(
-      screen.getByPlaceholderText("Jean Dupont"),
-      "Jean Test",
+      screen.getByPlaceholderText(/concession, garage, loueur/i),
+      "Garage Test",
     );
     await userEvent.type(
       screen.getByPlaceholderText("votre@email.fr"),
-      "exist@test.com",
+      "contact@garage.fr",
     );
 
-    await userEvent.type(
-      screen.getByPlaceholderText("8 caractères minimum"),
-      "GoodPass#1",
-    );
-    await userEvent.type(screen.getByPlaceholderText("••••••••"), "GoodPass#1");
-
-    fireEvent.click(screen.getByRole("button", { name: /créer mon compte/i }));
+    fireEvent.click(bouton());
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith(
-        "Un compte existe déjà avec cet email.",
+        "Adresse email invalide.",
       );
     });
   });

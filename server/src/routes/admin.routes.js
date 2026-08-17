@@ -262,6 +262,94 @@ router.get("/stats", async (_req, res, next) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// Demandes de mise en relation (prospects)
+//
+// Les comptes ne sont plus créés depuis le site public : ces demandes
+// sont la porte d'entrée, et l'admin décide de les convertir ou non.
+// ══════════════════════════════════════════════════════════════
+
+router.get("/demandes", async (req, res, next) => {
+  try {
+    const { status, type } = req.query;
+    const conditions = [];
+    const params = [];
+
+    if (status) {
+      params.push(status);
+      conditions.push(`status = $${params.length}`);
+    }
+    if (type) {
+      params.push(type);
+      conditions.push(`type = $${params.length}`);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const { rows } = await db.query(
+      `SELECT id, type, first_name, last_name, company, email, phone, message,
+              status, admin_note, converted_user_id, handled_at, created_at
+         FROM contact_requests
+         ${where}
+         ORDER BY created_at DESC`,
+      params,
+    );
+
+    res.json({ demandes: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/demandes/:id", async (req, res, next) => {
+  try {
+    const { status, adminNote } = req.body;
+    const allowed = ["nouvelle", "contactee", "convertie", "archivee"];
+
+    if (status && !allowed.includes(status)) {
+      return res.status(400).json({ error: "Statut invalide." });
+    }
+
+    // COALESCE : un champ absent du corps de requête ne doit pas
+    // écraser la valeur déjà enregistrée.
+    const { rows } = await db.query(
+      `UPDATE contact_requests
+          SET status     = COALESCE($1, status),
+              admin_note = COALESCE($2, admin_note),
+              handled_by = $3,
+              handled_at = NOW(),
+              updated_at = NOW()
+        WHERE id = $4
+      RETURNING id, type, status, admin_note, handled_at`,
+      [status || null, adminNote ?? null, req.user.id, req.params.id],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Demande introuvable." });
+    }
+
+    res.json({ demande: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/demandes/:id", async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      "DELETE FROM contact_requests WHERE id = $1 RETURNING id",
+      [req.params.id],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Demande introuvable." });
+    }
+
+    res.json({ message: "Demande supprimée." });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/users", async (req, res, next) => {
   try {
     const { role } = req.query;

@@ -72,11 +72,33 @@ const migrate = async () => {
   try {
     await db.query(`SELECT gen_random_uuid();`);
   } catch {
-    console.error(
-      "❌ gen_random_uuid() indisponible : PostgreSQL 13+ est requis,\n" +
-        "   ou l'extension pgcrypto doit être activée par l'hébergeur.",
+    // Dernier recours (PostgreSQL < 13 sans pgcrypto, cas des hébergements
+    // mutualisés) : on définit nous-mêmes la fonction en SQL pur. Les bits
+    // de version et de variante sont forcés pour produire un UUID v4 valide.
+    console.warn(
+      "⚠️  gen_random_uuid() absente — création d'une implémentation SQL de repli.",
     );
-    process.exit(1);
+    try {
+      await db.query(`
+        CREATE OR REPLACE FUNCTION gen_random_uuid() RETURNS uuid AS $func$
+          SELECT (
+            substr(md5(random()::text || clock_timestamp()::text), 1, 12)
+            || '4'
+            || substr(md5(random()::text || clock_timestamp()::text), 1, 3)
+            || substr('89ab', (floor(random() * 4) + 1)::int, 1)
+            || substr(md5(random()::text || clock_timestamp()::text), 1, 15)
+          )::uuid
+        $func$ LANGUAGE sql VOLATILE;
+      `);
+      await db.query(`SELECT gen_random_uuid();`);
+    } catch (err) {
+      console.error(
+        "❌ gen_random_uuid() indisponible et impossible à créer :\n" +
+          `   ${err.message.split("\n")[0]}\n` +
+          "   PostgreSQL 13+ ou l'extension pgcrypto sont requis.",
+      );
+      process.exit(1);
+    }
   }
 
   await db.query(`

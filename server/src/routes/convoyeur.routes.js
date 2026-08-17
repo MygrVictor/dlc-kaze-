@@ -250,7 +250,14 @@ router.get("/missions", async (req, res, next) => {
               u.full_name AS client_name
        FROM missions m
        JOIN users u ON u.id = m.client_id
-       WHERE m.convoyeur_id = $1 AND m.status IN ('ASSIGNEE', 'EN_COURS')
+       WHERE m.convoyeur_id = $1
+         AND (
+           m.status IN ('ASSIGNEE', 'EN_COURS')
+           -- Les missions livrées restent visibles une semaine, le temps que
+           -- le convoyeur vérifie son historique récent, sans faire grossir
+           -- la liste indéfiniment.
+           OR (m.status = 'LIVREE' AND m.updated_at > NOW() - INTERVAL '7 days')
+         )
        ORDER BY m.departure_date ASC NULLS LAST`,
       [req.user.id],
     );

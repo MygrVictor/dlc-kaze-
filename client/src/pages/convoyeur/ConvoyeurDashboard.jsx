@@ -8,8 +8,6 @@ import {
   Car,
   RefreshCw,
   Inbox,
-  Play,
-  CheckCircle,
   Phone,
   User,
   Cloud,
@@ -17,7 +15,6 @@ import {
   Navigation,
   ChevronDown,
   ChevronUp,
-  Loader2,
   AlertCircle,
   Zap,
   Package,
@@ -37,7 +34,6 @@ export default function ConvoyeurDashboard() {
   const [source, setSource] = useState("local");
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
-  const [actionLoading, setActionLoading] = useState(null);
   const [missionsDispoCount, setMissionsDispoCount] = useState(0);
 
   const fetchMissions = useCallback(() => {
@@ -77,37 +73,9 @@ export default function ConvoyeurDashboard() {
   }, [fetchMissions, fetchMissionsDispoCount]);
 
   // ── Actions ──────────────────────────────────────────────
-  const handleDemarrer = async (missionId) => {
-    if (!confirm("Voulez-vous démarrer cette mission ?")) return;
-    setActionLoading(missionId);
-    try {
-      await api.post(`/convoyeur/missions/${missionId}/demarrer`);
-      toast.success("Mission démarrée ! Bon convoyage 🚗");
-      fetchMissions();
-    } catch (err) {
-      toast.error(
-        err.response?.data?.error || "Impossible de démarrer la mission.",
-      );
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleLivrer = async (missionId) => {
-    if (!confirm("Confirmer la livraison de cette mission ?")) return;
-    setActionLoading(missionId);
-    try {
-      await api.post(`/convoyeur/missions/${missionId}/livrer`);
-      toast.success("Mission livrée avec succès ! ✅");
-      fetchMissions();
-    } catch (err) {
-      toast.error(
-        err.response?.data?.error || "Impossible de valider la livraison.",
-      );
-    } finally {
-      setActionLoading(null);
-    }
-  };
+  // Le démarrage et la clôture d'une mission n'existent plus ici : ils se
+  // font dans Kaze, seule source de vérité du terrain. DLC Kaze se contente
+  // d'afficher le statut redescendu par la synchronisation.
 
   // ── Stats rapides ────────────────────────────────────────
   const assignees = missions.filter(
@@ -247,17 +215,21 @@ export default function ConvoyeurDashboard() {
             const isEnCours =
               mission.status === "EN_COURS" ||
               mission.kaze_status === "started";
-            const isLoading = actionLoading === id;
+            const isLivree =
+              mission.status === "LIVREE" ||
+              mission.kaze_status === "completed";
 
             return (
               <div
                 key={id}
                 className={`card transition-all ${
-                  isEnCours
-                    ? "border-purple-500/30 bg-purple-500/[0.02]"
-                    : isAssignee
-                      ? "border-cyan-500/20"
-                      : "border-dark-700"
+                  isLivree
+                    ? "border-dark-700 opacity-70"
+                    : isEnCours
+                      ? "border-purple-500/30 bg-purple-500/[0.02]"
+                      : isAssignee
+                        ? "border-cyan-500/20"
+                        : "border-dark-700"
                 }`}
               >
                 {/* Main row */}
@@ -265,14 +237,18 @@ export default function ConvoyeurDashboard() {
                   {/* Status indicator */}
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                      isEnCours
-                        ? "bg-purple-500/10"
-                        : isAssignee
-                          ? "bg-cyan-500/10"
-                          : "bg-dark-700"
+                      isLivree
+                        ? "bg-emerald-500/10"
+                        : isEnCours
+                          ? "bg-purple-500/10"
+                          : isAssignee
+                            ? "bg-cyan-500/10"
+                            : "bg-dark-700"
                     }`}
                   >
-                    {isEnCours ? (
+                    {isLivree ? (
+                      <Flag size={20} className="text-emerald-400" />
+                    ) : isEnCours ? (
                       <Truck size={20} className="text-purple-400" />
                     ) : (
                       <Package size={20} className="text-cyan-400" />
@@ -342,35 +318,18 @@ export default function ConvoyeurDashboard() {
                       )}
                     </div>
 
-                    {/* Action buttons */}
+                    {/* Actions
+                        Le cycle de vie d'une mission (démarrage, livraison)
+                        se pilote exclusivement depuis Kaze. Ici, le convoyeur
+                        consulte : le statut redescend par la synchronisation. */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      {isAssignee && (
-                        <button
-                          onClick={() => handleDemarrer(id)}
-                          disabled={isLoading}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-                        >
-                          {isLoading ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Play size={14} />
-                          )}
-                          Démarrer la mission
-                        </button>
-                      )}
-                      {isEnCours && (
-                        <button
-                          onClick={() => handleLivrer(id)}
-                          disabled={isLoading}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-accent-600 hover:bg-accent-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-                        >
-                          {isLoading ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <CheckCircle size={14} />
-                          )}
-                          Confirmer livraison
-                        </button>
+                      {(isAssignee || isEnCours) && (
+                        <span className="flex items-center gap-1.5 px-3 py-2 bg-dark-700/40 border border-dark-600 text-dark-400 text-xs rounded-lg">
+                          <Cloud size={13} className="text-orange-400" />
+                          {isAssignee
+                            ? "Démarrez cette mission depuis Kaze"
+                            : "Clôturez cette mission depuis Kaze"}
+                        </span>
                       )}
 
                       {/* Expand detail */}

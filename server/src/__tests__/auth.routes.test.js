@@ -1,7 +1,7 @@
 /**
  * Tests d'intégration — Routes d'authentification
  * POST /api/auth/login
- * POST /api/auth/register-public
+ * POST /api/auth/demande
  * GET  /api/auth/me
  */
 const request = require("supertest");
@@ -21,6 +21,8 @@ jest.mock("../services/email.service", () => ({
   notifyAccountCreated: jest.fn().mockResolvedValue(undefined),
   notifyNewRegistration: jest.fn().mockResolvedValue(undefined),
   notifyRegistrationReceived: jest.fn().mockResolvedValue(undefined),
+  notifyNouvelleDemande: jest.fn().mockResolvedValue(undefined),
+  notifyDemandeRecue: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock kaze service
@@ -110,90 +112,96 @@ describe("POST /api/auth/login", () => {
 });
 
 // ──────────────────────────────────────────────────────────────
-//  POST /api/auth/register-public
+//  POST /api/auth/demande
 // ──────────────────────────────────────────────────────────────
-describe("POST /api/auth/register-public", () => {
-  it("refuse si champs obligatoires manquants", async () => {
+describe("POST /api/auth/demande", () => {
+  const enregistree = () =>
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: "dem-1", type: "client", created_at: new Date() }],
+    });
+
+  it("refuse un type inconnu", async () => {
     const res = await request(app)
-      .post("/api/auth/register-public")
-      .send({ email: "new@test.com" });
+      .post("/api/auth/demande")
+      .send({ type: "partenaire", company: "ACME", email: "a@b.fr" });
     expect(res.status).toBe(400);
   });
 
-  it("refuse si email invalide", async () => {
-    const res = await request(app).post("/api/auth/register-public").send({
-      email: "pas-un-email",
-      fullName: "Jean Test",
-      password: "GoodPass#1",
-    });
+  it("refuse un email invalide", async () => {
+    const res = await request(app)
+      .post("/api/auth/demande")
+      .send({ type: "client", company: "ACME", email: "pas-un-email" });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/email/i);
   });
 
-  it("refuse si mot de passe faible", async () => {
-    const res = await request(app).post("/api/auth/register-public").send({
-      email: "new@test.com",
-      fullName: "Jean Test",
-      password: "weak",
+  it("refuse un client sans structure", async () => {
+    const res = await request(app)
+      .post("/api/auth/demande")
+      .send({ type: "client", email: "a@b.fr" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/structure/i);
+  });
+
+  it("refuse un client sans email ni téléphone", async () => {
+    const res = await request(app)
+      .post("/api/auth/demande")
+      .send({ type: "client", company: "ACME" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/email ou un num/i);
+  });
+
+  it("accepte un client joignable par téléphone seul", async () => {
+    enregistree();
+    const res = await request(app)
+      .post("/api/auth/demande")
+      .send({ type: "client", company: "ACME", phone: "0145678901" });
+    expect(res.status).toBe(201);
+  });
+
+  it("refuse un convoyeur sans nom ni prénom", async () => {
+    const res = await request(app).post("/api/auth/demande").send({
+      type: "convoyeur",
+      email: "driver@test.com",
+      phone: "0612345678",
     });
     expect(res.status).toBe(400);
   });
 
-  it("refuse si email déjà pris", async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ id: "existing-id" }] });
-    const res = await request(app).post("/api/auth/register-public").send({
-      email: "existing@test.com",
-      fullName: "Jean Test",
-      password: "GoodPass#1",
-      role: "client",
-    });
-    expect(res.status).toBe(409);
-  });
-
-  it("crée un compte client avec succès", async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [] }) // pas d'existant
-      .mockResolvedValueOnce({
-        rows: [
-          {
-            id: "new-uuid",
-            email: "new@test.com",
-            full_name: "Jean Test",
-            role: "client",
-            is_validated: false,
-          },
-        ],
-      });
-    const res = await request(app).post("/api/auth/register-public").send({
-      email: "new@test.com",
-      fullName: "Jean Test",
-      password: "GoodPass#1",
-      role: "client",
-    });
-    expect(res.status).toBe(201);
-    expect(res.body.message).toMatch(/validation/i);
-  });
-
-  it("crée un compte convoyeur avec succès", async () => {
-    db.query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
-      rows: [
-        {
-          id: "new-uuid-2",
-          email: "driver@test.com",
-          full_name: "Marc Driver",
-          role: "convoyeur",
-          is_validated: false,
-        },
-      ],
-    });
-    const res = await request(app).post("/api/auth/register-public").send({
+  it("refuse un convoyeur avec un numéro fixe", async () => {
+    const res = await request(app).post("/api/auth/demande").send({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
       email: "driver@test.com",
-      fullName: "Marc Driver",
+      phone: "0145678901",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/mobile/i);
+  });
+
+  it("enregistre une demande de convoyeur complète", async () => {
+    enregistree();
+    const res = await request(app).post("/api/auth/demande").send({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
       phone: "0612345678",
-      password: "GoodPass#1",
-      role: "convoyeur",
     });
     expect(res.status).toBe(201);
+  });
+
+  it("n'écrit jamais dans la table users", async () => {
+    enregistree();
+    await request(app)
+      .post("/api/auth/demande")
+      .send({ type: "client", company: "ACME", email: "a@b.fr" });
+
+    const ecritures = db.query.mock.calls.filter(([sql]) =>
+      /INSERT INTO users/i.test(sql),
+    );
+    expect(ecritures).toHaveLength(0);
   });
 });
 

@@ -16,8 +16,9 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-const API_BASE =
-  import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:4000";
+// Même origine que l'API en production : un repli sur localhost serait
+// compilé dans le bundle et rendrait les documents inaccessibles en ligne.
+const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
 const getFileUrl = (filePath) => {
   const token = localStorage.getItem("dlc_token");

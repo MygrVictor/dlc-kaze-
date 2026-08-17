@@ -19,7 +19,7 @@ export default function PublicLayout() {
           borderBottom: "1px solid rgba(255,209,26,0.15)",
         }}
       >
-        <div className="mx-auto flex h-[76px] max-w-[1180px] items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-[72px] max-w-[1180px] items-center justify-between px-4 sm:px-6 lg:px-8 md:h-[88px]">
           {/* Logo */}
           <Link
             to="/"
@@ -30,10 +30,9 @@ export default function PublicLayout() {
             <img
               src="/logo.png"
               alt="Drive Line Connect"
+              className="nav-logo"
               style={{
-                height: 38,
                 width: "auto",
-                maxWidth: 180,
                 objectFit: "contain",
                 display: "block",
               }}

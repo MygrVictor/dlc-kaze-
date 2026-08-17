@@ -39,7 +39,7 @@ export default function LoginPage() {
   return (
     <div
       style={{
-        minHeight: "calc(100vh - 76px)",
+        minHeight: "calc(100vh - var(--nav-h))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -171,7 +171,7 @@ export default function LoginPage() {
               to="/register"
               style={{ color: "var(--teal)", fontWeight: 600 }}
             >
-              Créer un compte
+              Faire une demande
             </Link>
           </p>
         </div>

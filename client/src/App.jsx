@@ -19,6 +19,7 @@ import MissionDetail from "./pages/client/MissionDetail";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminMissions from "./pages/admin/AdminMissions";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminDemandes from "./pages/admin/AdminDemandes";
 import AdminMap from "./pages/admin/AdminMap";
 import AdminKaze from "./pages/admin/AdminKaze";
 
@@ -96,6 +97,7 @@ export default function App() {
         <Route path="missions" element={<AdminMissions />} />
         <Route path="carte" element={<AdminMap />} />
         <Route path="utilisateurs" element={<AdminUsers />} />
+        <Route path="demandes" element={<AdminDemandes />} />
         <Route path="kaze" element={<AdminKaze />} />
       </Route>
 

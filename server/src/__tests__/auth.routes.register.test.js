@@ -15,6 +15,8 @@ jest.mock("../services/email.service", () => ({
   notifyAccountCreated: jest.fn().mockResolvedValue(undefined),
   notifyNewRegistration: jest.fn().mockResolvedValue(undefined),
   notifyRegistrationReceived: jest.fn().mockResolvedValue(undefined),
+  notifyNouvelleDemande: jest.fn().mockResolvedValue(undefined),
+  notifyDemandeRecue: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("../services/kaze.service", () => ({
@@ -509,71 +511,82 @@ describe("POST /api/auth/register — email et réponse", () => {
 });
 
 // ──────────────────────────────────────────────────────────────
-//  Cas résiduels : inscription publique et connexion
+//  Cas résiduels : demande de contact et connexion
 // ──────────────────────────────────────────────────────────────
 describe("Routes publiques — cas résiduels", () => {
-  const inscrire = (corps) =>
-    request(app).post("/api/auth/register-public").send(corps);
+  const demander = (corps) =>
+    request(app).post("/api/auth/demande").send(corps);
 
-  const CORPS_PUBLIC = {
+  const CORPS_CLIENT = {
+    type: "client",
+    company: "Garage Public",
     email: "public@test.com",
-    fullName: "Jean Public",
-    password: "Solide#2025x",
-    role: "client",
   };
 
-  const LIGNE_PUBLIQUE = {
-    id: "pub-uuid",
-    email: "public@test.com",
-    full_name: "Jean Public",
-    role: "client",
-    is_validated: false,
+  const LIGNE_DEMANDE = {
+    id: "dem-uuid",
+    type: "client",
+    created_at: new Date(),
   };
 
   beforeEach(() => {
-    emailService.notifyNewRegistration.mockResolvedValue(undefined);
-    emailService.notifyRegistrationReceived.mockResolvedValue(undefined);
+    emailService.notifyNouvelleDemande.mockResolvedValue(undefined);
+    emailService.notifyDemandeRecue.mockResolvedValue(undefined);
     db.query.mockImplementation(async (sql) => {
-      if (/SELECT id FROM users WHERE email/i.test(sql)) return { rows: [] };
-      if (/INSERT INTO users/i.test(sql)) return { rows: [LIGNE_PUBLIQUE] };
+      if (/INSERT INTO contact_requests/i.test(sql))
+        return { rows: [LIGNE_DEMANDE] };
       return { rows: [] };
     });
   });
 
-  it("refuse un nom de plus de 100 caractères (400)", async () => {
-    const res = await inscrire({ ...CORPS_PUBLIC, fullName: "x".repeat(101) });
+  it("refuse un nom de structure de plus de 150 caractères (400)", async () => {
+    const res = await demander({ ...CORPS_CLIENT, company: "x".repeat(151) });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/100 caractères/i);
+    expect(res.body.error).toMatch(/trop long/i);
   });
 
-  it("crée le compte malgré l'échec de l'email admin", async () => {
-    emailService.notifyNewRegistration.mockRejectedValue(new Error("SMTP HS"));
-    const res = await inscrire(CORPS_PUBLIC);
+  it("refuse un message de plus de 2000 caractères (400)", async () => {
+    const res = await demander({ ...CORPS_CLIENT, message: "x".repeat(2001) });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/2000/);
+  });
+
+  it("enregistre la demande malgré l'échec de l'email admin", async () => {
+    emailService.notifyNouvelleDemande.mockRejectedValue(new Error("SMTP HS"));
+    const res = await demander(CORPS_CLIENT);
     expect(res.status).toBe(201);
-    expect(emailService.notifyRegistrationReceived).toHaveBeenCalled();
+    expect(emailService.notifyDemandeRecue).toHaveBeenCalled();
   });
 
-  it("crée le compte malgré l'échec de l'email de confirmation", async () => {
-    emailService.notifyRegistrationReceived.mockRejectedValue(
-      new Error("SMTP HS"),
-    );
-    const res = await inscrire(CORPS_PUBLIC);
+  it("enregistre la demande malgré l'échec de l'accusé de réception", async () => {
+    emailService.notifyDemandeRecue.mockRejectedValue(new Error("SMTP HS"));
+    const res = await demander(CORPS_CLIENT);
     expect(res.status).toBe(201);
   });
 
-  it("crée le compte en attente de validation (is_validated = false)", async () => {
-    await inscrire(CORPS_PUBLIC);
-    const insert = db.query.mock.calls.find(([sql]) =>
-      /INSERT INTO users/i.test(sql),
-    );
-    expect(insert[1][6]).toBe(false);
+  it("n'envoie pas d'accusé de réception sans email", async () => {
+    await demander({
+      type: "client",
+      company: "Garage Public",
+      phone: "0145678901",
+    });
+    expect(emailService.notifyDemandeRecue).not.toHaveBeenCalled();
   });
 
-  it("propage une erreur SQL à l'inscription publique (500)", async () => {
+  it("écrit dans contact_requests et jamais dans users", async () => {
+    await demander(CORPS_CLIENT);
+    const appels = db.query.mock.calls.map(([sql]) => sql);
+    expect(
+      appels.some((sql) => /INSERT INTO contact_requests/i.test(sql)),
+    ).toBe(true);
+    expect(appels.some((sql) => /INSERT INTO users/i.test(sql))).toBe(false);
+  });
+
+  it("propage une erreur SQL à l'enregistrement de la demande (500)", async () => {
     db.query.mockImplementation(async () => {
       throw new Error("DB down");
     });
-    const res = await inscrire(CORPS_PUBLIC);
+    const res = await demander(CORPS_CLIENT);
     expect(res.status).toBe(500);
   });
 
@@ -587,36 +600,36 @@ describe("Routes publiques — cas résiduels", () => {
     expect(res.status).toBe(500);
   });
 
-  it("refuse une inscription publique de convoyeur sans mobile (400)", async () => {
-    const res = await inscrire({
+  it("refuse une demande de convoyeur sans mobile (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
       email: "driver@test.com",
-      fullName: "Marc Driver",
-      password: "Solide#2025x",
-      role: "convoyeur",
     });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/mobile est obligatoire/i);
+    expect(res.body.error).toMatch(/mobile/i);
   });
 
-  it("refuse une inscription publique de convoyeur avec un fixe (400)", async () => {
-    const res = await inscrire({
+  it("refuse une demande de convoyeur avec un fixe (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
       email: "driver@test.com",
-      fullName: "Marc Driver",
       phone: "0145678901",
-      password: "Solide#2025x",
-      role: "convoyeur",
     });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/mobile invalide/i);
   });
 
-  it("accepte une inscription publique de convoyeur avec un mobile", async () => {
-    const res = await inscrire({
+  it("accepte une demande de convoyeur avec un mobile", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
       email: "driver@test.com",
-      fullName: "Marc Driver",
       phone: "0612345678",
-      password: "Solide#2025x",
-      role: "convoyeur",
     });
     expect(res.status).toBe(201);
   });

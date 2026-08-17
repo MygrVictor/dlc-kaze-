@@ -10,15 +10,14 @@ const db = require("./index");
 const seed = async () => {
   console.log("🌱 Seeding de la base…");
 
-  // Le mot de passe par défaut ne convient qu'au développement. En production,
-  // fournir ADMIN_EMAIL / ADMIN_PASSWORD pour éviter un compte dont les
-  // identifiants figurent en clair dans le dépôt.
+  // Aucun mot de passe par défaut : le dépôt est public, une valeur en dur
+  // ici serait un identifiant d'accès offert à quiconque lit le code.
   const email = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
-  const password = process.env.ADMIN_PASSWORD || "admin1234";
+  const password = process.env.ADMIN_PASSWORD;
 
-  if (process.env.NODE_ENV === "production" && !process.env.ADMIN_PASSWORD) {
+  if (!password) {
     console.error(
-      "❌ ADMIN_PASSWORD obligatoire en production — seed interrompu.",
+      "❌ ADMIN_PASSWORD manquant — ajoutez-le à votre .env avant de lancer le seed.",
     );
     process.exit(1);
   }

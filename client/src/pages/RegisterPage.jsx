@@ -1,22 +1,29 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Truck, UserCircle2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Truck, UserCircle2, CheckCircle2, MailCheck } from "lucide-react";
 import api from "../lib/api";
 import toast from "react-hot-toast";
 
+const labelStyle = {
+  display: "block",
+  fontSize: 13.5,
+  fontWeight: 600,
+  color: "var(--graphite)",
+  marginBottom: 6,
+};
+
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const [role, setRole] = useState("client");
   const [form, setForm] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
+    company: "",
     email: "",
     phone: "",
-    company: "",
-    password: "",
-    confirmPassword: "",
+    message: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [envoye, setEnvoye] = useState(false);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -24,65 +31,131 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (form.password !== form.confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas.");
-      return;
-    }
-    if (form.password.length < 8) {
-      toast.error("Le mot de passe doit contenir au moins 8 caractères.");
-      return;
-    }
-    // Les convoyeurs reçoivent les missions par WhatsApp : le mobile
-    // conditionne l'accès aux missions, on le vérifie avant l'envoi.
-    if (role === "convoyeur") {
-      const chiffres = form.phone.replace(/\D/g, "");
-      const mobileValide =
-        /^0[67]\d{8}$/.test(chiffres) ||
-        /^(?:00)?330?[67]\d{8}$/.test(chiffres) ||
-        (!chiffres.startsWith("33") &&
-          chiffres.length >= 10 &&
-          chiffres.length <= 15);
 
+    if (role === "convoyeur") {
+      // Un convoyeur est prévenu des missions par WhatsApp : sans mobile
+      // exploitable, la mise en relation n'aboutira jamais. Cette règle
+      // reproduit `isValidMobile` côté serveur pour éviter un aller-retour.
       if (!form.phone.trim()) {
         toast.error(
           "Le numéro de mobile est obligatoire : les missions vous sont annoncées par WhatsApp.",
         );
         return;
       }
+
+      const international = form.phone.trim().startsWith("+");
+      let chiffres = form.phone.replace(/\D/g, "");
+      let mobileValide;
+
+      if (chiffres.startsWith("00")) chiffres = chiffres.slice(2);
+
+      if (
+        !international &&
+        !chiffres.startsWith("00") &&
+        chiffres.length === 10 &&
+        chiffres.startsWith("0")
+      ) {
+        // Numéro national : seuls 06 et 07 sont des mobiles.
+        mobileValide = /^0[67]\d{8}$/.test(chiffres);
+      } else if (chiffres.startsWith("33")) {
+        mobileValide = /^[67]\d{8}$/.test(chiffres.slice(2).replace(/^0/, ""));
+      } else {
+        // Autres pays : on ne présume pas des plans de numérotation.
+        mobileValide = chiffres.length >= 8 && chiffres.length <= 15;
+      }
+
       if (!mobileValide) {
         toast.error(
           "Numéro de mobile invalide. Format attendu : 06 12 34 56 78.",
         );
         return;
       }
+    } else if (!form.email.trim() && !form.phone.trim()) {
+      toast.error("Indiquez au moins un email ou un numéro à rappeler.");
+      return;
     }
+
     setLoading(true);
     try {
-      await api.post("/auth/register-public", {
-        fullName: form.fullName,
-        email: form.email,
-        phone: form.phone?.trim() || undefined,
-        company: form.company || undefined,
-        password: form.password,
-        role,
+      await api.post("/auth/demande", {
+        type: role,
+        firstName: form.firstName.trim() || undefined,
+        lastName: form.lastName.trim() || undefined,
+        company: form.company.trim() || undefined,
+        email: form.email.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        message: form.message.trim() || undefined,
       });
-      toast.success(
-        "Compte créé ! Votre demande est en cours de validation. Vous recevrez un email de confirmation.",
-      );
-      navigate("/login");
+      setEnvoye(true);
     } catch (err) {
       toast.error(
-        err.response?.data?.error || "Erreur lors de la création du compte.",
+        err.response?.data?.error || "Erreur lors de l'envoi de la demande.",
       );
     } finally {
       setLoading(false);
     }
   };
 
+  if (envoye) {
+    return (
+      <div
+        style={{
+          minHeight: "calc(100vh - var(--nav-h))",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 16px",
+          background: "var(--cream-2)",
+        }}
+      >
+        <div
+          className="card"
+          style={{ maxWidth: 460, padding: "40px 36px", textAlign: "center" }}
+        >
+          <MailCheck size={44} style={{ color: "var(--teal)" }} />
+          <h1
+            style={{
+              fontSize: 24,
+              fontWeight: 800,
+              color: "var(--navy)",
+              marginTop: 16,
+            }}
+          >
+            Demande envoyée
+          </h1>
+          <p
+            style={{
+              color: "var(--graphite-soft)",
+              fontSize: 14.5,
+              lineHeight: 1.6,
+              marginTop: 12,
+            }}
+          >
+            Merci ! Notre équipe étudie votre demande et vous recontacte
+            rapidement. Si elle aboutit, nous créons votre compte et vous
+            recevez vos identifiants par email.
+          </p>
+          <Link
+            to="/"
+            className="btn-primary"
+            style={{
+              width: "100%",
+              justifyContent: "center",
+              marginTop: 24,
+              display: "flex",
+            }}
+          >
+            Retour à l'accueil
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
-        minHeight: "calc(100vh - 76px)",
+        minHeight: "calc(100vh - var(--nav-h))",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -95,16 +168,18 @@ export default function RegisterPage() {
           {/* Header */}
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--navy)" }}>
-              Créer un compte
+              Nous rejoindre
             </h1>
             <p
               style={{
                 color: "var(--graphite-soft)",
                 fontSize: 14,
                 marginTop: 8,
+                lineHeight: 1.55,
               }}
             >
-              Rejoignez la plateforme Drive Line Connect
+              Laissez-nous vos coordonnées : notre équipe vous recontacte et
+              crée votre accès à la plateforme.
             </p>
           </div>
 
@@ -211,27 +286,47 @@ export default function RegisterPage() {
             onSubmit={handleSubmit}
             style={{ display: "flex", flexDirection: "column", gap: 16 }}
           >
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  color: "var(--graphite)",
-                  marginBottom: 6,
-                }}
-              >
-                Nom complet *
-              </label>
-              <input
-                type="text"
-                name="fullName"
-                required
-                value={form.fullName}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="Jean Dupont"
-              />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
+              <div>
+                <label style={labelStyle}>
+                  Prénom{" "}
+                  {role === "convoyeur" && (
+                    <span style={{ color: "var(--teal)" }}>*</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  required={role === "convoyeur"}
+                  value={form.firstName}
+                  onChange={handleChange}
+                  className="input-field"
+                  placeholder="Jean"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>
+                  Nom{" "}
+                  {role === "convoyeur" && (
+                    <span style={{ color: "var(--teal)" }}>*</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  required={role === "convoyeur"}
+                  value={form.lastName}
+                  onChange={handleChange}
+                  className="input-field"
+                  placeholder="Dupont"
+                />
+              </div>
             </div>
 
             <div>
@@ -244,12 +339,15 @@ export default function RegisterPage() {
                   marginBottom: 6,
                 }}
               >
-                Email *
+                Email{" "}
+                {role === "convoyeur" && (
+                  <span style={{ color: "var(--teal)" }}>*</span>
+                )}
               </label>
               <input
                 type="email"
                 name="email"
-                required
+                required={role === "convoyeur"}
                 value={form.email}
                 onChange={handleChange}
                 className="input-field"
@@ -267,7 +365,7 @@ export default function RegisterPage() {
                   marginBottom: 6,
                 }}
               >
-                Téléphone{" "}
+                {role === "convoyeur" ? "Mobile" : "Numéro à rappeler"}{" "}
                 {role === "convoyeur" && (
                   <span style={{ color: "var(--teal)" }}>*</span>
                 )}
@@ -281,18 +379,17 @@ export default function RegisterPage() {
                 placeholder="+33 6 12 34 56 78"
                 required={role === "convoyeur"}
               />
-              {role === "convoyeur" && (
-                <p
-                  style={{
-                    fontSize: 12.5,
-                    color: "var(--graphite-soft)",
-                    marginTop: 6,
-                  }}
-                >
-                  Indispensable : les missions disponibles vous sont annoncées
-                  par WhatsApp.
-                </p>
-              )}
+              <p
+                style={{
+                  fontSize: 12.5,
+                  color: "var(--graphite-soft)",
+                  marginTop: 6,
+                }}
+              >
+                {role === "convoyeur"
+                  ? "Indispensable : les missions disponibles vous sont annoncées par WhatsApp."
+                  : "Email ou téléphone : au moins un moyen de vous joindre est nécessaire."}
+              </p>
             </div>
 
             {role === "client" && (
@@ -306,80 +403,35 @@ export default function RegisterPage() {
                     marginBottom: 6,
                   }}
                 >
-                  Société
+                  Nom de la structure{" "}
+                  <span style={{ color: "var(--amber-deep)" }}>*</span>
                 </label>
                 <input
                   type="text"
                   name="company"
+                  required
                   value={form.company}
                   onChange={handleChange}
                   className="input-field"
-                  placeholder="Nom de votre société (optionnel)"
+                  placeholder="Concession, garage, loueur…"
                 />
               </div>
             )}
 
             <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  color: "var(--graphite)",
-                  marginBottom: 6,
-                }}
-              >
-                Mot de passe *
-              </label>
-              <div style={{ position: "relative" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  required
-                  value={form.password}
-                  onChange={handleChange}
-                  className="input-field pr-10"
-                  placeholder="8 caractères minimum"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: 12,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "var(--graphite-soft)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  color: "var(--graphite)",
-                  marginBottom: 6,
-                }}
-              >
-                Confirmer le mot de passe *
-              </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="confirmPassword"
-                required
-                value={form.confirmPassword}
+              <label style={labelStyle}>Message (facultatif)</label>
+              <textarea
+                name="message"
+                rows={3}
+                value={form.message}
                 onChange={handleChange}
                 className="input-field"
-                placeholder="••••••••"
+                placeholder={
+                  role === "convoyeur"
+                    ? "Votre expérience, votre zone géographique…"
+                    : "Volume de véhicules, trajets habituels…"
+                }
+                style={{ resize: "vertical" }}
               />
             </div>
 
@@ -389,7 +441,7 @@ export default function RegisterPage() {
               className="btn-primary"
               style={{ width: "100%", justifyContent: "center", marginTop: 8 }}
             >
-              {loading ? "Création en cours…" : "Créer mon compte"}
+              {loading ? "Envoi en cours…" : "Envoyer ma demande"}
             </button>
           </form>
 

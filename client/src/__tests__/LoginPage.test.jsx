@@ -52,9 +52,9 @@ describe("LoginPage", () => {
     expect(screen.getByPlaceholderText("••••••••")).toBeInTheDocument();
   });
 
-  it("affiche le lien Créer un compte", () => {
+  it("affiche le lien Faire une demande", () => {
     renderLoginPage();
-    expect(screen.getByText("Créer un compte")).toBeInTheDocument();
+    expect(screen.getByText("Faire une demande")).toBeInTheDocument();
   });
 
   it("appelle login avec email et mot de passe", async () => {

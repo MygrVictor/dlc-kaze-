@@ -14,6 +14,14 @@
   --graphite: #2b2e36;
   --graphite-soft: #6b6f7a;
   --line-light: rgba(255, 209, 26, 0.35);
+  /* Hauteur de la barre de navigation publique. Centralisée ici pour que
+     les pages qui calculent `100vh - navbar` restent synchronisées. */
+  --nav-h: 72px;
+}
+@media (min-width: 768px) {
+  :root {
+    --nav-h: 88px;
+  }
 }
 
 @layer base {
@@ -460,6 +468,20 @@
   gap: 10px;
   color: white;
   text-decoration: none;
+}
+/* Logo de la barre de navigation publique.
+   Le fichier fait 600 × 70 px, soit un rapport de 8,6:1 : c'est la LARGEUR
+   qui commande l'encombrement, pas la hauteur. Fixer une hauteur sans
+   ajuster `max-width` reste sans effet, l'image étant alors bridée par la
+   largeur et simplement centrée dans une boîte trop haute. */
+.nav-logo {
+  height: 26px;
+  max-width: 100%;
+}
+@media (min-width: 768px) {
+  .nav-logo {
+    height: 40px;
+  }
 }
 .logo-mark {
   width: 34px;

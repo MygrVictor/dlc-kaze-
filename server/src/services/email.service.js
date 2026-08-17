@@ -387,6 +387,60 @@ async function notifyMissionDisponible(convoyeurs, mission) {
   return Promise.all(promises);
 }
 
+/**
+ * Notifier l'admin d'une nouvelle demande de mise en relation.
+ * Aucun compte n'a été créé : c'est un prospect à rappeler.
+ */
+async function notifyNouvelleDemande(demande) {
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const estConvoyeur = demande.type === "convoyeur";
+  const identite = estConvoyeur
+    ? `${demande.first_name || ""} ${demande.last_name || ""}`.trim()
+    : demande.company || "Structure non précisée";
+
+  const html = baseTemplate(`
+    <h2>Nouvelle demande ${estConvoyeur ? "convoyeur" : "client"}</h2>
+    <p>Un visiteur souhaite être recontacté :</p>
+    <div class="info-box">
+      <div class="info-row"><span class="info-label">${estConvoyeur ? "Nom" : "Structure"}</span><span class="info-value">${identite}</span></div>
+      ${demande.email ? `<div class="info-row"><span class="info-label">Email</span><span class="info-value">${demande.email}</span></div>` : ""}
+      ${demande.phone ? `<div class="info-row"><span class="info-label">Téléphone</span><span class="info-value">${demande.phone}</span></div>` : ""}
+      ${demande.message ? `<div class="info-row"><span class="info-label">Message</span><span class="info-value">${demande.message}</span></div>` : ""}
+    </div>
+    <p style="text-align: center;">
+      <a href="${process.env.CLIENT_URL}/admin/demandes" class="btn">Voir les demandes</a>
+    </p>
+  `);
+
+  return transporter.sendMail({
+    from: FROM,
+    to: adminEmail,
+    replyTo: demande.email || undefined,
+    subject: `Nouvelle demande ${estConvoyeur ? "convoyeur" : "client"} — ${identite}`,
+    html,
+  });
+}
+
+/**
+ * Accusé de réception au visiteur. Volontairement sobre : aucun compte
+ * n'existe encore, il ne faut donc promettre ni identifiants ni accès.
+ */
+async function notifyDemandeRecue(email, nom, type) {
+  const html = baseTemplate(`
+    <h2>Bonjour${nom ? ` ${nom}` : ""},</h2>
+    <p>Nous avons bien reçu votre demande ${type === "convoyeur" ? "pour rejoindre notre réseau de convoyeurs" : "de mise en relation"}.</p>
+    <p>Notre équipe l'étudie et vous recontacte rapidement${type === "convoyeur" ? " pour échanger sur votre profil" : " pour cerner vos besoins"}.</p>
+    <p style="font-size: 13px; color: #64748b;">Votre accès à la plateforme sera créé par nos soins à l'issue de cet échange.</p>
+  `);
+
+  return transporter.sendMail({
+    from: FROM,
+    to: email,
+    subject: "Votre demande a bien été reçue — Drive Line Connect",
+    html,
+  });
+}
+
 module.exports = {
   notifyDevisPropose,
   notifyMissionAssignee,
@@ -397,4 +451,6 @@ module.exports = {
   notifyAccountCreated,
   notifyAccountValidated,
   notifyMissionDisponible,
+  notifyNouvelleDemande,
+  notifyDemandeRecue,
 };

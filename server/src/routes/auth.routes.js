@@ -17,8 +17,12 @@ const crypto = require("crypto");
 
 const router = express.Router();
 
-// ── Rate limiting sur les routes d'authentification ──────────
-router.use(authLimiter);
+// ── Rate limiting ────────────────────────────────────────────
+// Volontairement PAS de `router.use(authLimiter)` : cela plafonnerait aussi
+// GET /me, que le front interroge à chaque chargement de page pour restaurer
+// la session. Quelques navigations suffisaient alors à épuiser le quota et
+// à provoquer un 429 sur la connexion elle-même.
+// Le limiteur n'est appliqué qu'aux routes réellement sensibles.
 
 /**
  * Génère un mot de passe temporaire sécurisé (12 caractères).
@@ -194,109 +198,131 @@ router.post(
   },
 );
 
-// ── Inscription publique (client ou convoyeur) ───────────────
-router.post("/register-public", async (req, res, next) => {
+// ══════════════════════════════════════════════════════════════
+// POST /api/auth/demande — Demande de mise en relation (public)
+//
+// Les comptes ne sont plus créés librement : un visiteur laisse ses
+// coordonnées, l'administrateur le rappelle puis crée le compte depuis
+// l'espace d'administration. Cette route n'écrit donc jamais dans
+// `users`, seulement dans `contact_requests`.
+// ══════════════════════════════════════════════════════════════
+router.post("/demande", authLimiter, async (req, res, next) => {
   try {
-    const { email, fullName, phone, company, password, role } = req.body;
+    const { type, firstName, lastName, company, email, phone, message } =
+      req.body;
 
-    if (!email || !fullName || !password) {
+    const allowedTypes = ["client", "convoyeur"];
+    if (!allowedTypes.includes(type)) {
       return res
         .status(400)
-        .json({ error: "Nom, email et mot de passe obligatoires." });
+        .json({ error: "Type de demande invalide (client ou convoyeur)." });
     }
 
-    if (!isValidEmail(email)) {
+    const mail = email ? email.toLowerCase().trim() : null;
+    const tel = phone ? phone.trim() : null;
+
+    if (mail && !isValidEmail(mail)) {
       return res.status(400).json({ error: "Adresse email invalide." });
     }
 
-    if (fullName.length > 100) {
-      return res
-        .status(400)
-        .json({ error: "Le nom complet ne doit pas dépasser 100 caractères." });
-    }
-
-    const passwordErrors = validatePassword(password);
-    if (passwordErrors.length > 0) {
-      return res
-        .status(400)
-        .json({ error: passwordErrors[0], details: passwordErrors });
-    }
-
-    const allowedRoles = ["client", "convoyeur"];
-    const userRole = allowedRoles.includes(role) ? role : "client";
-
-    // Les convoyeurs sont alertés des missions par WhatsApp :
-    // un mobile joignable est indispensable.
-    if (userRole === "convoyeur") {
-      if (!phone) {
-        return res.status(400).json({
-          error:
-            "Le numéro de mobile est obligatoire pour un convoyeur (notifications WhatsApp).",
-        });
+    // Longueurs bornées : ces valeurs sont réaffichées dans l'espace admin.
+    const champs = { firstName, lastName, company };
+    for (const [nom, valeur] of Object.entries(champs)) {
+      if (valeur && valeur.length > 150) {
+        return res.status(400).json({ error: `Champ ${nom} trop long.` });
       }
-      if (!isValidMobile(phone)) {
+    }
+    if (message && message.length > 2000) {
+      return res
+        .status(400)
+        .json({ error: "Le message ne doit pas dépasser 2000 caractères." });
+    }
+
+    if (type === "convoyeur") {
+      // Un convoyeur est alerté des missions par WhatsApp : sans mobile
+      // valide, la mise en relation n'aboutira pas.
+      if (!firstName || !lastName) {
+        return res.status(400).json({ error: "Nom et prénom obligatoires." });
+      }
+      if (!mail) {
+        return res.status(400).json({ error: "Adresse email obligatoire." });
+      }
+      if (!tel || !isValidMobile(tel)) {
         return res.status(400).json({
           error:
             "Numéro de mobile invalide. Format attendu : 06 12 34 56 78 ou +33 6 12 34 56 78.",
         });
       }
+    } else {
+      if (!company) {
+        return res
+          .status(400)
+          .json({ error: "Le nom de la structure est obligatoire." });
+      }
+      // Un client peut préférer être rappelé : l'un ou l'autre suffit.
+      if (!mail && !tel) {
+        return res.status(400).json({
+          error: "Indiquez au moins un email ou un numéro à rappeler.",
+        });
+      }
     }
-
-    const existing = await db.query("SELECT id FROM users WHERE email = $1", [
-      email.toLowerCase().trim(),
-    ]);
-    if (existing.rows.length > 0) {
-      return res
-        .status(409)
-        .json({ error: "Un compte existe déjà avec cet email." });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
 
     const { rows } = await db.query(
-      `INSERT INTO users (email, password_hash, full_name, phone, company, role, is_validated)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, email, full_name, role, is_validated, created_at`,
+      `INSERT INTO contact_requests
+         (type, first_name, last_name, company, email, phone, message, ip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, type, created_at`,
       [
-        email.toLowerCase().trim(),
-        passwordHash,
-        fullName.trim(),
-        phone || null,
-        company || null,
-        userRole,
-        false, // En attente de validation par un admin
+        type,
+        firstName ? firstName.trim() : null,
+        lastName ? lastName.trim() : null,
+        company ? company.trim() : null,
+        mail,
+        tel,
+        message ? message.trim() : null,
+        req.ip || null,
       ],
     );
 
-    const user = rows[0];
+    const demande = rows[0];
 
-    auditLog("USER_REGISTERED", user.id, {
+    auditLog("CONTACT_REQUEST", null, {
       ip: req.ip,
-      email: user.email,
-      role: userRole,
+      type,
+      email: mail,
+      phone: tel,
     });
 
+    // Les notifications ne doivent jamais faire échouer l'enregistrement :
+    // la demande est déjà en base, c'est le seul point qui compte.
     try {
-      await emailService.notifyNewRegistration(user);
+      await emailService.notifyNouvelleDemande({
+        ...demande,
+        first_name: firstName,
+        last_name: lastName,
+        company,
+        email: mail,
+        phone: tel,
+        message,
+      });
     } catch (emailErr) {
       console.error(
-        "⚠️ Email admin (nouvelle inscription) non envoyé :",
+        "⚠️ Email admin (nouvelle demande) non envoyé :",
         emailErr.message,
       );
     }
 
-    try {
-      await emailService.notifyRegistrationReceived(user.email, user.full_name);
-    } catch (emailErr) {
-      console.error(
-        "⚠️ Email de confirmation d'inscription non envoyé :",
-        emailErr.message,
-      );
+    if (mail) {
+      try {
+        await emailService.notifyDemandeRecue(mail, firstName || company, type);
+      } catch (emailErr) {
+        console.error("⚠️ Accusé de réception non envoyé :", emailErr.message);
+      }
     }
 
     res.status(201).json({
       message:
-        "Compte créé avec succès. Votre demande est en attente de validation par un administrateur.",
+        "Votre demande a bien été enregistrée. Notre équipe vous recontacte rapidement.",
     });
   } catch (err) {
     next(err);
@@ -304,7 +330,7 @@ router.post("/register-public", async (req, res, next) => {
 });
 
 // ── Connexion ────────────────────────────────────────────────
-router.post("/login", async (req, res, next) => {
+router.post("/login", authLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 

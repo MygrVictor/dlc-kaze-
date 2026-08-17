@@ -171,10 +171,9 @@ npm run db:migrate
 npm run db:seed
 ```
 
-Le compte créé est `admin@dlc-kaze.fr` avec le mot de passe `admin1234`,
-réservé au développement local. En production, définir `ADMIN_EMAIL` et
-`ADMIN_PASSWORD` dans le `.env` : le seed refuse de s'exécuter sans
-`ADMIN_PASSWORD` quand `NODE_ENV=production`.
+Le seed exige `ADMIN_PASSWORD` dans le `.env` — il n'existe aucun mot de
+passe par défaut. Définissez aussi `ADMIN_EMAIL` (sinon `admin@dlc-kaze.fr`).
+Le compte est créé, ou son mot de passe réinitialisé s'il existe déjà.
 
 ### 7. Démarrer le projet
 

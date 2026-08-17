@@ -20,3 +20,6 @@ uploads/
 *.log
 .DS_Store
 
+
+# Archives de déploiement (générées localement)
+*.zip
