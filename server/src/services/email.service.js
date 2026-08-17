@@ -422,6 +422,41 @@ async function notifyNouvelleDemande(demande) {
 }
 
 /**
+ * Alerter l'admin qu'une mission attend une cotation.
+ * Sans cet email, une demande de devis peut dormir plusieurs jours si
+ * personne n'ouvre le tableau de bord.
+ */
+async function notifyMissionACoter(mission, client) {
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const vehicule =
+    [mission.vehicle_brand, mission.vehicle_model].filter(Boolean).join(" ") ||
+    "Véhicule non précisé";
+
+  const html = baseTemplate(`
+    <h2>${mission.is_urgent ? "⚠️ Mission URGENTE à coter" : "Nouvelle mission à coter"}</h2>
+    <p>${client?.full_name || "Un client"} vient de déposer une demande de convoyage.</p>
+    <div class="info-box">
+      <div class="info-row"><span class="info-label">Client</span><span class="info-value">${client?.company || client?.full_name || "—"}</span></div>
+      <div class="info-row"><span class="info-label">Véhicule</span><span class="info-value">${vehicule}${mission.vehicle_plate ? ` (${mission.vehicle_plate})` : ""}</span></div>
+      <div class="info-row"><span class="info-label">Départ</span><span class="info-value">${mission.departure_address || "—"}</span></div>
+      <div class="info-row"><span class="info-label">Arrivée</span><span class="info-value">${mission.arrival_address || "—"}</span></div>
+      ${mission.departure_date ? `<div class="info-row"><span class="info-label">Date souhaitée</span><span class="info-value">${new Date(mission.departure_date).toLocaleDateString("fr-FR")}</span></div>` : ""}
+    </div>
+    <p style="text-align: center;">
+      <a href="${process.env.CLIENT_URL}/admin/missions" class="btn">Coter cette mission</a>
+    </p>
+  `);
+
+  return transporter.sendMail({
+    from: FROM,
+    to: adminEmail,
+    replyTo: client?.email || undefined,
+    subject: `${mission.is_urgent ? "[URGENT] " : ""}Mission à coter — ${vehicule}`,
+    html,
+  });
+}
+
+/**
  * Accusé de réception au visiteur. Volontairement sobre : aucun compte
  * n'existe encore, il ne faut donc promettre ni identifiants ni accès.
  */
@@ -452,5 +487,6 @@ module.exports = {
   notifyAccountValidated,
   notifyMissionDisponible,
   notifyNouvelleDemande,
+  notifyMissionACoter,
   notifyDemandeRecue,
 };

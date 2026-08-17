@@ -182,6 +182,20 @@ router.post(
         createdMissions.push(rows[0]);
       }
 
+      // Alerter l'admin : une mission non cotée n'avance pas tant que
+      // personne ne l'a vue. L'échec d'envoi ne doit pas annuler la
+      // création, la mission est déjà en base.
+      try {
+        for (const mission of createdMissions) {
+          await emailService.notifyMissionACoter(mission, req.user);
+        }
+      } catch (emailErr) {
+        console.error(
+          "⚠️ Email admin (mission à coter) non envoyé :",
+          emailErr.message,
+        );
+      }
+
       res.status(201).json({
         missions: createdMissions,
         count: createdMissions.length,
