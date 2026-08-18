@@ -1183,3 +1183,165 @@
     background-position: 0 -16px;
   }
 }
+
+/* ══════════════════════════════════════════════════
+   DASHBOARD — mode clair
+   ══════════════════════════════════════════════════
+
+   Le tableau de bord a été écrit en sombre : ses pages piochent
+   directement dans la palette `dark-*` (qui est l'échelle slate) via des
+   utilitaires Tailwind figés. Plutôt que de réécrire quarante fichiers,
+   on remappe l'échelle sous `.theme-light` : ce qui était sombre devient
+   clair, et inversement.
+
+   Les sélecteurs d'attribut sont nécessaires car Tailwind génère une
+   classe distincte pour chaque opacité (`bg-dark-700/30` n'est pas
+   `bg-dark-700`) ; la correspondance par sous-chaîne les couvre toutes.
+   Les nuances sont volontairement traitées de la plus foncée à la plus
+   claire pour que l'ordre de cascade reste prévisible. */
+
+/* Le fond du `body` déborde derrière la page (zone d'élasticité au
+   défilement, contenu plus court que l'écran) : on l'accorde au thème. */
+body:has(.dash) {
+  background: #020617;
+}
+body:has(.theme-light) {
+  background: #f1f5f9;
+}
+
+.dash.theme-light {
+  color: #0f172a;
+}
+
+/* ── Textes ─────────────────────────────────────── */
+.theme-light [class*="text-dark-100"],
+.theme-light [class*="text-slate-100"] {
+  color: #0f172a;
+}
+.theme-light [class*="text-dark-200"] {
+  color: #1e293b;
+}
+.theme-light [class*="text-dark-300"],
+.theme-light [class*="text-gray-300"] {
+  color: #334155;
+}
+/* Les textes secondaires restent gris moyen : les inverser mécaniquement
+   donnerait un gris trop pâle, illisible sur fond clair. */
+.theme-light [class*="text-dark-400"],
+.theme-light [class*="text-slate-400"],
+.theme-light [class*="text-gray-400"] {
+  color: #64748b;
+}
+.theme-light [class*="text-dark-500"],
+.theme-light [class*="text-slate-500"],
+.theme-light [class*="text-gray-500"] {
+  color: #78849a;
+}
+.theme-light [class*="text-dark-600"] {
+  color: #94a3b8;
+}
+.theme-light [class*="text-dark-700"] {
+  color: #cbd5e1;
+}
+/* `text-white` n'est volontairement pas remappé : il habille des fonds
+   colorés (boutons bleus, pastilles de statut) qui, eux, ne changent pas. */
+
+/* ── Fonds ──────────────────────────────────────── */
+.theme-light [class*="bg-dark-950"],
+.theme-light [class*="bg-slate-950"] {
+  background-color: #f1f5f9;
+}
+.theme-light [class*="bg-dark-900"],
+.theme-light [class*="bg-slate-900"] {
+  background-color: #ffffff;
+}
+.theme-light [class*="bg-dark-800"],
+.theme-light [class*="bg-slate-800"],
+.theme-light [class*="bg-gray-800"] {
+  background-color: #f8fafc;
+}
+.theme-light [class*="bg-dark-700"],
+.theme-light [class*="bg-gray-700"] {
+  background-color: #f1f5f9;
+}
+.theme-light [class*="bg-dark-600"],
+.theme-light [class*="bg-gray-600"] {
+  background-color: #e2e8f0;
+}
+
+/* ── Bordures ───────────────────────────────────── */
+.theme-light [class*="border-dark-800"],
+.theme-light [class*="border-slate-800"] {
+  border-color: #e2e8f0;
+}
+.theme-light [class*="border-dark-700"],
+.theme-light [class*="border-slate-700"],
+.theme-light [class*="border-gray-700"] {
+  border-color: #e2e8f0;
+}
+.theme-light [class*="border-dark-600"] {
+  border-color: #cbd5e1;
+}
+.theme-light [class*="border-dark-500"],
+.theme-light [class*="border-slate-500"] {
+  border-color: #94a3b8;
+}
+
+/* ── Composants ─────────────────────────────────── */
+.dash.theme-light .card,
+.theme-light .card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
+  color: #0f172a;
+}
+.theme-light .card h1,
+.theme-light .card h2,
+.theme-light .card h3,
+.theme-light .card h4 {
+  color: #0f172a;
+}
+
+.theme-light .badge {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.dash.theme-light .input-field,
+.theme-light input:not([type="checkbox"]):not([type="radio"]),
+.theme-light textarea,
+.theme-light select {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #0f172a;
+}
+.dash.theme-light .input-field:focus,
+.theme-light input:focus,
+.theme-light textarea:focus,
+.theme-light select:focus {
+  border-color: #2563eb;
+}
+.dash.theme-light .input-field::placeholder,
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* La barre latérale suit le thème : un panneau sombre isolé au milieu
+   d'une interface claire serait plus déroutant qu'élégant. */
+.theme-light aside {
+  background: #ffffff;
+}
+
+/* Les états de survol conçus pour le sombre éclaircissent le fond ;
+   sur fond blanc, il faut au contraire l'assombrir légèrement. */
+.theme-light [class*="hover:bg-slate-800"]:hover,
+.theme-light [class*="hover:bg-dark-600"]:hover,
+.theme-light [class*="hover:bg-dark-700"]:hover,
+.theme-light [class*="hover:bg-gray-600"]:hover {
+  background-color: #e2e8f0;
+}
+.theme-light [class*="hover:text-white"]:hover {
+  color: #0f172a;
+}

@@ -17,6 +17,8 @@ import {
   Zap,
   Inbox,
   History,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import TelephoneRequis from "../components/TelephoneRequis";
@@ -80,6 +82,17 @@ export default function DashboardLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [missionsDispoCount, setMissionsDispoCount] = useState(0);
+
+  // Thème du tableau de bord. Le choix est propre à l'appareil (un même
+  // convoyeur peut préférer le clair en plein soleil et le sombre le soir),
+  // donc localStorage plutôt qu'une préférence en base.
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("dlc-theme") || "dark",
+  );
+
+  useEffect(() => {
+    localStorage.setItem("dlc-theme", theme);
+  }, [theme]);
 
   const items = NAV_ITEMS[user?.role] || [];
 
@@ -200,6 +213,13 @@ export default function DashboardLayout() {
           </div>
         </div>
         <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="w-full flex items-center gap-2 px-3 py-2 mb-1 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+        >
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          {theme === "dark" ? "Mode clair" : "Mode sombre"}
+        </button>
+        <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
         >
@@ -211,7 +231,11 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className="dash min-h-screen flex bg-slate-950 text-slate-100">
+    <div
+      className={`dash min-h-screen flex text-slate-100 ${
+        theme === "light" ? "theme-light bg-slate-100" : "bg-slate-950"
+      }`}
+    >
       {/* ── Sidebar desktop ──────────────────── */}
       <aside className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-30 bg-slate-900 border-r border-slate-800">
         <Sidebar />
@@ -231,7 +255,11 @@ export default function DashboardLayout() {
       )}
 
       {/* ── Main content ─────────────────────── */}
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+      {/* `min-w-0` est indispensable : sans lui, un enfant flex refuse de
+         rétrécir sous sa largeur de contenu (une adresse longue, un tableau)
+         et pousse la page au-delà de la fenêtre, laissant apparaître le fond
+         clair du `body` sur la droite. */}
+      <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
         {/* Top bar mobile */}
         <header className="lg:hidden flex items-center justify-between px-4 h-14 bg-slate-900 border-b border-slate-800 text-slate-100">
           <button
@@ -245,7 +273,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-3 sm:p-6 lg:p-8">
+        <main className="flex-1 min-w-0 overflow-x-hidden p-3 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
