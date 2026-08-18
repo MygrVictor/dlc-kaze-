@@ -382,6 +382,8 @@ describe("GET /api/convoyeur/missions-disponibles", () => {
   beforeEach(() => {
     kazeService.kazeJobToLocal.mockReturnValue({
       status: "ACCEPTEE",
+      departure_address: "Paris",
+      arrival_address: "Lyon",
       start_date: "2026-08-01",
       end_date: "2026-08-02",
     });

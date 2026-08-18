@@ -423,14 +423,27 @@ const fetchJob = async (jobId) => {
 /** Transforme un job Kaze → données compatibles DLC. */
 const kazeJobToLocal = (job) => {
   const loc = job.work_order_address?.location?.split(",") || [];
-  // Adresses d'enlèvement/livraison extraites des étapes du workflow Kaze
-  const steps = job.steps || [];
-  const startStep = steps.find(
-    (s) => s.step_type === "start" || s.id === "start_navigation",
-  );
-  const endStep = steps.find(
-    (s) => s.step_type === "end" || s.id === "end_navigation",
-  );
+
+  // Les adresses d'enlèvement et de livraison ne sont pas exposées à plat
+  // par l'API : elles vivent dans l'arbre du workflow, soit sur les widgets
+  // `start_address`/`end_address` (propriété `data`), soit sur les étapes de
+  // navigation `start_navigation`/`end_navigation` (propriété `address`).
+  // Certaines réponses (listes allégées) fournissent aussi un tableau
+  // `steps` : on l'accepte en dernier recours.
+  const lireAdresse = (idAdresse, idNavigation) => {
+    if (job.workflow) {
+      const widget = findNode(job.workflow, { id: idAdresse });
+      if (widget?.data) return widget.data;
+      const nav = findNode(job.workflow, { id: idNavigation });
+      if (nav?.address) return nav.address;
+    }
+    const etape = (job.steps || []).find((s) => s.id === idNavigation);
+    return etape?.address || null;
+  };
+
+  const departureAddress = lireAdresse("start_address", "start_navigation");
+  const arrivalAddress = lireAdresse("end_address", "end_navigation");
+
   return {
     kaze_job_id: job.id,
     kaze_reference: job.reference,
@@ -443,8 +456,8 @@ const kazeJobToLocal = (job) => {
     performer_phone: job.performer?.phone || null,
     address: job.work_order_address?.address || null,
     departure_address:
-      startStep?.address || job.work_order_address?.address || null,
-    arrival_address: endStep?.address || null,
+      departureAddress || job.work_order_address?.address || null,
+    arrival_address: arrivalAddress,
     latitude: loc[0] ? parseFloat(loc[0]) : null,
     longitude: loc[1] ? parseFloat(loc[1]) : null,
     due_date: job.due_date ? new Date(job.due_date) : null,

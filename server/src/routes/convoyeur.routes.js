@@ -430,13 +430,6 @@ router.get("/missions-disponibles", async (req, res, next) => {
         )
         .map((j) => {
           const local = kazeService.kazeJobToLocal(j);
-          // Extraire adresses départ/arrivée depuis les steps
-          const startStep = (j.steps || []).find(
-            (s) => s.step_type === "start" || s.id === "start_navigation",
-          );
-          const endStep = (j.steps || []).find(
-            (s) => s.step_type === "end" || s.id === "end_navigation",
-          );
           return {
             id: `kaze_${j.id}`,
             kaze_job_id: j.id,
@@ -445,12 +438,8 @@ router.get("/missions-disponibles", async (req, res, next) => {
             kaze_status: j.status,
             title: j.title || `Mission #${j.reference}`,
             kaze_reference: j.reference,
-            departure_address:
-              startStep?.address ||
-              j.work_order_address?.address ||
-              local.address ||
-              null,
-            arrival_address: endStep?.address || null,
+            departure_address: local.departure_address,
+            arrival_address: local.arrival_address,
             departure_date: local.start_date || local.due_date || null,
             arrival_date: local.end_date || null,
             vehicle_brand: null,
