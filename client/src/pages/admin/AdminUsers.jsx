@@ -390,7 +390,7 @@ export default function AdminUsers() {
                           !u.is_validated && (
                             <button
                               onClick={() => handleValidate(u.id)}
-                              className="btn-accent text-xs py-1.5 px-3 flex items-center gap-1"
+                              className="btn-success btn-xs"
                             >
                               <UserCheck size={14} />
                               Valider
@@ -536,7 +536,7 @@ export default function AdminUsers() {
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="btn-danger flex-1"
               >
                 <Trash2 size={16} />
                 {deleting ? "Suppression…" : "Supprimer"}

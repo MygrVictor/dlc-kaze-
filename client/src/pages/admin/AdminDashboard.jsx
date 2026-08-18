@@ -2772,7 +2772,7 @@ function MissionsTab({
                           ) && (
                             <button
                               onClick={() => onCoter(m)}
-                              className="text-xs bg-primary-600 hover:bg-primary-500 text-white px-2 py-1 rounded flex items-center gap-1"
+                              className="btn-primary btn-xs"
                             >
                               <Euro size={11} />{" "}
                               {m.status === "DEVIS_REFUSE"
@@ -2789,7 +2789,7 @@ function MissionsTab({
                             <button
                               onClick={() => onSupprimer(m)}
                               title="Supprimer définitivement"
-                              className="text-xs text-red-400 border border-red-500/20 hover:bg-red-500/10 px-2 py-1 rounded flex items-center gap-1 transition-colors"
+                              className="btn-soft-danger btn-xs"
                             >
                               <Trash2 size={11} /> Supprimer
                             </button>
@@ -2799,7 +2799,7 @@ function MissionsTab({
                           ) && (
                             <button
                               onClick={() => onAssign(m)}
-                              className="text-xs bg-accent-600 hover:bg-accent-500 text-white px-2 py-1 rounded flex items-center gap-1"
+                              className="btn-success btn-xs"
                             >
                               <UserPlus size={11} />
                               {m.convoyeur_name ? "Réassigner" : "Assigner"}
@@ -2845,9 +2845,10 @@ function MissionsTab({
                           {!["LIVREE", "ANNULEE"].includes(m.status) && (
                             <button
                               onClick={() => onAnnuler(m.id)}
-                              className="text-xs bg-red-600/20 hover:bg-red-600/40 text-red-400 px-2 py-1 rounded flex items-center gap-1"
+                              title="Annuler la mission"
+                              className="btn-soft-warning btn-xs"
                             >
-                              <X size={11} />
+                              <X size={11} /> Annuler
                             </button>
                           )}
                         </div>

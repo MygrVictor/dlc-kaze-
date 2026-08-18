@@ -173,7 +173,7 @@ export default function ConvoyeurDashboard() {
                 </div>
                 <a
                   href="/convoyeur/disponibles"
-                  className="btn-accent flex items-center gap-2 whitespace-nowrap"
+                  className="btn-primary whitespace-nowrap"
                 >
                   <ArrowRight size={16} />
                   Voir les missions

@@ -218,6 +218,141 @@
   background: #b91c1c;
 }
 
+/* ── Boutons sémantiques ────────────────────────────
+   Un code couleur unique dans toute l'application :
+     vert   = action qui valide / fait avancer le dossier
+     rouge  = action destructrice (suppression, annulation)
+     orange = refus ou mise en pause, réversible
+   Les variantes « soft » (fond teinté + bordure) servent aux
+   actions secondaires listées dans les tableaux, afin de ne pas
+   saturer l'écran de blocs pleins.
+   ────────────────────────────────────────────────── */
+.btn-success,
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #16a34a;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px 22px;
+  border-radius: 6px;
+  border: 1px solid #16a34a;
+  transition: all 0.2s;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  white-space: nowrap;
+}
+.btn-success:hover:not(:disabled),
+.btn-accent:hover:not(:disabled) {
+  background: #15803d;
+  border-color: #15803d;
+}
+
+.btn-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ea580c;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px 22px;
+  border-radius: 6px;
+  border: 1px solid #ea580c;
+  transition: all 0.2s;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  white-space: nowrap;
+}
+.btn-warning:hover:not(:disabled) {
+  background: #c2410c;
+  border-color: #c2410c;
+}
+
+/* Variantes discrètes : même sémantique, poids visuel réduit. */
+.btn-soft-danger,
+.btn-soft-warning,
+.btn-soft-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  cursor: pointer;
+  font-family: "Inter", sans-serif;
+  white-space: nowrap;
+}
+.btn-soft-danger {
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.btn-soft-danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.55);
+}
+.btn-soft-warning {
+  color: #ea580c;
+  border: 1px solid rgba(234, 88, 12, 0.3);
+}
+.btn-soft-warning:hover:not(:disabled) {
+  background: rgba(234, 88, 12, 0.1);
+  border-color: rgba(234, 88, 12, 0.55);
+}
+.btn-soft-success {
+  color: #16a34a;
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+.btn-soft-success:hover:not(:disabled) {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.55);
+}
+
+/* Taille compacte pour les actions en ligne dans les tableaux. */
+.btn-xs {
+  font-size: 12px;
+  padding: 6px 10px;
+  gap: 5px;
+  border-radius: 5px;
+}
+
+/* État désactivé et focus clavier, communs à tous les boutons. */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-outline:disabled,
+.btn-danger:disabled,
+.btn-success:disabled,
+.btn-accent:disabled,
+.btn-warning:disabled,
+.btn-soft-danger:disabled,
+.btn-soft-warning:disabled,
+.btn-soft-success:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-outline:focus-visible,
+.btn-danger:focus-visible,
+.btn-success:focus-visible,
+.btn-accent:focus-visible,
+.btn-warning:focus-visible,
+.btn-soft-danger:focus-visible,
+.btn-soft-warning:focus-visible,
+.btn-soft-success:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
 /* ── Form fields ────────────────────────────────── */
 .input-field {
   width: 100%;

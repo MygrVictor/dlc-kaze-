@@ -495,7 +495,7 @@ export default function AdminDemandes() {
               <button
                 onClick={supprimer}
                 disabled={suppression}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="btn-danger flex-1"
               >
                 <Trash2 size={16} />
                 {suppression ? "Suppression…" : "Supprimer"}

@@ -198,7 +198,7 @@ export default function MissionDetail() {
               </button>
               <button
                 onClick={() => setRefusModal(true)}
-                className="btn-secondary flex items-center gap-2 !text-red-300 hover:!text-red-200"
+                className="btn-soft-warning"
               >
                 <XCircle size={18} />
                 Refuser
@@ -206,7 +206,7 @@ export default function MissionDetail() {
               <button
                 onClick={handleAccept}
                 disabled={accepting}
-                className="btn-accent flex items-center gap-2"
+                className="btn-success"
               >
                 <CheckCircle2 size={18} />
                 {accepting ? "Validation…" : "Accepter la mission"}
@@ -569,7 +569,7 @@ export default function MissionDetail() {
               <button
                 onClick={handleRefuse}
                 disabled={refusing || refusMotif.trim().length < 5}
-                className="btn-primary bg-orange-600 hover:bg-orange-500 disabled:opacity-50"
+                className="btn-warning"
               >
                 {refusing ? "Envoi…" : "Envoyer le refus"}
               </button>

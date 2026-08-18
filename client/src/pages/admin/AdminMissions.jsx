@@ -590,7 +590,7 @@ export default function AdminMissions() {
                               setPriceValue("");
                               setPriceConvoyeurValue("");
                             }}
-                            className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
+                            className="btn-primary btn-xs"
                           >
                             <Euro size={14} />
                             {m.status === "DEVIS_REFUSE" ? "Recoter" : "Coter"}
@@ -607,7 +607,7 @@ export default function AdminMissions() {
                             onClick={() => handleDeleteMission(m)}
                             disabled={deletingId === m.id}
                             title="Supprimer définitivement"
-                            className="text-xs py-1.5 px-3 flex items-center gap-1 rounded-lg text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                            className="btn-soft-danger btn-xs"
                           >
                             <Trash2 size={14} />
                             {deletingId === m.id ? "…" : "Supprimer"}
@@ -616,7 +616,7 @@ export default function AdminMissions() {
                       {canAssign(m) && (
                         <button
                           onClick={() => openAssignModal(m)}
-                          className="btn-accent text-xs py-1.5 px-3 flex items-center gap-1"
+                          className="btn-success btn-xs"
                         >
                           <UserCheck size={14} />
                           {m.convoyeur_name ? "Réassigner" : "Assigner"}
@@ -1167,7 +1167,7 @@ export default function AdminMissions() {
               <button
                 onClick={handleAssign}
                 disabled={assigning || !selectedConvoyeur}
-                className="btn-accent flex-1 flex items-center justify-center gap-2"
+                className="btn-success flex-1"
               >
                 <Truck size={16} />
                 {assigning ? "Attribution…" : "Assigner"}
