@@ -275,7 +275,7 @@ export default function AdminUsers() {
 
       {!loading && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-stack">
             <thead>
               <tr className="border-b border-dark-700">
                 <th className="text-left py-3 px-4 text-dark-400 font-medium">

@@ -369,8 +369,8 @@ export default function AdminMissions() {
       </div>
 
       {/* Source filter (DLC / Kaze / Toutes) */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xs text-dark-500">Source :</span>
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1">
+        <span className="text-xs text-dark-500 shrink-0">Source :</span>
         {[
           { value: "all", label: "Toutes", count: allMissions.length },
           { value: "dlc", label: "DLC", count: dlcCount, color: "primary" },
@@ -448,10 +448,11 @@ export default function AdminMissions() {
         </div>
       )}
 
-      {/* Table */}
+      {/* Table — sous 768 px, `table-stack` empile chaque ligne en carte
+          plutôt que d'imposer un défilement latéral. */}
       {!(loading && kazeLoading) && !error && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-stack">
             <thead>
               <tr className="border-b border-dark-700">
                 <th className="text-left py-3 px-4 text-dark-400 font-medium">
@@ -489,7 +490,7 @@ export default function AdminMissions() {
                   key={m.id}
                   className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors"
                 >
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" data-label="Source">
                     {m.source === "kaze" ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20">
                         <Zap size={10} /> Kaze
@@ -500,7 +501,7 @@ export default function AdminMissions() {
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" data-label="Trajet">
                     <span className="font-medium">
                       {m.departure_address}
                       {m.arrival_address ? ` → ${m.arrival_address}` : ""}
@@ -517,7 +518,7 @@ export default function AdminMissions() {
                       </p>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" data-label="Client">
                     <div>
                       <p className="font-medium">{m.client_name}</p>
                       {m.client_email && (
@@ -527,17 +528,17 @@ export default function AdminMissions() {
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-dark-300">
+                  <td className="py-3 px-4 text-dark-300" data-label="Véhicule">
                     {m.vehicle_brand || m.vehicle_model
                       ? `${m.vehicle_brand || ""} ${m.vehicle_model || ""}`.trim()
                       : m.source === "kaze"
                         ? "—"
                         : ""}
                   </td>
-                  <td className="py-3 px-4 text-dark-400">
+                  <td className="py-3 px-4 text-dark-400" data-label="Date">
                     {formatDate(m.departure_date || m.created_at)}
                   </td>
-                  <td className="py-3 px-4 font-semibold">
+                  <td className="py-3 px-4 font-semibold" data-label="Prix">
                     {m.price ? (
                       <div>
                         {formatPrice(m.price)}
@@ -551,7 +552,7 @@ export default function AdminMissions() {
                       <span className="text-dark-500 text-xs">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" data-label="Statut">
                     {m.source === "kaze" && m.kaze_status ? (
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${KAZE_STATUS_COLORS[m.kaze_status] || "bg-dark-700 text-dark-300"}`}
@@ -564,7 +565,7 @@ export default function AdminMissions() {
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4" data-label="Convoyeur">
                     {m.convoyeur_name ? (
                       <span className="flex items-center gap-1.5 text-accent-400 text-xs font-medium">
                         <Truck size={13} />

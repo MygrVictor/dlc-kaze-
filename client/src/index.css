@@ -1185,6 +1185,57 @@
 }
 
 /* ══════════════════════════════════════════════════
+   Tableaux empilables sur mobile
+   ══════════════════════════════════════════════════
+
+   Un tableau de huit colonnes ne tient pas sur un téléphone : le
+   défilement latéral oblige à faire des allers-retours pour relier une
+   ligne à ses en-têtes. Sous 768 px, chaque ligne devient donc une carte
+   et chaque cellule une ligne « Libellé : valeur ».
+
+   Le libellé provient de l'attribut `data-label` porté par la cellule ;
+   sans lui, la valeur s'affiche seule, ce qui reste lisible. */
+@media (max-width: 767px) {
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack thead {
+    display: none;
+  }
+  .table-stack tr {
+    border: 1px solid rgb(255 255 255 / 0.09);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: rgb(30 41 59 / 0.4);
+  }
+  .theme-light .table-stack tr {
+    border-color: #e2e8f0;
+    background: #ffffff;
+  }
+  .table-stack td {
+    padding: 4px 0 !important;
+    border: none;
+    text-align: left !important;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label) " : ";
+    color: #64748b;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  /* Les cellules vides n'ont pas à occuper de place. */
+  .table-stack td:empty {
+    display: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════
    DASHBOARD — mode clair
    ══════════════════════════════════════════════════
 

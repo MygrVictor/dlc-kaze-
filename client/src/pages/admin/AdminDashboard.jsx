@@ -485,14 +485,14 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── Tabs ────────────────────────────────────────── */}
-      <div className="flex gap-1 mb-6 bg-dark-800/50 p-1 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 mb-6 bg-dark-800/50 p-1 rounded-xl overflow-x-auto scrollbar-none">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+              className={`shrink-0 flex items-center gap-2 px-3 min-h-[40px] rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? "bg-primary-600 text-white shadow-lg"
                   : "text-dark-400 hover:text-white hover:bg-dark-700/50"
@@ -601,23 +601,30 @@ export default function AdminDashboard() {
               ].map((card, index) => (
                 <div key={card.label} className="relative">
                   <div
-                    className={`card text-center py-4 border ${card.border} ${card.bg.replace("/10", "/5")}`}
+                    className={`card text-center py-3 px-2 sm:py-4 border ${card.border} ${card.bg.replace("/10", "/5")}`}
                   >
                     <div
-                      className={`w-10 h-10 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mx-auto mb-2`}
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mx-auto mb-1.5 sm:mb-2`}
                     >
-                      <card.icon size={20} />
+                      <card.icon size={18} />
                     </div>
-                    <p className="text-3xl font-bold">{card.value}</p>
-                    <p className={`text-sm font-medium mt-1 ${card.color}`}>
+                    <p className="text-2xl sm:text-3xl font-bold leading-none">
+                      {card.value}
+                    </p>
+                    <p
+                      className={`text-xs sm:text-sm font-medium mt-1 ${card.color}`}
+                    >
                       {card.label}
                     </p>
-                    <p className="text-[11px] text-dark-500 mt-0.5">
+                    <p className="text-[11px] text-dark-500 mt-0.5 hidden sm:block">
                       {card.sublabel}
                     </p>
                   </div>
+                  {/* Les flèches de progression n'ont de sens que sur une
+                      seule ligne : sur mobile la grille passe à deux colonnes
+                      et elles pointeraient dans le vide. */}
                   {index < 4 && (
-                    <div className="absolute top-1/2 -right-2 z-10 -translate-y-1/2 text-dark-600">
+                    <div className="hidden lg:block absolute top-1/2 -right-2 z-10 -translate-y-1/2 text-dark-600">
                       <ArrowRight size={14} />
                     </div>
                   )}
@@ -771,7 +778,7 @@ export default function AdminDashboard() {
                   <p className="text-xs text-dark-500 mb-2">
                     {plateResults.length} mission(s) trouvée(s)
                   </p>
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-stack">
                     <thead>
                       <tr className="text-dark-400 text-xs border-b border-dark-700">
                         <th className="text-left pb-2 font-medium">Statut</th>
@@ -942,7 +949,7 @@ export default function AdminDashboard() {
                 {showCompleted && (
                   <div className="mt-4">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-sm table-stack">
                         <thead>
                           <tr className="text-dark-400 text-xs border-b border-dark-700">
                             <th className="text-left pb-2 font-medium">
@@ -997,7 +1004,7 @@ export default function AdminDashboard() {
                                     </span>
                                   )}
                                 </td>
-                                <td className="py-2.5 pr-3 max-w-[180px] truncate font-medium text-dark-100">
+                                <td className="py-2.5 pr-3 md:max-w-[180px] md:truncate font-medium text-dark-100">
                                   {m.source === "kaze" ? (
                                     <>
                                       {m.kaze_reference && (
@@ -1014,10 +1021,16 @@ export default function AdminDashboard() {
                                     </>
                                   )}
                                 </td>
-                                <td className="py-2.5 pr-3 text-dark-300 text-xs">
+                                <td
+                                  className="py-2.5 pr-3 text-dark-300 text-xs"
+                                  data-label="Client"
+                                >
                                   {m.client_name}
                                 </td>
-                                <td className="py-2.5 pr-3 text-dark-300 text-xs">
+                                <td
+                                  className="py-2.5 pr-3 text-dark-300 text-xs"
+                                  data-label="Véhicule"
+                                >
                                   {m.vehicle_brand || m.vehicle_model ? (
                                     <>
                                       {m.vehicle_brand} {m.vehicle_model}
@@ -1031,7 +1044,10 @@ export default function AdminDashboard() {
                                     <span className="text-dark-600">—</span>
                                   )}
                                 </td>
-                                <td className="py-2.5 pr-3 text-xs">
+                                <td
+                                  className="py-2.5 pr-3 text-xs"
+                                  data-label="Convoyeur"
+                                >
                                   {m.convoyeur_name ? (
                                     <span className="text-accent-400 flex items-center gap-1">
                                       <Truck size={11} /> {m.convoyeur_name}
@@ -1040,15 +1056,21 @@ export default function AdminDashboard() {
                                     <span className="text-dark-500">—</span>
                                   )}
                                 </td>
-                                <td className="py-2.5 pr-3 font-semibold">
+                                <td
+                                  className="py-2.5 pr-3 font-semibold"
+                                  data-label="Prix client"
+                                >
                                   {m.price ? formatPrice(m.price) : "—"}
                                 </td>
-                                <td className="py-2.5 pr-3 text-accent-400 font-semibold">
+                                <td
+                                  className="py-2.5 pr-3 text-accent-400 font-semibold"
+                                  data-label="Prix convoyeur"
+                                >
                                   {m.price_convoyeur
                                     ? formatPrice(m.price_convoyeur)
                                     : "—"}
                                 </td>
-                                <td className="py-2.5 pr-3">
+                                <td className="py-2.5 pr-3" data-label="Marge">
                                   {margin != null ? (
                                     <span
                                       className={`font-bold ${margin >= 0 ? "text-emerald-400" : "text-red-400"}`}
@@ -1059,7 +1081,10 @@ export default function AdminDashboard() {
                                     <span className="text-dark-500">—</span>
                                   )}
                                 </td>
-                                <td className="py-2.5 text-dark-300 text-xs">
+                                <td
+                                  className="py-2.5 text-dark-300 text-xs"
+                                  data-label="Terminée le"
+                                >
                                   {formatDate(m.updated_at)}
                                 </td>
                               </tr>
@@ -1178,7 +1203,7 @@ export default function AdminDashboard() {
                         .slice(0, 10);
 
                       return (
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm table-stack">
                           <thead>
                             <tr className="text-dark-400 text-xs border-b border-dark-700">
                               <th className="text-left pb-2 font-medium">
@@ -2619,7 +2644,7 @@ function MissionsTab({
       ) : (
         <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-stack">
               <thead>
                 <tr className="border-b border-dark-700 bg-dark-800/50">
                   <th className="text-left py-3 px-3 text-dark-400 font-medium text-xs">
@@ -3208,7 +3233,7 @@ function UpcomingMissionsTab({
       ) : (
         <div className="card p-0 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-stack">
               <thead>
                 <tr className="border-b border-dark-700 bg-dark-800/50">
                   <th className="text-left py-3 px-3 text-dark-400 font-medium text-xs">
