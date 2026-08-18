@@ -1345,3 +1345,46 @@ body:has(.theme-light) {
 .theme-light [class*="hover:text-white"]:hover {
   color: #0f172a;
 }
+
+/* ── Couleurs sémantiques ───────────────────────── */
+/* Les nuances 300/400 sont calibrées pour ressortir sur fond sombre :
+   sur blanc elles deviennent délavées, en particulier le vert et le jaune
+   des montants. On les remplace par des nuances 600/700, de teinte
+   identique mais au contraste suffisant. */
+.theme-light [class*="text-accent-400"],
+.theme-light [class*="text-accent-300"],
+.theme-light [class*="text-green-400"],
+.theme-light [class*="text-emerald-400"] {
+  color: #15803d;
+}
+.theme-light [class*="text-yellow-400"],
+.theme-light [class*="text-amber-400"] {
+  color: #b45309;
+}
+.theme-light [class*="text-orange-400"] {
+  color: #c2410c;
+}
+.theme-light [class*="text-red-400"] {
+  color: #dc2626;
+}
+.theme-light [class*="text-blue-400"],
+.theme-light [class*="text-primary-400"],
+.theme-light [class*="text-cyan-400"] {
+  color: #1d4ed8;
+}
+.theme-light [class*="text-purple-400"] {
+  color: #7e22ce;
+}
+
+/* Les fonds teintés très transparents disparaissent sur blanc : on les
+   densifie légèrement pour que les pastilles restent perceptibles. */
+.theme-light [class*="bg-accent-500/10"],
+.theme-light [class*="bg-emerald-500/10"] {
+  background-color: rgb(34 197 94 / 0.12);
+}
+.theme-light [class*="bg-accent-500/20"] {
+  background-color: rgb(34 197 94 / 0.18);
+}
+.theme-light [class*="border-accent-500/20"] {
+  border-color: rgb(34 197 94 / 0.35);
+}

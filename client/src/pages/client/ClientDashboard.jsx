@@ -16,11 +16,41 @@ import {
   Truck,
 } from "lucide-react";
 
+/**
+ * Regroupements proposés au client.
+ *
+ * On raisonne par étape vécue plutôt que par statut technique : « en cours »
+ * couvre aussi bien une mission assignée qu'un convoyage démarré, distinction
+ * qui n'intéresse pas le client. Un filtre par statut brut multiplierait les
+ * onglets pour un gain nul.
+ */
+const FILTRES = [
+  { cle: "TOUTES", label: "Toutes", statuts: null },
+  {
+    cle: "A_COTER",
+    label: "En attente de cotation",
+    statuts: ["EN_ATTENTE_DE_COTATION"],
+  },
+  {
+    cle: "DEVIS",
+    label: "Devis à traiter",
+    statuts: ["DEVIS_PROPOSE", "DEVIS_REFUSE"],
+  },
+  {
+    cle: "EN_COURS",
+    label: "En cours",
+    statuts: ["ACCEPTEE", "ASSIGNEE", "EN_COURS"],
+  },
+  { cle: "TERMINEES", label: "Terminées", statuts: ["LIVREE"] },
+  { cle: "ANNULEES", label: "Annulées", statuts: ["ANNULEE"] },
+];
+
 export default function ClientDashboard() {
   const { user } = useAuth();
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filtre, setFiltre] = useState("TOUTES");
 
   useEffect(() => {
     api
@@ -32,6 +62,20 @@ export default function ClientDashboard() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // Le filtrage se fait en mémoire : le client a rarement plus de quelques
+  // dizaines de missions, un aller-retour serveur par onglet serait un coût
+  // sans contrepartie.
+  const compter = (statuts) =>
+    statuts === null
+      ? missions.length
+      : missions.filter((m) => statuts.includes(m.status)).length;
+
+  const actif = FILTRES.find((f) => f.cle === filtre) || FILTRES[0];
+  const missionsVisibles =
+    actif.statuts === null
+      ? missions
+      : missions.filter((m) => actif.statuts.includes(m.status));
 
   if (!user.is_validated) {
     return (
@@ -97,10 +141,51 @@ export default function ClientDashboard() {
         </div>
       )}
 
-      
+      {/* Filtres par étape — masqués tant qu'il n'y a rien à trier */}
       {!loading && missions.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 mb-5 -mx-1 px-1">
+          {FILTRES.map((f) => {
+            const n = compter(f.statuts);
+            // Un onglet toujours vide n'apporte rien : on le retire, sauf
+            // « Toutes » qui sert de retour à l'état initial.
+            if (n === 0 && f.cle !== "TOUTES") return null;
+            const estActif = filtre === f.cle;
+            return (
+              <button
+                key={f.cle}
+                onClick={() => setFiltre(f.cle)}
+                className={`shrink-0 flex items-center gap-1.5 px-3.5 min-h-[38px] rounded-lg text-sm font-medium border transition-colors ${
+                  estActif
+                    ? "bg-primary-600 border-primary-600 text-white"
+                    : "bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700"
+                }`}
+              >
+                {f.label}
+                <span
+                  className={`text-xs font-bold ${
+                    estActif ? "text-white/80" : "text-dark-500"
+                  }`}
+                >
+                  {n}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Aucun résultat pour le filtre courant */}
+      {!loading && missions.length > 0 && missionsVisibles.length === 0 && (
+        <div className="card text-center py-12">
+          <p className="text-dark-400 text-sm">
+            Aucune mission dans cette catégorie.
+          </p>
+        </div>
+      )}
+
+      {!loading && missionsVisibles.length > 0 && (
         <div className="space-y-4">
-          {missions.map((mission) => (
+          {missionsVisibles.map((mission) => (
             <Link
               key={mission.id}
               to={`/client/missions/${mission.id}`}
