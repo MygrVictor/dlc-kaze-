@@ -217,7 +217,19 @@ const migrate = async () => {
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS service_handover BOOLEAN NOT NULL DEFAULT false;
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS emergency_contact_name  VARCHAR(150);
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS emergency_contact_email VARCHAR(255);
+
+    -- Refus de devis : motif saisi par le client + horodatage, pour que
+    -- l'équipe puisse le rappeler et ajuster la proposition.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS refus_motif  TEXT;
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS refused_at   TIMESTAMPTZ;
   `);
+
+  // Refus de devis par le client : statut distinct d'ANNULEE afin de pouvoir
+  // relancer commercialement. ALTER TYPE ... ADD VALUE doit être exécuté seul,
+  // hors du bloc multi-instructions (contrainte PostgreSQL).
+  await db.query(
+    `ALTER TYPE mission_status ADD VALUE IF NOT EXISTS 'DEVIS_REFUSE'`,
+  );
 
   console.log("✅ Migration terminée avec succès.");
   process.exit(0);

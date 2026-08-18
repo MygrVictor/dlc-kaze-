@@ -5,6 +5,7 @@
 export const STATUS_LABELS = {
   EN_ATTENTE_DE_COTATION: "En attente de cotation",
   DEVIS_PROPOSE: "Devis proposé",
+  DEVIS_REFUSE: "Devis refusé",
   ACCEPTEE: "Acceptée",
   ASSIGNEE: "Assignée",
   EN_COURS: "En cours",
@@ -16,6 +17,7 @@ export const STATUS_COLORS = {
   EN_ATTENTE_DE_COTATION:
     "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
   DEVIS_PROPOSE: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  DEVIS_REFUSE: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
   ACCEPTEE: "bg-green-500/10 text-green-400 border border-green-500/20",
   ASSIGNEE: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
   EN_COURS: "bg-purple-500/10 text-purple-400 border border-purple-500/20",

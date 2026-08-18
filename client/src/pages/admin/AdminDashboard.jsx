@@ -379,6 +379,7 @@ export default function AdminDashboard() {
   const UPCOMING_STATUSES = [
     "EN_ATTENTE_DE_COTATION",
     "DEVIS_PROPOSE",
+    "DEVIS_REFUSE",
     "ACCEPTEE",
     "ASSIGNEE",
   ];
@@ -1302,8 +1303,10 @@ export default function AdminDashboard() {
                                     </button>
                                     {m.source === "dlc" && (
                                       <>
-                                        {m.status ===
-                                          "EN_ATTENTE_DE_COTATION" && (
+                                        {[
+                                          "EN_ATTENTE_DE_COTATION",
+                                          "DEVIS_REFUSE",
+                                        ].includes(m.status) && (
                                           <button
                                             onClick={() => {
                                               setPriceModal(m);
@@ -1312,7 +1315,10 @@ export default function AdminDashboard() {
                                             }}
                                             className="text-xs bg-primary-600 hover:bg-primary-500 text-white px-2 py-1 rounded flex items-center gap-1"
                                           >
-                                            <Euro size={12} /> Coter
+                                            <Euro size={12} />{" "}
+                                            {m.status === "DEVIS_REFUSE"
+                                              ? "Recoter"
+                                              : "Coter"}
                                           </button>
                                         )}
                                         {[
@@ -2257,6 +2263,24 @@ export default function AdminDashboard() {
                 {priceModal.client_name}
               </p>
             </div>
+            {priceModal.refus_motif && (
+              <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg mb-4">
+                <p className="text-sm font-semibold text-orange-300 mb-1">
+                  Devis précédent refusé
+                  {priceModal.price
+                    ? ` (${formatPrice(priceModal.price)})`
+                    : ""}
+                </p>
+                <p className="text-sm text-dark-200 whitespace-pre-wrap">
+                  {priceModal.refus_motif}
+                </p>
+                {priceModal.client_phone && (
+                  <p className="text-xs text-dark-400 mt-2">
+                    À rappeler : {priceModal.client_phone}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="mb-4">
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Prix client (€ TTC)
@@ -2396,6 +2420,7 @@ function MissionsTab({
     "",
     "EN_ATTENTE_DE_COTATION",
     "DEVIS_PROPOSE",
+    "DEVIS_REFUSE",
     "ACCEPTEE",
     "ASSIGNEE",
     "EN_COURS",
@@ -2717,12 +2742,17 @@ function MissionsTab({
                     <td className="py-3 px-3 text-right">
                       {m.source === "dlc" ? (
                         <div className="flex items-center gap-1.5 justify-end">
-                          {m.status === "EN_ATTENTE_DE_COTATION" && (
+                          {["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
+                            m.status,
+                          ) && (
                             <button
                               onClick={() => onCoter(m)}
                               className="text-xs bg-primary-600 hover:bg-primary-500 text-white px-2 py-1 rounded flex items-center gap-1"
                             >
-                              <Euro size={11} /> Coter
+                              <Euro size={11} />{" "}
+                              {m.status === "DEVIS_REFUSE"
+                                ? "Recoter"
+                                : "Coter"}
                             </button>
                           )}
                           {["ACCEPTEE", "ASSIGNEE", "EN_COURS"].includes(
@@ -2992,6 +3022,7 @@ function UpcomingMissionsTab({
   const UPCOMING_STATUSES = [
     "EN_ATTENTE_DE_COTATION",
     "DEVIS_PROPOSE",
+    "DEVIS_REFUSE",
     "ACCEPTEE",
     "ASSIGNEE",
   ];

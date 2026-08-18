@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "migrate": "node src/db/migrate.js",
     "migrate:documents": "node src/db/migrate-documents.js",
+    "migrate:lot": "node src/db/migrate-lot.js",
     "seed": "node src/db/seed.js",
     "test": "cross-env NODE_ENV=test jest --forceExit",
     "test:watch": "cross-env NODE_ENV=test jest --watch",

@@ -1,5 +1,5 @@
 /**
- * Migration — table `contact_requests`.
+ * Migration — table `contact_requests
  *
  * Les comptes ne sont plus créés librement depuis le site : un visiteur
  * laisse ses coordonnées, l'administrateur le rappelle puis crée le compte

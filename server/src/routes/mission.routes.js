@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto = require("crypto");
 const db = require("../db");
 const {
   authenticate,
@@ -8,7 +9,10 @@ const {
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
 const whatsappService = require("../services/whatsapp.service");
-const { generateDevisPDF } = require("../services/devis.service");
+const {
+  generateDevisPDF,
+  generateDevisGroupePDF,
+} = require("../services/devis.service");
 const { lundiDeLaSemaine } = require("../lib/dates");
 const { classeDePeage, estUtilitaire12m3 } = require("../lib/vehicules");
 const {
@@ -107,6 +111,11 @@ router.post(
       // à part, dans `desired_delivery_date`.
       const dateOperationnelle = lundiDeLaSemaine();
 
+      // Un véhicule = une mission (contrainte Kaze), mais plusieurs
+      // véhicules déclarés d'un coup restent une seule affaire pour le
+      // client : le lot permet d'en tirer un devis unique et chiffré.
+      const batchId = crypto.randomUUID();
+
       for (const v of vehicleList) {
         const { rows } = await db.query(
           `INSERT INTO missions (
@@ -122,7 +131,7 @@ router.post(
             service_refuel, service_document_management, service_handover,
             retribution_details,
             emergency_contact_name, emergency_phone, emergency_contact_email,
-            comments, desired_delivery_date, is_urgent, status
+            comments, desired_delivery_date, is_urgent, batch_id, status
           ) VALUES (
             $1,
             $2, $3, $4, $5, $6,
@@ -136,7 +145,7 @@ router.post(
             $27, $28, $29,
             $30,
             $31, $32, $33,
-            $34, $35, $36, 'EN_ATTENTE_DE_COTATION'
+            $34, $35, $36, $37, 'EN_ATTENTE_DE_COTATION'
           ) RETURNING *`,
           [
             req.user.id,
@@ -177,6 +186,7 @@ router.post(
             comments || null,
             desiredDeliveryDate || null,
             Boolean(isUrgent),
+            batchId,
           ],
         );
         createdMissions.push(rows[0]);
@@ -313,8 +323,25 @@ router.get(
       );
       const client = uRows[0] || {};
 
-      // 3. Générer le PDF
-      const devisNum = `DEV-${mission.id.substring(0, 8).toUpperCase()}`;
+      // 3. Le client a-t-il déclaré plusieurs véhicules d'un coup ? Dans
+      //    ce cas il attend une seule proposition chiffrée, pas un PDF
+      //    par véhicule. On ne retient que les missions déjà cotées :
+      //    additionner un prix manquant fausserait le total.
+      let lot = [mission];
+      if (mission.batch_id) {
+        const { rows } = await db.query(
+          `SELECT * FROM missions
+            WHERE batch_id = $1 AND price IS NOT NULL
+            ORDER BY created_at ASC, id ASC`,
+          [mission.batch_id],
+        );
+        if (rows.length > 1) lot = rows;
+      }
+
+      const groupe = lot.length > 1;
+      const devisNum = groupe
+        ? `DEV-${mission.batch_id.substring(0, 8).toUpperCase()}`
+        : `DEV-${mission.id.substring(0, 8).toUpperCase()}`;
       const filename = `devis-${devisNum}.pdf`;
 
       res.setHeader("Content-Type", "application/pdf");
@@ -323,7 +350,9 @@ router.get(
         `attachment; filename="${filename}"`,
       );
 
-      const doc = generateDevisPDF(mission, client);
+      const doc = groupe
+        ? generateDevisGroupePDF(lot, client)
+        : generateDevisPDF(mission, client);
       doc.pipe(res);
       doc.end();
     } catch (err) {
@@ -437,6 +466,74 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
 });
 
 // ═════════════════════════════════════════════════════════════
+// ÉTAPE 3 bis — Client : Refuser le devis (avec motif obligatoire)
+// Le motif remonte à l'équipe par email : il sert de point d'entrée
+// pour rappeler le client et retravailler la proposition.
+// ═════════════════════════════════════════════════════════════
+router.post("/:id/refuser", authorize("client"), async (req, res, next) => {
+  try {
+    const motif = (req.body?.motif || "").trim();
+    if (motif.length < 5) {
+      return res.status(400).json({
+        error: "Merci d'indiquer le motif du refus (5 caractères minimum).",
+      });
+    }
+    if (motif.length > 2000) {
+      return res
+        .status(400)
+        .json({ error: "Le motif ne peut pas dépasser 2000 caractères." });
+    }
+
+    const { rows } = await db.query("SELECT * FROM missions WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (rows.length === 0)
+      return res.status(404).json({ error: "Mission introuvable." });
+
+    const mission = rows[0];
+
+    if (mission.client_id !== req.user.id) {
+      return res
+        .status(403)
+        .json({ error: "Cette mission ne vous appartient pas." });
+    }
+    if (mission.status !== "DEVIS_PROPOSE") {
+      return res.status(400).json({
+        error: `Impossible de refuser : la mission est au statut "${mission.status}".`,
+      });
+    }
+
+    const { rows: updated } = await db.query(
+      `UPDATE missions
+          SET status = 'DEVIS_REFUSE', refus_motif = $1, refused_at = NOW(), updated_at = NOW()
+        WHERE id = $2
+        RETURNING *`,
+      [motif, mission.id],
+    );
+
+    // Alerter l'équipe (non bloquant : le refus reste enregistré même si
+    // l'email échoue).
+    try {
+      const { rows: clients } = await db.query(
+        "SELECT id, email, full_name, phone, company FROM users WHERE id = $1",
+        [mission.client_id],
+      );
+      await emailService.notifyDevisRefuse(mission, clients[0], motif);
+    } catch (emailErr) {
+      console.error("⚠️ Email refus de devis non envoyé :", emailErr.message);
+    }
+
+    res.json({
+      message: "Devis refusé. Notre équipe vous recontacte rapidement.",
+      status: "DEVIS_REFUSE",
+      mission: updated[0],
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═════════════════════════════════════════════════════════════
 // Client : Annuler sa mission (avant qu'elle soit EN_COURS)
 // ═════════════════════════════════════════════════════════════
 router.post("/:id/annuler", authorize("client"), async (req, res, next) => {
@@ -459,6 +556,7 @@ router.post("/:id/annuler", authorize("client"), async (req, res, next) => {
     const cancellable = [
       "EN_ATTENTE_DE_COTATION",
       "DEVIS_PROPOSE",
+      "DEVIS_REFUSE",
       "ACCEPTEE",
       "ASSIGNEE",
     ];

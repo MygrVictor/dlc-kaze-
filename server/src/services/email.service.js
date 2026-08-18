@@ -457,6 +457,44 @@ async function notifyMissionACoter(mission, client) {
 }
 
 /**
+ * Alerter l'équipe qu'un client vient de refuser un devis, avec son motif.
+ * Le refus est une opportunité commerciale : on transmet aussi ses coordonnées
+ * pour pouvoir le rappeler et ajuster la proposition.
+ */
+async function notifyDevisRefuse(mission, client, motif) {
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const vehicule =
+    [mission.vehicle_brand, mission.vehicle_model].filter(Boolean).join(" ") ||
+    "Véhicule non précisé";
+
+  const html = baseTemplate(`
+    <h2>Devis refusé par le client</h2>
+    <p>${client?.full_name || "Un client"} a refusé le devis proposé. Un rappel téléphonique est recommandé.</p>
+    <div class="info-box">
+      <div class="info-row"><span class="info-label">Client</span><span class="info-value">${client?.company || client?.full_name || "—"}</span></div>
+      ${client?.phone ? `<div class="info-row"><span class="info-label">Téléphone</span><span class="info-value">${client.phone}</span></div>` : ""}
+      ${client?.email ? `<div class="info-row"><span class="info-label">Email</span><span class="info-value">${client.email}</span></div>` : ""}
+      <div class="info-row"><span class="info-label">Véhicule</span><span class="info-value">${vehicule}${mission.vehicle_plate ? ` (${mission.vehicle_plate})` : ""}</span></div>
+      <div class="info-row"><span class="info-label">Trajet</span><span class="info-value">${mission.departure_address || "—"} → ${mission.arrival_address || "—"}</span></div>
+      ${mission.price ? `<div class="info-row"><span class="info-label">Prix proposé</span><span class="info-value">${parseFloat(mission.price).toFixed(2)} € HT</span></div>` : ""}
+    </div>
+    <p><strong style="color:#f1f5f9;">Motif du refus :</strong></p>
+    <div class="info-box"><p style="margin:0;">${motif}</p></div>
+    <p style="text-align: center;">
+      <a href="${process.env.CLIENT_URL}/admin/missions" class="btn">Voir la mission</a>
+    </p>
+  `);
+
+  return transporter.sendMail({
+    from: FROM,
+    to: adminEmail,
+    replyTo: client?.email || undefined,
+    subject: `Devis refusé — ${client?.company || client?.full_name || "Client"} — ${vehicule}`,
+    html,
+  });
+}
+
+/**
  * Accusé de réception au visiteur. Volontairement sobre : aucun compte
  * n'existe encore, il ne faut donc promettre ni identifiants ni accès.
  */
@@ -488,5 +526,6 @@ module.exports = {
   notifyMissionDisponible,
   notifyNouvelleDemande,
   notifyMissionACoter,
+  notifyDevisRefuse,
   notifyDemandeRecue,
 };

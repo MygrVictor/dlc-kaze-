@@ -282,6 +282,7 @@ export default function AdminMissions() {
     "",
     "EN_ATTENTE_DE_COTATION",
     "DEVIS_PROPOSE",
+    "DEVIS_REFUSE",
     "ACCEPTEE",
     "ASSIGNEE",
     "EN_COURS",
@@ -553,7 +554,9 @@ export default function AdminMissions() {
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center gap-2 justify-end">
                       {m.source === "dlc" &&
-                        m.status === "EN_ATTENTE_DE_COTATION" && (
+                        ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
+                          m.status,
+                        ) && (
                           <button
                             onClick={() => {
                               setPriceModal(m);
@@ -563,7 +566,7 @@ export default function AdminMissions() {
                             className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"
                           >
                             <Euro size={14} />
-                            Coter
+                            {m.status === "DEVIS_REFUSE" ? "Recoter" : "Coter"}
                           </button>
                         )}
                       {canAssign(m) && (
@@ -876,6 +879,26 @@ export default function AdminMissions() {
                         {priceModal.emergency_phone}
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Motif de refus du précédent devis */}
+              {priceModal.refus_motif && (
+                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare size={16} className="text-orange-400" />
+                    <h4 className="text-sm font-semibold text-orange-300">
+                      Devis refusé par le client
+                    </h4>
+                  </div>
+                  <p className="text-sm text-dark-200 whitespace-pre-wrap">
+                    {priceModal.refus_motif}
+                  </p>
+                  {priceModal.client_phone && (
+                    <p className="text-xs text-dark-400 mt-2">
+                      À rappeler : {priceModal.client_phone}
+                    </p>
                   )}
                 </div>
               )}

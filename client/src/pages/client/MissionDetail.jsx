@@ -25,6 +25,7 @@ import {
   ShieldAlert,
   Download,
   KeyRound,
+  XCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -34,6 +35,9 @@ export default function MissionDetail() {
   const [mission, setMission] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
+  const [refusModal, setRefusModal] = useState(false);
+  const [refusMotif, setRefusMotif] = useState("");
+  const [refusing, setRefusing] = useState(false);
 
   useEffect(() => {
     api
@@ -81,6 +85,34 @@ export default function MissionDetail() {
       toast.error(err.response?.data?.error || "Erreur lors de l'acceptation.");
     } finally {
       setAccepting(false);
+    }
+  };
+
+  const handleRefuse = async () => {
+    const motif = refusMotif.trim();
+    if (motif.length < 5) {
+      toast.error("Merci de préciser le motif du refus.");
+      return;
+    }
+    setRefusing(true);
+    try {
+      const { data } = await api.post(`/missions/${id}/refuser`, { motif });
+      toast.success(
+        "Devis refusé. Notre équipe vous rappelle pour en discuter.",
+      );
+      setMission(
+        data.mission || {
+          ...mission,
+          status: "DEVIS_REFUSE",
+          refus_motif: motif,
+        },
+      );
+      setRefusModal(false);
+      setRefusMotif("");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors du refus.");
+    } finally {
+      setRefusing(false);
     }
   };
 
@@ -165,6 +197,13 @@ export default function MissionDetail() {
                 Voir le devis
               </button>
               <button
+                onClick={() => setRefusModal(true)}
+                className="btn-secondary flex items-center gap-2 !text-red-300 hover:!text-red-200"
+              >
+                <XCircle size={18} />
+                Refuser
+              </button>
+              <button
                 onClick={handleAccept}
                 disabled={accepting}
                 className="btn-accent flex items-center gap-2"
@@ -172,6 +211,27 @@ export default function MissionDetail() {
                 <CheckCircle2 size={18} />
                 {accepting ? "Validation…" : "Accepter la mission"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Devis refusé : rappel du motif transmis à l'équipe */}
+      {mission.status === "DEVIS_REFUSE" && (
+        <div className="card bg-gradient-to-r from-orange-900/30 to-dark-800/50 border-orange-500/30 mb-6">
+          <div className="flex items-start gap-3">
+            <XCircle size={22} className="text-orange-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Devis refusé</p>
+              <p className="text-sm text-dark-300 mt-1">
+                Votre motif a été transmis à notre équipe, qui vous recontacte
+                pour en discuter.
+              </p>
+              {mission.refus_motif && (
+                <p className="text-sm text-dark-200 mt-3 whitespace-pre-wrap bg-dark-900/50 rounded-lg p-3 border border-dark-700">
+                  {mission.refus_motif}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -468,6 +528,55 @@ export default function MissionDetail() {
             ))}
         </div>
       </div>
+
+      {/* Modal de refus du devis */}
+      {refusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="card w-full max-w-lg border-orange-500/30">
+            <div className="flex items-center gap-2 mb-2">
+              <XCircle size={20} className="text-orange-400" />
+              <h3 className="text-lg font-semibold">Refuser le devis</h3>
+            </div>
+            <p className="text-sm text-dark-400 mb-4">
+              Dites-nous pourquoi ce devis ne convient pas (prix, délai,
+              prestation…). Votre message est transmis à notre équipe, qui vous
+              rappellera pour en discuter.
+            </p>
+            <label htmlFor="refus-motif" className="sr-only">
+              Motif du refus
+            </label>
+            <textarea
+              id="refus-motif"
+              rows={5}
+              value={refusMotif}
+              onChange={(e) => setRefusMotif(e.target.value)}
+              maxLength={2000}
+              autoFocus
+              placeholder="Ex. : le tarif dépasse notre budget, la date de livraison est trop tardive…"
+              className="input w-full resize-none"
+            />
+            <p className="text-xs text-dark-500 mt-1">
+              {refusMotif.trim().length}/2000 caractères
+            </p>
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => setRefusModal(false)}
+                className="btn-secondary"
+                disabled={refusing}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleRefuse}
+                disabled={refusing || refusMotif.trim().length < 5}
+                className="btn-primary bg-orange-600 hover:bg-orange-500 disabled:opacity-50"
+              >
+                {refusing ? "Envoi…" : "Envoyer le refus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

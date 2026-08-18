@@ -46,13 +46,17 @@ jest.mock("../services/whatsapp.service", () => ({
 
 jest.mock("../services/devis.service", () => ({
   generateDevisPDF: jest.fn(),
+  generateDevisGroupePDF: jest.fn(),
 }));
 
 const db = require("../db");
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
 const whatsappService = require("../services/whatsapp.service");
-const { generateDevisPDF } = require("../services/devis.service");
+const {
+  generateDevisPDF,
+  generateDevisGroupePDF,
+} = require("../services/devis.service");
 const app = require("./app.test-setup");
 
 const CLIENT = {
@@ -253,8 +257,8 @@ describe("POST /api/missions — création", () => {
       comments: "Livraison délicate",
     });
 
-    // 34 champs du formulaire + date souhaitée + urgence
-    expect(params).toHaveLength(36);
+    // 34 champs du formulaire + date souhaitée + urgence + identifiant de lot
+    expect(params).toHaveLength(37);
     expect(params).toEqual(
       expect.arrayContaining([
         CLIENT.id,
@@ -524,7 +528,7 @@ describe("POST /api/missions — dates et urgence", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(capture.params).toHaveLength(36);
+      expect(capture.params).toHaveLength(37);
       expect(capture.sql).toMatch(/service_handover/);
     });
   });
@@ -814,6 +818,73 @@ describe("GET /api/missions/:id/devis", () => {
     expect(res.headers["content-type"]).toMatch(/application\/pdf/);
     expect(res.headers["content-disposition"]).toMatch(/devis-DEV-/);
     expect(generateDevisPDF).toHaveBeenCalled();
+  });
+
+  // Plusieurs véhicules déclarés ensemble = une seule affaire : le client
+  // doit recevoir un document unique portant le total, pas un PDF par
+  // véhicule qu'il devrait télécharger puis additionner lui-même.
+  const BATCH_ID = "22222222-2222-2222-2222-222222222222";
+
+  it("regroupe les missions du même lot dans un devis unique", async () => {
+    generateDevisGroupePDF.mockReturnValue(fakePdf());
+    mockDb(CLIENT, (sql) => {
+      if (/FROM missions WHERE id/i.test(sql))
+        return {
+          rows: [
+            {
+              id: MISSION_ID,
+              client_id: CLIENT.id,
+              price: 450,
+              batch_id: BATCH_ID,
+            },
+          ],
+        };
+      if (/WHERE batch_id/i.test(sql))
+        return {
+          rows: [
+            { id: MISSION_ID, price: 450, batch_id: BATCH_ID },
+            { id: "33333333-3333-3333-3333-333333333333", price: 550 },
+          ],
+        };
+      if (/FROM users WHERE id/i.test(sql))
+        return { rows: [{ full_name: "Client Test", email: CLIENT.email }] };
+    });
+
+    const res = await telecharger(CLIENT);
+
+    expect(res.status).toBe(200);
+    expect(generateDevisGroupePDF).toHaveBeenCalled();
+    expect(generateDevisPDF).not.toHaveBeenCalled();
+    expect(generateDevisGroupePDF.mock.calls[0][0]).toHaveLength(2);
+  });
+
+  it("reste sur le devis simple si le lot ne compte qu'une mission cotée", async () => {
+    generateDevisPDF.mockReturnValue(fakePdf());
+    mockDb(CLIENT, (sql) => {
+      if (/FROM missions WHERE id/i.test(sql))
+        return {
+          rows: [
+            {
+              id: MISSION_ID,
+              client_id: CLIENT.id,
+              price: 450,
+              batch_id: BATCH_ID,
+            },
+          ],
+        };
+      // Les autres véhicules du lot ne sont pas encore cotés : les
+      // additionner donnerait un total faux.
+      if (/WHERE batch_id/i.test(sql))
+        return { rows: [{ id: MISSION_ID, price: 450, batch_id: BATCH_ID }] };
+      if (/FROM users WHERE id/i.test(sql))
+        return { rows: [{ full_name: "Client Test", email: CLIENT.email }] };
+    });
+
+    const res = await telecharger(CLIENT);
+
+    expect(res.status).toBe(200);
+    expect(generateDevisPDF).toHaveBeenCalled();
+    expect(generateDevisGroupePDF).not.toHaveBeenCalled();
   });
 });
 

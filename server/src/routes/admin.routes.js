@@ -116,6 +116,7 @@ router.get("/missions", async (req, res, next) => {
 
     let query = `
       SELECT m.*, u.full_name AS client_name, u.email AS client_email, u.company AS client_company,
+             u.phone AS client_phone,
              c.full_name AS convoyeur_name
       FROM missions m
       JOIN users u ON u.id = m.client_id
@@ -818,7 +819,8 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
     const mission = await getMissionById(req.params.id);
     if (!mission)
       return res.status(404).json({ error: "Mission introuvable." });
-    if (mission.status !== "EN_ATTENTE_DE_COTATION") {
+    // Une mission refusée peut être recotée après discussion avec le client.
+    if (!["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(mission.status)) {
       return res.status(400).json({
         error: `Impossible de proposer un prix : statut actuel "${mission.status}".`,
       });
