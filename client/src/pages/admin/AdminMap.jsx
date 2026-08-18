@@ -58,6 +58,50 @@ const STATUS_CONFIG = {
   },
 };
 
+// ── Phases d'exploitation ──────────────────────────────────
+// Huit statuts à l'écran ne se lisent pas d'un coup d'œil. Ce qui
+// intéresse l'exploitant sur une carte tient en trois questions : qu'est-ce
+// qui attend une action de ma part, qu'est-ce qui roule, qu'est-ce qui est
+// derrière moi. Les statuts fins restent dans l'infobulle.
+const PHASES = {
+  A_TRAITER: {
+    label: "À traiter",
+    aide: "Sans convoyeur : à coter, à valider ou à assigner",
+    color: "#f59e0b",
+    bg: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+    rayon: 9,
+  },
+  EN_COURS: {
+    label: "En cours",
+    aide: "Assignée à un convoyeur ou déjà en route",
+    color: "#22c55e",
+    bg: "bg-green-500/20 text-green-400 border-green-500/30",
+    rayon: 9,
+  },
+  TERMINEE: {
+    label: "Terminées",
+    aide: "Livrées — conservées pour l'historique",
+    color: "#64748b",
+    bg: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+    rayon: 5,
+  },
+};
+
+/** Phase d'une mission DLC, déduite de son statut. */
+function phaseDeStatut(status) {
+  if (status === "LIVREE") return "TERMINEE";
+  if (status === "ASSIGNEE" || status === "EN_COURS") return "EN_COURS";
+  return "A_TRAITER";
+}
+
+/** Même lecture pour un job Kaze, dont les statuts sont en anglais. */
+function phaseDeKaze(job) {
+  if (job.kaze_status === "completed" || job.kaze_status === "cancelled")
+    return "TERMINEE";
+  if (job.kaze_status === "started" || job.performer_name) return "EN_COURS";
+  return "A_TRAITER";
+}
+
 // ── Auto-fit de la carte aux markers ────────────────────────
 function FitBounds({ missions }) {
   const map = useMap();
@@ -139,8 +183,10 @@ export default function AdminMap() {
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeStatuses, setActiveStatuses] = useState(
-    new Set(Object.keys(STATUS_CONFIG).filter((s) => s !== "LIVREE")),
+  // Par défaut, l'historique est masqué : la carte sert d'abord à piloter
+  // ce qui reste à faire.
+  const [activePhases, setActivePhases] = useState(
+    new Set(["A_TRAITER", "EN_COURS"]),
   );
 
   // Kaze data
@@ -175,33 +221,37 @@ export default function AdminMap() {
     fetchMapData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggleStatus = (status) => {
-    setActiveStatuses((prev) => {
+  const togglePhase = (phase) => {
+    setActivePhases((prev) => {
       const next = new Set(prev);
-      if (next.has(status)) {
-        next.delete(status);
+      if (next.has(phase)) {
+        next.delete(phase);
       } else {
-        next.add(status);
+        next.add(phase);
       }
       return next;
     });
   };
 
-  // Filtrer les missions affichées en local pour un toggle réactif
+  // Filtrage local pour une bascule instantanée
   const filtered = useMemo(
-    () => missions.filter((m) => activeStatuses.has(m.status)),
-    [missions, activeStatuses],
+    () => missions.filter((m) => activePhases.has(phaseDeStatut(m.status))),
+    [missions, activePhases],
   );
 
-  // Stats par statut
+  const kazeFiltres = useMemo(
+    () => kazeJobs.filter((j) => activePhases.has(phaseDeKaze(j))),
+    [kazeJobs, activePhases],
+  );
+
+  // Compteurs par phase, toutes sources confondues : c'est le volume réel
+  // à traiter qui compte, pas la provenance technique de la mission.
   const stats = useMemo(() => {
-    const counts = {};
-    Object.keys(STATUS_CONFIG).forEach((s) => (counts[s] = 0));
-    missions.forEach((m) => {
-      if (counts[m.status] !== undefined) counts[m.status]++;
-    });
+    const counts = { A_TRAITER: 0, EN_COURS: 0, TERMINEE: 0 };
+    missions.forEach((m) => counts[phaseDeStatut(m.status)]++);
+    kazeJobs.forEach((j) => counts[phaseDeKaze(j)]++);
     return counts;
-  }, [missions]);
+  }, [missions, kazeJobs]);
 
   if (loading) {
     return (
@@ -252,41 +302,46 @@ export default function AdminMap() {
         </button>
       </div>
 
-      {/* ── Filtres par statut ───────────────── */}
+      {/* ── Filtres par phase ────────────────── */}
       <div className="bg-dark-800 border border-dark-700 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Filter size={16} className="text-dark-400" />
           <span className="text-sm font-medium text-dark-300">
-            Filtrer par statut
+            Où en sont les missions
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
-            const isActive = activeStatuses.has(key);
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {Object.entries(PHASES).map(([key, cfg]) => {
+            const isActive = activePhases.has(key);
             return (
               <button
                 key={key}
-                onClick={() => toggleStatus(key)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
+                onClick={() => togglePhase(key)}
+                className={`text-left px-3 py-2.5 rounded-lg border transition-all duration-200 ${
                   isActive
                     ? cfg.bg
                     : "bg-dark-900/50 text-dark-500 border-dark-700 opacity-50"
                 }`}
               >
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{
-                    backgroundColor: isActive ? cfg.color : "#475569",
-                  }}
-                />
-                {cfg.label}
-                <span className="ml-1 font-bold">{stats[key] || 0}</span>
+                <span className="flex items-center gap-2 font-semibold text-sm">
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: isActive ? cfg.color : "#475569",
+                    }}
+                  />
+                  {cfg.label}
+                  <span className="ml-auto font-bold">{stats[key] || 0}</span>
+                </span>
+                <span className="block text-[11px] text-dark-400 mt-1 pl-5">
+                  {cfg.aide}
+                </span>
               </button>
             );
           })}
         </div>
         {/* Kaze toggles */}
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-dark-700">
+        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-dark-700">
           <Zap size={14} className="text-orange-400" />
           <span className="text-xs font-medium text-orange-400 mr-2">Kaze</span>
           <button
@@ -299,7 +354,7 @@ export default function AdminMap() {
           >
             <Truck size={12} />
             Missions Kaze
-            <span className="font-bold">{kazeJobs.length}</span>
+            <span className="font-bold">{kazeFiltres.length}</span>
           </button>
           <button
             onClick={() => setShowKazeDrivers((v) => !v)}
@@ -395,7 +450,11 @@ export default function AdminMap() {
             <FitBounds missions={filtered} />
 
             {filtered.map((m) => {
-              const cfg = STATUS_CONFIG[m.status] || {};
+              const phase = phaseDeStatut(m.status);
+              const cfg = PHASES[phase];
+              // Les missions livrées s'effacent : présentes pour le contexte,
+              // elles ne doivent pas concurrencer visuellement l'actif.
+              const terminee = phase === "TERMINEE";
 
               return (
                 <Fragment key={m.id}>
@@ -408,21 +467,21 @@ export default function AdminMap() {
                       ]}
                       pathOptions={{
                         color: cfg.color,
-                        weight: 3,
-                        opacity: 0.9,
-                        dashArray: "7 5",
+                        weight: terminee ? 1.5 : 3,
+                        opacity: terminee ? 0.35 : 0.9,
+                        dashArray: terminee ? "3 6" : "7 5",
                       }}
                     />
                   )}
 
-                  {/* Marqueur départ */}
+                  {/* Marqueur départ — disque plein */}
                   {m.departure && (
                     <CircleMarker
                       center={[m.departure.lat, m.departure.lng]}
-                      radius={7}
+                      radius={cfg.rayon}
                       pathOptions={{
                         fillColor: cfg.color,
-                        fillOpacity: 1,
+                        fillOpacity: terminee ? 0.5 : 1,
                         color: "#0f172a",
                         weight: 2,
                       }}
@@ -433,14 +492,15 @@ export default function AdminMap() {
                     </CircleMarker>
                   )}
 
-                  {/* Marqueur arrivée (plus petit, avec bord pointillé) */}
+                  {/* Marqueur arrivée — anneau creux, pour distinguer
+                      d'un coup d'œil le point de chute du point de départ */}
                   {m.arrival && (
                     <CircleMarker
                       center={[m.arrival.lat, m.arrival.lng]}
-                      radius={5}
+                      radius={cfg.rayon - 2}
                       pathOptions={{
                         fillColor: "#ffffff",
-                        fillOpacity: 0.95,
+                        fillOpacity: terminee ? 0.5 : 0.95,
                         color: cfg.color,
                         weight: 3,
                       }}
@@ -454,65 +514,71 @@ export default function AdminMap() {
               );
             })}
 
-            {/* ── Kaze missions (orange markers) ────── */}
+            {/* ── Missions Kaze ──────────────────────── */}
+            {/* Même code couleur que les missions DLC : ce qui compte est
+                l'avancement, pas la provenance. La bordure orange rappelle
+                seulement qu'elles viennent de Kaze. */}
             {showKazeJobs &&
-              kazeJobs.map((job) => (
-                <CircleMarker
-                  key={`kaze-${job.kaze_job_id}`}
-                  center={[job.latitude, job.longitude]}
-                  radius={8}
-                  pathOptions={{
-                    fillColor: "#f97316",
-                    fillOpacity: 1,
-                    color: "#0f172a",
-                    weight: 2,
-                  }}
-                >
-                  <Popup>
-                    <div className="min-w-[200px] text-sm">
-                      <div className="font-bold text-dark-900 mb-1 flex items-center gap-1.5">
-                        <span style={{ color: "#f97316" }}>⚡</span> Kaze —{" "}
-                        {job.kaze_reference}
-                      </div>
-                      <p className="font-medium text-dark-800 mb-1">
-                        {job.title}
-                      </p>
-                      <p className="text-dark-500 text-xs mb-2">
-                        {job.address}
-                      </p>
-                      <div className="space-y-1 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-dark-500">Statut</span>
-                          <span
-                            className="font-medium"
-                            style={{ color: "#f97316" }}
-                          >
-                            {job.status_name}
-                          </span>
+              kazeFiltres.map((job) => {
+                const cfg = PHASES[phaseDeKaze(job)];
+                return (
+                  <CircleMarker
+                    key={`kaze-${job.kaze_job_id}`}
+                    center={[job.latitude, job.longitude]}
+                    radius={cfg.rayon}
+                    pathOptions={{
+                      fillColor: cfg.color,
+                      fillOpacity: 1,
+                      color: "#f97316",
+                      weight: 3,
+                    }}
+                  >
+                    <Popup>
+                      <div className="min-w-[200px] text-sm">
+                        <div className="font-bold text-dark-900 mb-1 flex items-center gap-1.5">
+                          <span style={{ color: "#f97316" }}>⚡</span> Kaze —{" "}
+                          {job.kaze_reference}
                         </div>
-                        {job.performer_name && (
+                        <p className="font-medium text-dark-800 mb-1">
+                          {job.title}
+                        </p>
+                        <p className="text-dark-500 text-xs mb-2">
+                          {job.address}
+                        </p>
+                        <div className="space-y-1 text-xs">
                           <div className="flex justify-between">
-                            <span className="text-dark-500">Convoyeur</span>
-                            <span className="font-medium text-dark-800">
-                              {job.performer_name}
+                            <span className="text-dark-500">Statut</span>
+                            <span
+                              className="font-medium"
+                              style={{ color: "#f97316" }}
+                            >
+                              {job.status_name}
                             </span>
                           </div>
-                        )}
-                        {job.due_date && (
-                          <div className="flex justify-between">
-                            <span className="text-dark-500">Date</span>
-                            <span className="text-dark-700">
-                              {new Date(job.due_date).toLocaleDateString(
-                                "fr-FR",
-                              )}
-                            </span>
-                          </div>
-                        )}
+                          {job.performer_name && (
+                            <div className="flex justify-between">
+                              <span className="text-dark-500">Convoyeur</span>
+                              <span className="font-medium text-dark-800">
+                                {job.performer_name}
+                              </span>
+                            </div>
+                          )}
+                          {job.due_date && (
+                            <div className="flex justify-between">
+                              <span className="text-dark-500">Date</span>
+                              <span className="text-dark-700">
+                                {new Date(job.due_date).toLocaleDateString(
+                                  "fr-FR",
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              ))}
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
 
             {/* ── Kaze drivers GPS (cyan pulsing markers) ── */}
             {showKazeDrivers &&
