@@ -620,6 +620,31 @@ router.get("/missions/map", async (req, res, next) => {
     try {
       const rawJobs = await kazeService.fetchRecentJobs(60);
       kazeJobs = (rawJobs || []).map(kazeService.kazeJobToLocal);
+
+      // La liste `/jobs` de Kaze est allégée : ni coordonnées, ni workflow,
+      // et `work_order_address` est souvent vide sur les missions assignées.
+      // Ces jobs n'avaient donc aucune adresse à géocoder et disparaissaient
+      // de la carte. On va chercher leur détail, qui porte les adresses du
+      // workflow. Le nombre d'appels est borné : la carte doit rester
+      // rapide, quitte à ce que quelques missions anciennes manquent.
+      const sansPosition = kazeJobs.filter(
+        (j) => !j.latitude && !j.address && !j.departure_address,
+      );
+      const A_COMPLETER = 40;
+      await Promise.all(
+        sansPosition.slice(0, A_COMPLETER).map(async (job) => {
+          try {
+            const detail = await kazeService.fetchJob(job.kaze_job_id);
+            const complet = kazeService.kazeJobToLocal(detail);
+            job.departure_address = complet.departure_address;
+            job.arrival_address = complet.arrival_address;
+            job.latitude = complet.latitude;
+            job.longitude = complet.longitude;
+          } catch {
+            // Un job introuvable ne doit pas priver la carte des autres.
+          }
+        }),
+      );
     } catch (kazeErr) {
       console.error("⚠️ Kaze map fetch:", kazeErr.message);
     }
@@ -630,9 +655,15 @@ router.get("/missions/map", async (req, res, next) => {
         allAddresses.push(mission.departure_address);
       if (mission.arrival_address) allAddresses.push(mission.arrival_address);
     });
+    // Beaucoup de jobs Kaze n'ont pas de `work_order_address` : leur point
+    // de départ vit dans le workflow. Sans ce repli, ces missions restaient
+    // invisibles sur la carte faute d'adresse à géocoder.
     kazeJobs
-      .filter((job) => !job.latitude && job.address)
-      .forEach((job) => allAddresses.push(job.address));
+      .filter((job) => !job.latitude)
+      .forEach((job) => {
+        const adresse = job.address || job.departure_address;
+        if (adresse) allAddresses.push(adresse);
+      });
 
     const coordsMap = await geocodingService.geocodeBatch(allAddresses);
 
@@ -672,8 +703,9 @@ router.get("/missions/map", async (req, res, next) => {
       .map((job) => {
         let lat = job.latitude;
         let lng = job.longitude;
-        if (!lat && job.address) {
-          const geocoded = coordsMap.get(job.address.trim());
+        const adresse = job.address || job.departure_address;
+        if (!lat && adresse) {
+          const geocoded = coordsMap.get(adresse.trim());
           if (geocoded) {
             lat = geocoded.lat;
             lng = geocoded.lng;
@@ -684,7 +716,8 @@ router.get("/missions/map", async (req, res, next) => {
           kaze_job_id: job.kaze_job_id,
           kaze_reference: job.kaze_reference,
           title: job.title,
-          address: job.address,
+          address: adresse,
+          arrival_address: job.arrival_address,
           status_name: job.status_name,
           kaze_status: job.kaze_status,
           performer_name: job.performer_name,
