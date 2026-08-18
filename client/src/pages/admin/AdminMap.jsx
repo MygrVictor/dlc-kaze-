@@ -199,7 +199,10 @@ export default function AdminMap() {
     setLoading(true);
     setError(null);
     try {
-      const statuses = [...activeStatuses].join(",");
+      // On charge tous les statuts : le tri par phase se fait ensuite en
+      // mémoire, ce qui rend les bascules instantanées et évite de relancer
+      // un géocodage à chaque changement de filtre.
+      const statuses = Object.keys(STATUS_CONFIG).join(",");
       const [mapRes, kazeUsersRes] = await Promise.all([
         api
           .get(`/admin/missions/map?statuses=${statuses}`)
