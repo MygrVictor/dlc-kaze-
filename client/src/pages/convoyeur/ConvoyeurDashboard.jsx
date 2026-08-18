@@ -227,7 +227,17 @@ export default function ConvoyeurDashboard() {
             return (
               <div
                 key={id}
-                className={`card transition-all ${
+                role="button"
+                tabIndex={0}
+                aria-expanded={isExpanded}
+                onClick={() => setExpanded(isExpanded ? null : id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setExpanded(isExpanded ? null : id);
+                  }
+                }}
+                className={`card transition-all cursor-pointer hover:border-dark-500 ${
                   isLivree
                     ? "border-dark-700 opacity-70"
                     : isEnCours
@@ -342,9 +352,13 @@ export default function ConvoyeurDashboard() {
                         </span>
                       )}
 
-                      {/* Expand detail */}
+                      {/* Expand detail — la carte entière est déjà cliquable,
+                          ce bouton reste comme repère visuel explicite. */}
                       <button
-                        onClick={() => setExpanded(isExpanded ? null : id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpanded(isExpanded ? null : id);
+                        }}
                         className="flex items-center gap-1 px-3 py-2 bg-dark-700 hover:bg-dark-600 text-dark-300 text-sm rounded-lg transition-colors ml-auto"
                       >
                         {isExpanded ? (
@@ -363,7 +377,12 @@ export default function ConvoyeurDashboard() {
 
                 {/* ── Expanded detail ──────────────────────── */}
                 {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-dark-700 space-y-4">
+                  <div
+                    className="mt-4 pt-4 border-t border-dark-700 space-y-4"
+                    /* Le clic sur un lien tel: ou une adresse ne doit pas
+                       refermer la carte que l'on vient d'ouvrir. */
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {/* Contacts */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {/* Départ */}
