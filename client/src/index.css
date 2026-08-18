@@ -414,42 +414,47 @@
 }
 
 /* ── Form fields ────────────────────────────────── */
-.input-field {
-  width: 100%;
-  border: 1.5px solid rgba(11, 29, 58, 0.15);
-  border-radius: 9px;
-  padding: 14px 16px;
-  font-family: "Inter", sans-serif;
-  font-size: 14.5px;
-  color: var(--graphite);
-  background: white;
-  transition: border-color 0.2s;
-  outline: none;
-}
-.input-field:focus {
-  border-color: var(--teal);
-}
-.input-field::placeholder {
-  color: var(--graphite-soft);
-}
+/* Dans @layer components pour que les utilitaires Tailwind (pl-10, pr-12…)
+   l'emportent : sans cela, le raccourci `padding` écrase la marge réservée
+   aux icônes placées en absolu dans le champ, qui chevauchent la saisie. */
+@layer components {
+  .input-field {
+    width: 100%;
+    border: 1.5px solid rgba(11, 29, 58, 0.15);
+    border-radius: 9px;
+    padding: 14px 16px;
+    font-family: "Inter", sans-serif;
+    font-size: 14.5px;
+    color: var(--graphite);
+    background: white;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .input-field:focus {
+    border-color: var(--teal);
+  }
+  .input-field::placeholder {
+    color: var(--graphite-soft);
+  }
 
-.input-dark {
-  width: 100%;
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
-  padding: 14px 16px;
-  font-family: "Inter", sans-serif;
-  font-size: 14.5px;
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.05);
-  transition: border-color 0.2s;
-  outline: none;
-}
-.input-dark:focus {
-  border-color: var(--amber);
-}
-.input-dark::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  .input-dark {
+    width: 100%;
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    padding: 14px 16px;
+    font-family: "Inter", sans-serif;
+    font-size: 14.5px;
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.05);
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .input-dark:focus {
+    border-color: var(--amber);
+  }
+  .input-dark::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
 }
 
 /* ── Cards ──────────────────────────────────────── */
