@@ -233,7 +233,7 @@ export default function NewMission() {
       const count = data.count || 1;
       toast.success(
         count > 1
-          ? `${count} missions créées ! Vous recevrez un devis pour chacune.`
+          ? `${count} missions créées ! Vous recevrez un devis comprenants toutes les missions.`
           : "Mission créée ! Vous recevrez un devis sous 24h.",
       );
       navigate("/client");

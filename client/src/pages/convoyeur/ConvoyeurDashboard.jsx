@@ -112,7 +112,7 @@ export default function ConvoyeurDashboard() {
         <button
           onClick={fetchMissions}
           disabled={loading}
-          className="btn-secondary flex items-center gap-2 mt-3 sm:mt-0"
+          className="btn-secondary w-full sm:w-auto justify-center mt-3 sm:mt-0"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           Actualiser
@@ -120,27 +120,27 @@ export default function ConvoyeurDashboard() {
       </div>
 
       {/* ── Stats rapides ──────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="card text-center py-3">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center mx-auto mb-2">
-            <Package size={16} className="text-cyan-400" />
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+        <div className="card text-center py-4 px-2">
+          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center mx-auto mb-2">
+            <Package size={18} className="text-cyan-400" />
           </div>
-          <p className="text-xl font-bold">{assignees.length}</p>
-          <p className="text-xs text-dark-400">À démarrer</p>
+          <p className="text-2xl font-bold leading-none">{assignees.length}</p>
+          <p className="text-xs text-dark-400 mt-1.5">À démarrer</p>
         </div>
-        <div className="card text-center py-3">
-          <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center mx-auto mb-2">
-            <Truck size={16} className="text-purple-400" />
+        <div className="card text-center py-4 px-2">
+          <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center mx-auto mb-2">
+            <Truck size={18} className="text-purple-400" />
           </div>
-          <p className="text-xl font-bold">{enCours.length}</p>
-          <p className="text-xs text-dark-400">En cours</p>
+          <p className="text-2xl font-bold leading-none">{enCours.length}</p>
+          <p className="text-xs text-dark-400 mt-1.5">En cours</p>
         </div>
-        <div className="card text-center py-3">
-          <div className="w-8 h-8 rounded-lg bg-accent-500/10 flex items-center justify-center mx-auto mb-2">
-            <Flag size={16} className="text-accent-400" />
+        <div className="card text-center py-4 px-2">
+          <div className="w-9 h-9 rounded-lg bg-accent-500/10 flex items-center justify-center mx-auto mb-2">
+            <Flag size={18} className="text-accent-400" />
           </div>
-          <p className="text-xl font-bold">{total}</p>
-          <p className="text-xs text-dark-400">Total</p>
+          <p className="text-2xl font-bold leading-none">{total}</p>
+          <p className="text-xs text-dark-400 mt-1.5">Total</p>
         </div>
       </div>
 
@@ -157,7 +157,7 @@ export default function ConvoyeurDashboard() {
           {/* Badge missions disponibles */}
           {missionsDispoCount > 0 && (
             <div className="card bg-gradient-to-r from-accent-900/50 to-dark-800/50 border-accent-500/30 p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="relative flex h-12 w-12 items-center justify-center">
                     <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75"></span>
@@ -178,7 +178,7 @@ export default function ConvoyeurDashboard() {
                 </div>
                 <a
                   href="/convoyeur/disponibles"
-                  className="btn-primary whitespace-nowrap"
+                  className="btn-primary w-full sm:w-auto justify-center whitespace-nowrap"
                 >
                   <ArrowRight size={16} />
                   Voir les missions
@@ -248,10 +248,10 @@ export default function ConvoyeurDashboard() {
                 }`}
               >
                 {/* Main row */}
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 sm:gap-4">
                   {/* Status indicator */}
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                       isLivree
                         ? "bg-emerald-500/10"
                         : isEnCours
@@ -273,7 +273,7 @@ export default function ConvoyeurDashboard() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     {/* Status + Date */}
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 mb-2.5">
                       <span
                         className={`badge text-xs ${STATUS_COLORS[mission.status] || "bg-dark-600 text-dark-300"}`}
                       >
@@ -281,7 +281,7 @@ export default function ConvoyeurDashboard() {
                           mission.status_name ||
                           mission.status}
                       </span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap ml-auto">
                         {mission.price > 0 && (
                           <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold bg-accent-500/10 text-accent-400 border border-accent-500/20">
                             {formatPrice(mission.price)}
@@ -303,25 +303,30 @@ export default function ConvoyeurDashboard() {
                       </div>
                     </div>
 
-                    {/* Route */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <MapPin size={16} className="text-green-400 shrink-0" />
-                      <p className="font-semibold text-dark-100 truncate">
-                        {mission.departure_address ||
-                          mission.departure?.address ||
-                          mission.address ||
-                          "—"}
-                      </p>
+                    {/* Route — empilé sur mobile : deux adresses côte à côte
+                        sur un écran étroit sont illisibles une fois tronquées. */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 mb-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin size={16} className="text-green-400 shrink-0" />
+                        <p className="font-semibold text-dark-100 text-sm sm:text-base truncate">
+                          {mission.departure_address ||
+                            mission.departure?.address ||
+                            mission.address ||
+                            "—"}
+                        </p>
+                      </div>
                       <ArrowRight
                         size={14}
-                        className="text-dark-500 shrink-0"
+                        className="text-dark-500 shrink-0 rotate-90 sm:rotate-0 ml-2 sm:ml-0"
                       />
-                      <MapPin size={16} className="text-red-400 shrink-0" />
-                      <p className="font-semibold text-dark-100 truncate">
-                        {mission.arrival_address ||
-                          mission.arrival?.address ||
-                          "—"}
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin size={16} className="text-red-400 shrink-0" />
+                        <p className="font-semibold text-dark-100 text-sm sm:text-base truncate">
+                          {mission.arrival_address ||
+                            mission.arrival?.address ||
+                            "—"}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Vehicle */}
@@ -344,7 +349,7 @@ export default function ConvoyeurDashboard() {
                         consulte : le statut redescend par la synchronisation. */}
                     <div className="flex items-center gap-2 flex-wrap">
                       {(isAssignee || isEnCours) && (
-                        <span className="flex items-center gap-1.5 px-3 py-2 bg-dark-700/40 border border-dark-600 text-dark-400 text-xs rounded-lg">
+                        <span className="flex items-center gap-1.5 px-3 py-2 bg-dark-700/40 border border-dark-600 text-dark-400 text-xs rounded-lg w-full sm:w-auto">
                           <Cloud size={13} className="text-orange-400" />
                           {isAssignee
                             ? "Démarrez cette mission depuis Kaze"
@@ -359,7 +364,7 @@ export default function ConvoyeurDashboard() {
                           e.stopPropagation();
                           setExpanded(isExpanded ? null : id);
                         }}
-                        className="flex items-center gap-1 px-3 py-2 bg-dark-700 hover:bg-dark-600 text-dark-300 text-sm rounded-lg transition-colors ml-auto"
+                        className="flex items-center justify-center gap-1 px-3 min-h-[44px] bg-dark-700 hover:bg-dark-600 text-dark-300 text-sm rounded-lg transition-colors w-full sm:w-auto sm:ml-auto"
                       >
                         {isExpanded ? (
                           <>
@@ -488,7 +493,7 @@ export default function ConvoyeurDashboard() {
                           Détail véhicule
                         </h4>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-2.5 text-xs">
                         {(mission.vehicle_brand || mission.vehicle?.brand) && (
                           <div>
                             <span className="text-dark-500">Marque</span>

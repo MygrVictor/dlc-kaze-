@@ -89,18 +89,18 @@ export default function MissionsDisponibles() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">
             Missions disponibles
           </h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-gray-400 mt-1 text-sm">
             Missions acceptées par les clients, en attente d'un convoyeur
           </p>
         </div>
         <button
           onClick={fetchMissions}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 px-4 min-h-[44px] bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors w-full sm:w-auto"
         >
           <RefreshCw className="w-4 h-4" />
           Rafraîchir
@@ -132,7 +132,7 @@ export default function MissionsDisponibles() {
           {missions.map((mission) => (
             <div
               key={mission.id}
-              className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-blue-500/50 transition-colors"
+              className="bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-700 hover:border-blue-500/50 transition-colors"
             >
               {/* Status */}
               <div className="flex items-center justify-between mb-4">
@@ -159,19 +159,19 @@ export default function MissionsDisponibles() {
               <div className="space-y-3 mb-4">
                 <div className="flex items-start gap-3">
                   <MapPin className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-500">Départ</p>
-                    <p className="text-white font-medium">
+                    <p className="text-white font-medium break-words">
                       {mission.departure_address}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <MapPin className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs text-gray-500">Arrivée</p>
-                    <p className="text-white font-medium">
-                      {mission.arrival_address}
+                    <p className="text-white font-medium break-words">
+                      {mission.arrival_address || "—"}
                     </p>
                   </div>
                 </div>
@@ -179,8 +179,8 @@ export default function MissionsDisponibles() {
 
               {/* Véhicule & Prix */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Car className="w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-2 text-sm min-w-0">
+                  <Car className="w-4 h-4 text-gray-400 shrink-0" />
                   <span className="text-gray-300 truncate">
                     {mission.vehicle_brand} {mission.vehicle_model}
                   </span>
