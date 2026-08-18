@@ -223,10 +223,53 @@ router.get("/missions", async (req, res, next) => {
     if (kaze_driver_id) {
       try {
         const kazeData = await kazeService.getMissionsByDriver(kaze_driver_id);
-        return res.json({
-          source: "kaze",
-          missions: kazeData.missions || kazeData,
+        const kazeMissions = kazeData.missions || kazeData;
+
+        // La liste Kaze /jobs est allégée : pas de steps détaillés (donc pas
+        // d'adresse de livraison) et aucune notion de rémunération convoyeur.
+        // On complète chaque mission avec sa jumelle en base, retrouvée par
+        // kaze_mission_id, pour que la carte affiche un trajet complet et le
+        // prix convoyeur. Les valeurs Kaze restent prioritaires quand elles
+        // existent : Kaze reste la source de vérité du terrain.
+        const kazeIds = kazeMissions
+          .map((m) => m.kaze_job_id)
+          .filter(Boolean)
+          .map(String);
+
+        let locales = new Map();
+        if (kazeIds.length > 0) {
+          const { rows } = await db.query(
+            `SELECT m.kaze_mission_id, m.id, m.departure_address, m.arrival_address,
+                    m.departure_date, m.arrival_date,
+                    m.vehicle_brand, m.vehicle_model, m.vehicle_plate,
+                    m.departure_contact_name, m.departure_contact_phone,
+                    m.arrival_contact_name, m.arrival_contact_phone,
+                    m.comments, m.price_convoyeur AS price,
+                    u.full_name AS client_name
+               FROM missions m
+               JOIN users u ON u.id = m.client_id
+              WHERE m.kaze_mission_id = ANY($1)`,
+            [kazeIds],
+          );
+          locales = new Map(rows.map((r) => [String(r.kaze_mission_id), r]));
+        }
+
+        const enrichies = kazeMissions.map((m) => {
+          const locale = locales.get(String(m.kaze_job_id));
+          if (!locale) return m;
+          const fusion = { ...m };
+          for (const [cle, valeur] of Object.entries(locale)) {
+            if (fusion[cle] === undefined || fusion[cle] === null) {
+              fusion[cle] = valeur;
+            }
+          }
+          // Le prix ne vient jamais de Kaze : on impose celui de la base.
+          fusion.price = locale.price;
+          fusion.mission_id = locale.id;
+          return fusion;
         });
+
+        return res.json({ source: "kaze", missions: enrichies });
       } catch (kazeErr) {
         console.error(
           "⚠️ Kaze indisponible, fallback sur la base locale :",
