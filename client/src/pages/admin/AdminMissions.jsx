@@ -32,6 +32,7 @@ import {
   Zap,
   RefreshCw,
   KeyRound,
+  Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -72,6 +73,7 @@ export default function AdminMissions() {
   const [priceConvoyeurValue, setPriceConvoyeurValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Kaze
   const [kazeJobs, setKazeJobs] = useState([]);
@@ -233,6 +235,31 @@ export default function AdminMissions() {
       toast.error(err.response?.data?.error || "Erreur.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Suppression définitive : réservée aux dossiers non démarrés (le
+  // serveur refuse le reste), typiquement un devis refusé sans suite.
+  const handleDeleteMission = async (mission) => {
+    const trajet = `${mission.departure_address?.split(",")[0]} → ${mission.arrival_address?.split(",")[0]}`;
+    if (
+      !window.confirm(
+        `Supprimer définitivement la mission « ${trajet} » ?\n\nCette action est irréversible.`,
+      )
+    )
+      return;
+
+    setDeletingId(mission.id);
+    try {
+      await api.delete(`/admin/missions/${mission.id}`);
+      toast.success("Mission supprimée.");
+      setMissions((prev) => prev.filter((m) => m.id !== mission.id));
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Erreur lors de la suppression.",
+      );
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -567,6 +594,23 @@ export default function AdminMissions() {
                           >
                             <Euro size={14} />
                             {m.status === "DEVIS_REFUSE" ? "Recoter" : "Coter"}
+                          </button>
+                        )}
+                      {m.source === "dlc" &&
+                        [
+                          "EN_ATTENTE_DE_COTATION",
+                          "DEVIS_PROPOSE",
+                          "DEVIS_REFUSE",
+                          "ANNULEE",
+                        ].includes(m.status) && (
+                          <button
+                            onClick={() => handleDeleteMission(m)}
+                            disabled={deletingId === m.id}
+                            title="Supprimer définitivement"
+                            className="text-xs py-1.5 px-3 flex items-center gap-1 rounded-lg text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 size={14} />
+                            {deletingId === m.id ? "…" : "Supprimer"}
                           </button>
                         )}
                       {canAssign(m) && (

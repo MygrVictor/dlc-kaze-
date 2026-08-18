@@ -855,6 +855,48 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// Supprimer une mission. Réservé aux dossiers qui n'ont pas
+// démarré : une mission assignée ou en cours doit être annulée,
+// pas effacée, afin de conserver la trace opérationnelle.
+// ─────────────────────────────────────────────────────────────
+router.delete("/missions/:id", async (req, res, next) => {
+  try {
+    const mission = await getMissionById(req.params.id);
+    if (!mission)
+      return res.status(404).json({ error: "Mission introuvable." });
+
+    const deletable = [
+      "EN_ATTENTE_DE_COTATION",
+      "DEVIS_PROPOSE",
+      "DEVIS_REFUSE",
+      "ANNULEE",
+    ];
+    if (!deletable.includes(mission.status)) {
+      return res.status(400).json({
+        error: `Impossible de supprimer une mission au statut "${mission.status}". Annulez-la d'abord.`,
+      });
+    }
+
+    if (mission.kaze_mission_id) {
+      try {
+        await kazeService.cancelMission(mission.kaze_mission_id);
+      } catch (kazeErr) {
+        console.error(
+          "⚠️ Kaze : échec de l'annulation avant suppression :",
+          kazeErr.message,
+        );
+      }
+    }
+
+    await db.query("DELETE FROM missions WHERE id = $1", [mission.id]);
+
+    res.json({ message: "Mission supprimée.", deletedId: mission.id });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
   try {
     const { convoyeurId, kazeDriverId } = req.body;

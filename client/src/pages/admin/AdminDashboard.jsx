@@ -43,6 +43,7 @@ import {
   Phone,
   User,
   Plus,
+  Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -305,6 +306,28 @@ export default function AdminDashboard() {
       fetchStats();
     } catch (err) {
       toast.error(err.response?.data?.error || "Erreur.");
+    }
+  };
+
+  // Suppression définitive : le serveur la restreint aux dossiers non
+  // démarrés (devis refusé sans suite, doublon, annulation définitive).
+  const handleSupprimer = async (mission) => {
+    const trajet = `${mission.departure_address?.split(",")[0]} → ${mission.arrival_address?.split(",")[0]}`;
+    if (
+      !confirm(
+        `Supprimer définitivement la mission « ${trajet} » ?\n\nCette action est irréversible.`,
+      )
+    )
+      return;
+    try {
+      await api.delete(`/admin/missions/${mission.id}`);
+      toast.success("Mission supprimée.");
+      fetchMissions();
+      fetchStats();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Erreur lors de la suppression.",
+      );
     }
   };
 
@@ -1780,6 +1803,7 @@ export default function AdminDashboard() {
           }}
           onSyncKaze={handleSyncKaze}
           onAnnuler={handleAnnuler}
+          onSupprimer={handleSupprimer}
           syncing={syncing}
           onCoter={(m) => {
             setPriceModal(m);
@@ -2383,6 +2407,7 @@ function MissionsTab({
   onRefresh,
   onSyncKaze,
   onAnnuler,
+  onSupprimer,
   syncing,
   onCoter,
   onAssign,
@@ -2753,6 +2778,20 @@ function MissionsTab({
                               {m.status === "DEVIS_REFUSE"
                                 ? "Recoter"
                                 : "Coter"}
+                            </button>
+                          )}
+                          {[
+                            "EN_ATTENTE_DE_COTATION",
+                            "DEVIS_PROPOSE",
+                            "DEVIS_REFUSE",
+                            "ANNULEE",
+                          ].includes(m.status) && (
+                            <button
+                              onClick={() => onSupprimer(m)}
+                              title="Supprimer définitivement"
+                              className="text-xs text-red-400 border border-red-500/20 hover:bg-red-500/10 px-2 py-1 rounded flex items-center gap-1 transition-colors"
+                            >
+                              <Trash2 size={11} /> Supprimer
                             </button>
                           )}
                           {["ACCEPTEE", "ASSIGNEE", "EN_COURS"].includes(
