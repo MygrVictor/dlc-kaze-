@@ -269,7 +269,15 @@ export default function DashboardLayout() {
             <Menu size={24} />
           </button>
           <span className="text-sm font-semibold">{roleLabel[user?.role]}</span>
-          <div className="w-6" />
+          {/* Le sélecteur de thème vit dans la barre latérale, invisible sur
+              mobile tant qu'on ne l'ouvre pas : on le redouble ici. */}
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            aria-label={theme === "dark" ? "Mode clair" : "Mode sombre"}
+            className="text-slate-400 hover:text-white p-1"
+          >
+            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
         </header>
 
         {/* Content */}
