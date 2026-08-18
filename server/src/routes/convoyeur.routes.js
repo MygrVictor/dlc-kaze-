@@ -239,12 +239,20 @@ router.get("/missions", async (req, res, next) => {
         let locales = new Map();
         if (kazeIds.length > 0) {
           const { rows } = await db.query(
-            `SELECT m.kaze_mission_id, m.id, m.departure_address, m.arrival_address,
-                    m.departure_date, m.arrival_date,
-                    m.vehicle_brand, m.vehicle_model, m.vehicle_plate,
+            `SELECT m.kaze_mission_id, m.id,
+                    m.departure_address, m.departure_date,
                     m.departure_contact_name, m.departure_contact_phone,
+                    m.departure_instructions,
+                    m.arrival_address, m.arrival_date,
                     m.arrival_contact_name, m.arrival_contact_phone,
-                    m.comments, m.price_convoyeur AS price,
+                    m.vehicle_brand, m.vehicle_model, m.vehicle_plate,
+                    m.vehicle_vin, m.vehicle_finish, m.vehicle_energy,
+                    m.vehicle_state, m.vehicle_keys, m.vehicle_year,
+                    m.vehicle_type, m.vehicle_toll_class, m.vehicle_utility_12m3,
+                    m.service_wash_exterior, m.service_clean_interior,
+                    m.service_refuel, m.service_handover,
+                    m.emergency_phone, m.comments,
+                    m.price_convoyeur AS price,
                     u.full_name AS client_name
                FROM missions m
                JOIN users u ON u.id = m.client_id
