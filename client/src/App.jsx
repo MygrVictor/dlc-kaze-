@@ -26,6 +26,7 @@ import AdminKaze from "./pages/admin/AdminKaze";
 // Pages Convoyeur
 import ConvoyeurDashboard from "./pages/convoyeur/ConvoyeurDashboard";
 import MissionsDisponibles from "./pages/convoyeur/MissionsDisponibles";
+import ConvoyeurHistorique from "./pages/convoyeur/ConvoyeurHistorique";
 import ConvoyeurProfil from "./pages/convoyeur/ConvoyeurProfil";
 // ── Route protégée ──────────────────────────────────────────
 function ProtectedRoute({ children, roles }) {
@@ -111,7 +112,8 @@ export default function App() {
         }
       >
         <Route index element={<ConvoyeurDashboard />} />
-        <Route path="disponibles" element={<MissionsDisponibles />} />
+        <Route path="disponibles" element={<MissionsDisponibles />} />{" "}
+        <Route path="historique" element={<ConvoyeurHistorique />} />{" "}
         <Route path="profil" element={<ConvoyeurProfil />} />
       </Route>
 

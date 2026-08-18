@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../../lib/api";
-import { STATUS_LABELS, STATUS_COLORS, formatDate } from "../../lib/utils";
+import {
+  STATUS_LABELS,
+  STATUS_COLORS,
+  formatDate,
+  formatPrice,
+} from "../../lib/utils";
 import {
   Truck,
   MapPin,
@@ -267,6 +272,11 @@ export default function ConvoyeurDashboard() {
                           mission.status}
                       </span>
                       <div className="flex items-center gap-2">
+                        {mission.price > 0 && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold bg-accent-500/10 text-accent-400 border border-accent-500/20">
+                            {formatPrice(mission.price)}
+                          </span>
+                        )}
                         {mission.kaze_job_id && (
                           <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
                             <Cloud size={10} /> Kaze

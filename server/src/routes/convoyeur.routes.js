@@ -269,6 +269,60 @@ router.get("/missions", async (req, res, next) => {
 });
 
 // ═════════════════════════════════════════════════════════════
+// Convoyeur : Historique de ses missions terminées
+//
+// Le planning ne montre que les 7 derniers jours pour rester
+// lisible. Cette route sert l'archive complète, paginée, afin que
+// le convoyeur puisse retrouver une course ancienne et vérifier sa
+// rémunération. Comme partout côté convoyeur, on expose
+// price_convoyeur sous le nom « price » : le prix client ne doit
+// jamais transiter jusqu'ici.
+// ═════════════════════════════════════════════════════════════
+router.get("/historique", async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 25, 100);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const offset = (page - 1) * limit;
+
+    const { rows: totalRows } = await db.query(
+      `SELECT COUNT(*)::int AS total,
+              COALESCE(SUM(price_convoyeur), 0)::float AS revenus
+         FROM missions
+        WHERE convoyeur_id = $1
+          AND status = 'LIVREE'`,
+      [req.user.id],
+    );
+
+    const { rows } = await db.query(
+      `SELECT m.id, m.vehicle_plate, m.vehicle_brand, m.vehicle_model,
+              m.departure_address, m.departure_date,
+              m.arrival_address, m.arrival_date,
+              m.price_convoyeur AS price, m.status,
+              m.kaze_mission_id, m.created_at, m.updated_at,
+              u.full_name AS client_name
+         FROM missions m
+         JOIN users u ON u.id = m.client_id
+        WHERE m.convoyeur_id = $1
+          AND m.status = 'LIVREE'
+        ORDER BY m.updated_at DESC
+        LIMIT $2 OFFSET $3`,
+      [req.user.id, limit, offset],
+    );
+
+    res.json({
+      missions: rows,
+      total: totalRows[0].total,
+      revenus: totalRows[0].revenus,
+      page,
+      limit,
+      hasMore: offset + rows.length < totalRows[0].total,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═════════════════════════════════════════════════════════════
 // Convoyeur : Compter les missions disponibles (pour badge)
 // ═════════════════════════════════════════════════════════════
 router.get("/missions-disponibles-count", async (req, res, next) => {
