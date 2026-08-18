@@ -876,16 +876,16 @@ describe("createMission", () => {
     expect(signature).toBe(true);
   });
 
-  it("regroupe les destinataires du récapitulatif sans doublon", async () => {
+  it("n'envoie le récapitulatif qu'au contact de livraison de la mission", async () => {
     await kaze.createMission({
       ...MISSION,
-      client_email: "meme@test.com",
-      arrival_contact_email: "meme@test.com",
+      client_email: "compte-client@test.com",
+      arrival_contact_email: "livraison@test.com",
     });
 
     const brut = JSON.stringify(client.post.mock.calls[0][1]);
-    expect(brut).toContain("meme@test.com");
-    expect(brut).not.toContain("meme@test.com,meme@test.com");
+    expect(brut).toContain("livraison@test.com");
+    expect(brut).not.toContain("compte-client@test.com");
   });
 
   it("avertit lorsqu'aucun email ne permet d'envoyer le récapitulatif", async () => {

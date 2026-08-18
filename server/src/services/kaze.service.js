@@ -1035,13 +1035,15 @@ const createMission = async (mission) => {
       // d'envoi du mail de clôture. Kaze envoie automatiquement le
       // récap (PDF + lien) quand cette étape est complétée : on n'a
       // donc rien à gérer côté DLC, il suffit de renseigner
-      // l'adresse du client à la création du job.
+      // l'adresse à la création du job.
+      //
+      // Un seul destinataire : le contact de livraison renseigné sur
+      // la mission, car c'est lui qui réceptionne le véhicule. On ne
+      // retombe sur l'email du compte client que si aucun contact
+      // d'arrivée n'a été saisi — sans quoi la même personne reçoit
+      // deux fois le récap.
       // ──────────────────────────────────────────────────────
-      const recapEmails = [
-        ...new Set(
-          [mission.client_email, mission.arrival_contact_email].filter(Boolean),
-        ),
-      ].join(",");
+      const recapEmails = mission.arrival_contact_email || mission.client_email;
 
       if (recapEmails) {
         const clientSignature = findNode(workflow, {
