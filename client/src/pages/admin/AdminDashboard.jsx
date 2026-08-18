@@ -559,6 +559,7 @@ export default function AdminDashboard() {
                   color: "text-yellow-400",
                   bg: "bg-yellow-500/10",
                   border: "border-yellow-500/20",
+                  status: "EN_ATTENTE_DE_COTATION",
                 },
                 {
                   label: "Devis proposés",
@@ -568,6 +569,7 @@ export default function AdminDashboard() {
                   color: "text-blue-400",
                   bg: "bg-blue-500/10",
                   border: "border-blue-500/20",
+                  status: "DEVIS_PROPOSE",
                 },
                 {
                   label: "Acceptées",
@@ -577,6 +579,7 @@ export default function AdminDashboard() {
                   color: "text-green-400",
                   bg: "bg-green-500/10",
                   border: "border-green-500/20",
+                  status: "ACCEPTEE",
                 },
                 {
                   label: "Assignées",
@@ -588,6 +591,7 @@ export default function AdminDashboard() {
                   color: "text-purple-400",
                   bg: "bg-purple-500/10",
                   border: "border-purple-500/20",
+                  status: "ASSIGNEE",
                 },
                 {
                   label: "Livrées",
@@ -597,29 +601,31 @@ export default function AdminDashboard() {
                   color: "text-emerald-400",
                   bg: "bg-emerald-500/10",
                   border: "border-emerald-500/20",
+                  status: "LIVREE",
                 },
               ].map((card, index) => (
                 <div key={card.label} className="relative">
-                  <div
-                    className={`card text-center py-3 px-2 sm:py-4 border ${card.border} ${card.bg.replace("/10", "/5")}`}
+                  {/* Chaque étape mène à la liste filtrée correspondante :
+                      un compteur qu'on ne peut pas ouvrir n'est qu'un chiffre. */}
+                  <Link
+                    to={`/admin/missions?status=${card.status}`}
+                    className={`card block text-center py-2.5 px-2 border ${card.border} ${card.bg.replace("/10", "/5")} hover:border-opacity-60 transition-all`}
                   >
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mx-auto mb-1.5 sm:mb-2`}
+                      className={`w-7 h-7 rounded-lg ${card.bg} ${card.color} flex items-center justify-center mx-auto mb-1.5`}
                     >
-                      <card.icon size={18} />
+                      <card.icon size={15} />
                     </div>
-                    <p className="text-2xl sm:text-3xl font-bold leading-none">
+                    <p className="text-xl font-bold leading-none">
                       {card.value}
                     </p>
-                    <p
-                      className={`text-xs sm:text-sm font-medium mt-1 ${card.color}`}
-                    >
+                    <p className={`text-[11px] font-medium mt-1 ${card.color}`}>
                       {card.label}
                     </p>
-                    <p className="text-[11px] text-dark-500 mt-0.5 hidden sm:block">
+                    <p className="text-[10px] text-dark-500 mt-0.5 hidden sm:block">
                       {card.sublabel}
                     </p>
-                  </div>
+                  </Link>
                   {/* Les flèches de progression n'ont de sens que sur une
                       seule ligne : sur mobile la grille passe à deux colonnes
                       et elles pointeraient dans le vide. */}
