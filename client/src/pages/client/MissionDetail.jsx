@@ -178,9 +178,9 @@ export default function MissionDetail() {
       {/* Accept bar */}
       {mission.status === "DEVIS_PROPOSE" && (
         <div className="card bg-gradient-to-r from-primary-900/50 to-dark-800/50 border-primary-500/30 mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Euro size={24} className="text-primary-400" />
+              <Euro size={24} className="text-primary-400 shrink-0" />
               <div>
                 <p className="text-sm text-dark-300">Devis proposé</p>
                 <p className="text-2xl font-bold">
@@ -188,28 +188,28 @@ export default function MissionDetail() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-3">
               <button
                 onClick={() => downloadDevis(id)}
-                className="btn-secondary flex items-center gap-2"
+                className="btn-secondary btn-sm"
               >
-                <Download size={18} />
+                <Download size={16} />
                 Voir le devis
               </button>
               <button
                 onClick={() => setRefusModal(true)}
-                className="btn-soft-warning"
+                className="btn-soft-warning btn-sm"
               >
-                <XCircle size={18} />
+                <XCircle size={16} />
                 Refuser
               </button>
               <button
                 onClick={handleAccept}
                 disabled={accepting}
-                className="btn-success"
+                className="btn-success col-span-2 sm:col-span-1"
               >
                 <CheckCircle2 size={18} />
-                {accepting ? "Validation…" : "Accepter la mission"}
+                {accepting ? "Validation…" : "Accepter"}
               </button>
             </div>
           </div>
@@ -243,9 +243,9 @@ export default function MissionDetail() {
           mission.status,
         ) && (
           <div className="card bg-gradient-to-r from-emerald-900/30 to-dark-800/50 border-emerald-500/20 mb-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <CheckCircle2 size={22} className="text-emerald-400" />
+                <CheckCircle2 size={22} className="text-emerald-400 shrink-0" />
                 <div>
                   <p className="text-sm text-dark-300">Devis accepté</p>
                   <p className="text-xl font-bold">
@@ -255,7 +255,7 @@ export default function MissionDetail() {
               </div>
               <button
                 onClick={() => downloadDevis(id)}
-                className="btn-primary flex items-center gap-2"
+                className="btn-primary w-full sm:w-auto"
               >
                 <Download size={18} />
                 Télécharger le devis PDF
@@ -531,8 +531,8 @@ export default function MissionDetail() {
 
       {/* Modal de refus du devis */}
       {refusModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="card w-full max-w-lg border-orange-500/30">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4 overflow-y-auto">
+          <div className="card w-full max-w-lg border-orange-500/30 rounded-b-none sm:rounded-2xl">
             <div className="flex items-center gap-2 mb-2">
               <XCircle size={20} className="text-orange-400" />
               <h3 className="text-lg font-semibold">Refuser le devis</h3>
@@ -558,7 +558,7 @@ export default function MissionDetail() {
             <p className="text-xs text-dark-500 mt-1">
               {refusMotif.trim().length}/2000 caractères
             </p>
-            <div className="flex justify-end gap-3 mt-5">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-5">
               <button
                 onClick={() => setRefusModal(false)}
                 className="btn-secondary"

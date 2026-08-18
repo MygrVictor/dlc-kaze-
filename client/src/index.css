@@ -109,74 +109,288 @@
   }
 }
 
-/* ── Buttons ────────────────────────────────────── */
-.btn-primary {
+/* ── Buttons ──────────────────────────────────────────
+   Tous les boutons partagent la même base : même hauteur,
+   même rayon, même graisse, même transition. Seules les
+   couleurs changent d'une variante à l'autre, ce qui donne
+   une famille visuellement cohérente.
+
+   Code couleur :
+     ambre  = action principale neutre (coter, créer, valider un formulaire)
+     vert   = action qui fait avancer le dossier (accepter, assigner)
+     orange = négatif mais réversible (refuser, annuler)
+     rouge  = destructeur et irréversible (supprimer)
+
+   Deux intensités : fond plein pour l'action décisive,
+   contour teinté (« soft ») pour les actions listées en tableau.
+   ──────────────────────────────────────────────────── */
+.btn-primary,
+.btn-outline,
+.btn-secondary,
+.btn-danger,
+.btn-success,
+.btn-accent,
+.btn-warning,
+.btn-soft-danger,
+.btn-soft-warning,
+.btn-soft-success,
+.btn-ghost {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  background: var(--amber);
-  color: var(--asphalt);
-  font-weight: 700;
-  font-size: 15px;
-  padding: 14px 28px;
-  border-radius: 6px;
-  border: 2px solid var(--amber);
-  transition: all 0.2s;
-  cursor: pointer;
-  text-decoration: none;
+  min-height: 44px; /* cible tactile confortable (recommandation WCAG) */
+  padding: 0 20px;
+  border-radius: 8px;
+  border: 1px solid transparent;
   font-family: "Inter", sans-serif;
-}
-.btn-primary:hover {
-  background: var(--amber-deep);
-  border-color: var(--amber-deep);
-  transform: translateY(-1px);
-}
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn-outline {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  color: white;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 14px 28px;
-  border-radius: 6px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.2s;
-  cursor: pointer;
-  text-decoration: none;
-  font-family: "Inter", sans-serif;
+/* Les icônes ne doivent jamais rétrécir dans un bouton étroit. */
+.btn-primary > svg,
+.btn-outline > svg,
+.btn-secondary > svg,
+.btn-danger > svg,
+.btn-success > svg,
+.btn-accent > svg,
+.btn-warning > svg,
+.btn-soft-danger > svg,
+.btn-soft-warning > svg,
+.btn-soft-success > svg,
+.btn-ghost > svg {
+  flex-shrink: 0;
 }
-.btn-outline:hover {
+
+/* ── Variantes pleines ── */
+.btn-primary {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--asphalt);
+  font-weight: 700;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--amber-deep);
+  border-color: var(--amber-deep);
+}
+
+.btn-success,
+.btn-accent {
+  background: #15803d;
+  border-color: #15803d;
+  color: white;
+}
+.btn-success:hover:not(:disabled),
+.btn-accent:hover:not(:disabled) {
+  background: #166534;
+  border-color: #166534;
+}
+
+.btn-warning {
+  background: #c2410c;
+  border-color: #c2410c;
+  color: white;
+}
+.btn-warning:hover:not(:disabled) {
+  background: #9a3412;
+  border-color: #9a3412;
+}
+
+.btn-danger {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  color: white;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+/* ── Variantes neutres ── */
+.btn-outline {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+.btn-outline:hover:not(:disabled) {
   border-color: white;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 600;
-  font-size: 14px;
-  padding: 12px 22px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  transition: all 0.2s;
-  cursor: pointer;
-  text-decoration: none;
-  font-family: "Inter", sans-serif;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.9);
 }
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.25);
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: rgba(255, 255, 255, 0.6);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+/* ── Variantes discrètes (contour teinté) ── */
+.btn-soft-success {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.35);
+  color: #4ade80;
+}
+.btn-soft-success:hover:not(:disabled) {
+  background: rgba(22, 163, 74, 0.18);
+  border-color: rgba(22, 163, 74, 0.6);
+}
+
+.btn-soft-warning {
+  background: rgba(234, 88, 12, 0.08);
+  border-color: rgba(234, 88, 12, 0.35);
+  color: #fb923c;
+}
+.btn-soft-warning:hover:not(:disabled) {
+  background: rgba(234, 88, 12, 0.18);
+  border-color: rgba(234, 88, 12, 0.6);
+}
+
+.btn-soft-danger {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #f87171;
+}
+.btn-soft-danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.18);
+  border-color: rgba(220, 38, 38, 0.6);
+}
+
+/* ── Tailles ── */
+.btn-xs {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  gap: 6px;
+  border-radius: 7px;
+}
+.btn-sm {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 13.5px;
+  gap: 7px;
+}
+.btn-lg {
+  min-height: 52px;
+  padding: 0 30px;
+  font-size: 16px;
+}
+/* Bouton carré pour une icône seule. */
+.btn-icon {
+  padding: 0;
+  width: 44px;
+}
+.btn-icon.btn-xs {
+  width: 34px;
+}
+.btn-icon.btn-sm {
+  width: 38px;
+}
+
+/* ── États communs ── */
+.btn-primary:disabled,
+.btn-outline:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-success:disabled,
+.btn-accent:disabled,
+.btn-warning:disabled,
+.btn-soft-danger:disabled,
+.btn-soft-warning:disabled,
+.btn-soft-success:disabled,
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn-primary:active:not(:disabled),
+.btn-outline:active:not(:disabled),
+.btn-secondary:active:not(:disabled),
+.btn-danger:active:not(:disabled),
+.btn-success:active:not(:disabled),
+.btn-accent:active:not(:disabled),
+.btn-warning:active:not(:disabled),
+.btn-soft-danger:active:not(:disabled),
+.btn-soft-warning:active:not(:disabled),
+.btn-soft-success:active:not(:disabled),
+.btn-ghost:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn-primary:focus-visible,
+.btn-outline:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible,
+.btn-success:focus-visible,
+.btn-accent:focus-visible,
+.btn-warning:focus-visible,
+.btn-soft-danger:focus-visible,
+.btn-soft-warning:focus-visible,
+.btn-soft-success:focus-visible,
+.btn-ghost:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* ── Mobile ──────────────────────────────────────────
+   Sur petit écran, les rangées d'actions passent en pleine
+   largeur et les libellés trop longs sont tronqués plutôt
+   que de déformer la mise en page.
+   ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .btn-primary,
+  .btn-outline,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success,
+  .btn-accent,
+  .btn-warning,
+  .btn-soft-danger,
+  .btn-soft-warning,
+  .btn-soft-success {
+    min-height: 46px;
+    font-size: 14px;
+    padding: 0 16px;
+  }
+  .btn-xs {
+    min-height: 36px;
+    font-size: 12.5px;
+  }
+  /* Groupe d'actions : empilé et pleine largeur sur mobile. */
+  .btn-group-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  .btn-group-stack > * {
+    width: 100%;
+  }
 }
 
 .btn-account {
@@ -197,160 +411,6 @@
 .btn-account:hover {
   border-color: var(--amber);
   color: var(--amber);
-}
-
-.btn-danger {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #dc2626;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
-  padding: 12px 22px;
-  border-radius: 6px;
-  border: none;
-  transition: all 0.2s;
-  cursor: pointer;
-  font-family: "Inter", sans-serif;
-}
-.btn-danger:hover {
-  background: #b91c1c;
-}
-
-/* ── Boutons sémantiques ────────────────────────────
-   Un code couleur unique dans toute l'application :
-     vert   = action qui valide / fait avancer le dossier
-     rouge  = action destructrice (suppression, annulation)
-     orange = refus ou mise en pause, réversible
-   Les variantes « soft » (fond teinté + bordure) servent aux
-   actions secondaires listées dans les tableaux, afin de ne pas
-   saturer l'écran de blocs pleins.
-   ────────────────────────────────────────────────── */
-.btn-success,
-.btn-accent {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #16a34a;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
-  padding: 12px 22px;
-  border-radius: 6px;
-  border: 1px solid #16a34a;
-  transition: all 0.2s;
-  cursor: pointer;
-  font-family: "Inter", sans-serif;
-  white-space: nowrap;
-}
-.btn-success:hover:not(:disabled),
-.btn-accent:hover:not(:disabled) {
-  background: #15803d;
-  border-color: #15803d;
-}
-
-.btn-warning {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #ea580c;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
-  padding: 12px 22px;
-  border-radius: 6px;
-  border: 1px solid #ea580c;
-  transition: all 0.2s;
-  cursor: pointer;
-  font-family: "Inter", sans-serif;
-  white-space: nowrap;
-}
-.btn-warning:hover:not(:disabled) {
-  background: #c2410c;
-  border-color: #c2410c;
-}
-
-/* Variantes discrètes : même sémantique, poids visuel réduit. */
-.btn-soft-danger,
-.btn-soft-warning,
-.btn-soft-success {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: transparent;
-  font-weight: 600;
-  font-size: 13px;
-  padding: 8px 14px;
-  border-radius: 6px;
-  transition: all 0.2s;
-  cursor: pointer;
-  font-family: "Inter", sans-serif;
-  white-space: nowrap;
-}
-.btn-soft-danger {
-  color: #dc2626;
-  border: 1px solid rgba(220, 38, 38, 0.3);
-}
-.btn-soft-danger:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.1);
-  border-color: rgba(220, 38, 38, 0.55);
-}
-.btn-soft-warning {
-  color: #ea580c;
-  border: 1px solid rgba(234, 88, 12, 0.3);
-}
-.btn-soft-warning:hover:not(:disabled) {
-  background: rgba(234, 88, 12, 0.1);
-  border-color: rgba(234, 88, 12, 0.55);
-}
-.btn-soft-success {
-  color: #16a34a;
-  border: 1px solid rgba(22, 163, 74, 0.3);
-}
-.btn-soft-success:hover:not(:disabled) {
-  background: rgba(22, 163, 74, 0.1);
-  border-color: rgba(22, 163, 74, 0.55);
-}
-
-/* Taille compacte pour les actions en ligne dans les tableaux. */
-.btn-xs {
-  font-size: 12px;
-  padding: 6px 10px;
-  gap: 5px;
-  border-radius: 5px;
-}
-
-/* État désactivé et focus clavier, communs à tous les boutons. */
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-outline:disabled,
-.btn-danger:disabled,
-.btn-success:disabled,
-.btn-accent:disabled,
-.btn-warning:disabled,
-.btn-soft-danger:disabled,
-.btn-soft-warning:disabled,
-.btn-soft-success:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-.btn-primary:focus-visible,
-.btn-secondary:focus-visible,
-.btn-outline:focus-visible,
-.btn-danger:focus-visible,
-.btn-success:focus-visible,
-.btn-accent:focus-visible,
-.btn-warning:focus-visible,
-.btn-soft-danger:focus-visible,
-.btn-soft-warning:focus-visible,
-.btn-soft-success:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 2px;
 }
 
 /* ── Form fields ────────────────────────────────── */
@@ -404,6 +464,53 @@
   }
 }
 
+/* Sur mobile, les cartes gagnent en surface utile en réduisant
+   les marges intérieures latérales. */
+@media (max-width: 640px) {
+  .card {
+    padding: 16px 14px;
+    border-radius: 12px;
+  }
+}
+
+@layer utilities {
+  /* Masque la barre de défilement des rangées de filtres, qui restent
+     défilables au doigt. */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  /* Indique visuellement qu'un tableau déborde horizontalement. */
+  .scroll-shadow-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background:
+      linear-gradient(to right, rgb(15 23 42) 30%, rgba(15, 23, 42, 0)),
+      linear-gradient(to left, rgb(15 23 42) 30%, rgba(15, 23, 42, 0)) 100% 0,
+      radial-gradient(
+        farthest-side at 0 50%,
+        rgba(0, 0, 0, 0.35),
+        rgba(0, 0, 0, 0)
+      ),
+      radial-gradient(
+          farthest-side at 100% 50%,
+          rgba(0, 0, 0, 0.35),
+          rgba(0, 0, 0, 0)
+        )
+        100% 0;
+    background-repeat: no-repeat;
+    background-size:
+      36px 100%,
+      36px 100%,
+      14px 100%,
+      14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+}
+
 /* Public pages: larger padding for standalone white cards */
 .contact-card,
 .login-card {
@@ -448,14 +555,13 @@
   color: #f1f5f9;
 }
 
-/* Boutons principaux : bleu du dashboard, pas l'ambre de la vitrine */
+/* Boutons principaux : bleu du dashboard, pas l'ambre de la vitrine.
+   Seules les couleurs changent : la géométrie (hauteur, rayon, graisse)
+   reste celle définie plus haut pour toute la famille de boutons. */
 .dash .btn-primary {
   background: #1d4ed8;
   border-color: #1d4ed8;
   color: #ffffff;
-  padding: 11px 20px;
-  font-size: 14px;
-  border-radius: 9px;
 }
 .dash .btn-primary:hover:not(:disabled) {
   background: #1e40af;

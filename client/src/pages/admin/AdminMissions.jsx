@@ -384,7 +384,7 @@ export default function AdminMissions() {
           <button
             key={s.value}
             onClick={() => setSourceFilter(s.value)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+            className={`shrink-0 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
               sourceFilter === s.value
                 ? s.value === "kaze"
                   ? "bg-orange-600 text-white"
@@ -408,12 +408,12 @@ export default function AdminMissions() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1 -mx-1 px-1 sm:flex-wrap sm:overflow-visible scrollbar-none">
         {statuses.map((s) => (
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`shrink-0 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
               statusFilter === s
                 ? "bg-primary-600 text-white"
                 : "bg-dark-800 text-dark-400 hover:text-white hover:bg-dark-700"
@@ -579,7 +579,7 @@ export default function AdminMissions() {
                     )}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <div className="flex items-center gap-2 justify-end">
+                    <div className="flex flex-wrap items-center gap-2 justify-end">
                       {m.source === "dlc" &&
                         ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
                           m.status,
