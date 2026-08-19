@@ -1414,6 +1414,16 @@ body:has(.theme-light) {
   background: #ffffff;
 }
 
+/* Le logo est dessiné en blanc : sur fond clair il devient invisible.
+   Plutôt que de le déformer avec un filtre (qui écraserait aussi l'ambre),
+   on lui redonne le fond sombre pour lequel il a été conçu. */
+.theme-light img[src*="logo"] {
+  background: var(--navy, #12141c);
+  border-radius: 12px;
+  padding: 8px 14px;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.12);
+}
+
 /* Les états de survol conçus pour le sombre éclaircissent le fond ;
    sur fond blanc, il faut au contraire l'assombrir légèrement. */
 .theme-light [class*="hover:bg-slate-800"]:hover,
