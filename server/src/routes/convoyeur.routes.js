@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const multer = require("multer");
 const db = require("../db");
 const {
@@ -20,19 +21,27 @@ const UPLOAD_DIR = path.join(__dirname, "../../../uploads/documents");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const ALLOWED_TYPES = ["permis", "carte_identite", "assurance", "domicile"];
-const ALLOWED_MIME = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/pdf",
-];
+
+// Le type MIME est déclaré par le client : il ne prouve rien. C'est
+// l'extension du fichier stocké qui décidera du Content-Type au moment
+// où on le servira, donc c'est elle qu'il faut contraindre. On associe
+// chaque MIME accepté à son extension canonique et on ignore le nom
+// d'origine : un « photo.png.html » ne peut plus se glisser au travers.
+const EXTENSIONS_AUTORISEES = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "application/pdf": ".pdf",
+};
+const ALLOWED_MIME = Object.keys(EXTENSIONS_AUTORISEES);
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeName = `${req.user.id}_${req.params.type}_${Date.now()}${ext}`;
-    cb(null, safeName);
+    // Nom imprévisible : sans cela, connaître l'identifiant du convoyeur
+    // et la date de dépôt suffirait à deviner l'URL du document.
+    const alea = crypto.randomBytes(16).toString("hex");
+    cb(null, `${alea}${EXTENSIONS_AUTORISEES[file.mimetype]}`);
   },
 });
 
@@ -469,6 +478,14 @@ router.get("/missions-disponibles", async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 router.post("/kaze-missions/:kazeJobId/prendre", async (req, res, next) => {
   try {
+    // Cet identifiant part construire une URL vers l'API Kaze : on le
+    // borne au format attendu plutôt que de faire confiance à l'appelant.
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(req.params.kazeJobId)) {
+      return res
+        .status(400)
+        .json({ error: "Identifiant de mission invalide." });
+    }
+
     if (!req.user.kaze_driver_id) {
       return res.status(400).json({
         error:

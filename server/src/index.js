@@ -200,17 +200,24 @@ app.use("/api/convoyeur", convoyeurRoutes);
 app.use("/api/v1", partnerRoutes);
 
 // ── Fichiers uploadés (documents convoyeurs) ─────────────────
-// Accessible via token en query param (?token=...) pour les liens directs
+//
+// Ces fichiers sont des pièces d'identité : leur accès est nominatif.
+// Un jeton valide ne suffit pas, on vérifie en base que le demandeur
+// est bien le propriétaire du document — ou un administrateur.
+//
+// Le jeton est accepté en query param car ces URL sont posées dans des
+// balises <img>/<a> qui ne peuvent pas porter d'en-tête Authorization.
 const uploadsDir = path.resolve(__dirname, "../../uploads");
 if (!require("fs").existsSync(uploadsDir))
   require("fs").mkdirSync(uploadsDir, { recursive: true });
 
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
+const db = require("./db");
 
 app.get("/uploads/*", async (req, res) => {
+  let charge;
   try {
-    // Accepter le token soit en header Authorization soit en query param
     let token = null;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -223,14 +230,45 @@ app.get("/uploads/*", async (req, res) => {
       return res.status(401).json({ error: "Token manquant." });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET);
+    charge = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: "Token invalide ou expiré." });
+  }
 
-    // Construire le chemin du fichier
-    const filePath = path.join(uploadsDir, req.params[0]);
+  try {
+    // Le jeton porte un rôle figé à l'émission : on relit l'utilisateur
+    // pour qu'un compte supprimé ou rétrogradé perde l'accès immédiatement.
+    const { rows: comptes } = await db.query(
+      "SELECT id, role FROM users WHERE id = $1",
+      [charge.userId],
+    );
+    const demandeur = comptes[0];
+    if (!demandeur) {
+      return res.status(401).json({ error: "Compte introuvable." });
+    }
 
-    // Vérifier que le fichier est bien dans uploadsDir (sécurité path traversal)
-    const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(path.resolve(uploadsDir))) {
+    const cheminRelatif = `/uploads/${req.params[0]}`;
+    const { rows: docs } = await db.query(
+      "SELECT convoyeur_id FROM convoyeur_documents WHERE file_path = $1",
+      [cheminRelatif],
+    );
+    const document = docs[0];
+
+    // Un fichier inconnu de la base n'a aucune raison d'être servi :
+    // on répond 404 plutôt que 403 pour ne rien révéler de son existence.
+    if (!document) {
+      return res.status(404).json({ error: "Fichier introuvable." });
+    }
+
+    const estProprietaire = document.convoyeur_id === demandeur.id;
+    if (!estProprietaire && demandeur.role !== "admin") {
+      return res.status(404).json({ error: "Fichier introuvable." });
+    }
+
+    const resolvedPath = path.resolve(path.join(uploadsDir, req.params[0]));
+    // Le séparateur final est indispensable : sans lui, un dossier voisin
+    // nommé « uploads_old » satisferait le test de préfixe.
+    if (!resolvedPath.startsWith(uploadsDir + path.sep)) {
       return res.status(403).json({ error: "Accès interdit." });
     }
 
@@ -238,9 +276,14 @@ app.get("/uploads/*", async (req, res) => {
       return res.status(404).json({ error: "Fichier introuvable." });
     }
 
+    // Ceinture et bretelles : même si un HTML parvenait à être stocké,
+    // le navigateur ne l'exécuterait pas sur notre origine.
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
     res.sendFile(resolvedPath);
-  } catch {
-    res.status(401).json({ error: "Token invalide ou expiré." });
+  } catch (err) {
+    console.error("Téléchargement de document impossible :", err.message);
+    res.status(500).json({ error: "Erreur serveur." });
   }
 });
 
