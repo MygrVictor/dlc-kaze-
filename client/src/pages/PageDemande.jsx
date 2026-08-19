@@ -78,6 +78,7 @@ export function Requis({ couleur }) {
  * @param {Function} props.valider               (form) => string|null
  * @param {Function} props.children              (outils) => JSX des champs
  * @param {Function} [props.preparer]            (form) => corps de requête
+ * @param {JSX}      [props.argumentaire]        colonne de gauche facultative
  */
 export default function PageDemande({
   type,
@@ -88,6 +89,7 @@ export default function PageDemande({
   confirmation,
   valider,
   preparer,
+  argumentaire,
   children,
 }) {
   const [form, setForm] = useState(FORMULAIRE_VIDE);
@@ -191,8 +193,30 @@ export default function PageDemande({
   }
 
   return (
-    <div style={cadre}>
-      <div style={{ width: "100%", maxWidth: 480 }}>
+    <div
+      style={{
+        ...cadre,
+        // Un argumentaire déplie la page : on cadre par le haut, sinon le
+        // contenu long serait centré verticalement et coupé.
+        alignItems: argumentaire ? "flex-start" : "center",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: argumentaire ? 1100 : 480,
+          display: "grid",
+          // Le formulaire garde une largeur fixe et lisible ; c'est
+          // l'argumentaire qui absorbe l'espace disponible.
+          gridTemplateColumns: argumentaire
+            ? "minmax(0, 1fr) minmax(360px, 460px)"
+            : "1fr",
+          gap: 40,
+          alignItems: "start",
+        }}
+        className={argumentaire ? "demande-grille" : undefined}
+      >
+        {argumentaire}
         <div className="card" style={{ padding: "40px 36px" }}>
           <div style={{ marginBottom: 24 }}>
             <h1

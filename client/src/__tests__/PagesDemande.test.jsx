@@ -47,6 +47,20 @@ describe("DevenirClientPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("expose l'argumentaire attendu par une entreprise", () => {
+    // Un décideur ne remplit pas un formulaire nu : responsabilité,
+    // suivi et engagement doivent être traités avant la demande.
+    afficher(DevenirClientPage);
+    expect(
+      screen.getByText(/véhicules assurés pendant tout le trajet/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/convoyeurs professionnels vérifiés/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/suivi en temps réel/i)).toBeInTheDocument();
+    expect(screen.getByText(/sans engagement/i)).toBeInTheDocument();
+  });
+
   it("exige le nom de la structure", async () => {
     afficher(DevenirClientPage);
     fireEvent.click(bouton());

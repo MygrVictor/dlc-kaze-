@@ -1078,6 +1078,18 @@
     padding: 32px 20px;
   }
 }
+
+/* ── Pages « Devenir client / convoyeur » ────────── */
+/* Argumentaire et formulaire côte à côte sur grand écran. En dessous de
+   960px la colonne de gauche perd toute lisibilité : on empile, en
+   plaçant le formulaire en second pour laisser l'argumentaire convaincre
+   avant de demander quoi que ce soit. */
+@media (max-width: 960px) {
+  .demande-grille {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+}
 .field {
   position: relative;
   margin-bottom: 22px;
