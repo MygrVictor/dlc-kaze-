@@ -1003,6 +1003,23 @@
   margin: 18px auto 40px;
   font-size: 16px;
 }
+/* Pendant clair, pour la section entreprises : même rythme vertical que
+   la section convoyeur, mais sur fond crème. */
+.section-claire {
+  text-align: center;
+}
+.section-claire .desc {
+  color: var(--graphite-soft);
+  max-width: 660px;
+  margin: 18px auto 40px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.section-claire .chip {
+  border-color: rgba(255, 209, 26, 0.55);
+  background: rgba(255, 209, 26, 0.14);
+  color: var(--navy);
+}
 .chip-row {
   display: flex;
   justify-content: center;

@@ -418,6 +418,84 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── CLIENT ─────────────────────────────────── */}
+      {/* Pendant clair de la section convoyeur : les deux publics ont
+          désormais chacun leur invitation, au lieu d'un unique appel qui
+          renvoyait tout le monde vers le même formulaire. */}
+      <section
+        id="entreprises"
+        className="section-claire"
+        style={{ background: "var(--cream)", padding: "96px 32px" }}
+      >
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <div className="waypoint-label reveal">
+            <div className="waypoint">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--amber)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ width: 22, height: 22 }}
+              >
+                <path d="M3 21h18M5 21V7l7-4 7 4v14" />
+                <path d="M9 21v-6h6v6" />
+              </svg>
+            </div>
+            <span className="tag">KM 180 · ENTREPRISES</span>
+          </div>
+          <h2
+            className="display reveal"
+            style={{
+              fontSize: "clamp(36px,5vw,54px)",
+              textTransform: "uppercase",
+              color: "var(--navy)",
+            }}
+          >
+            Devenez client
+          </h2>
+          <p className="desc reveal">
+            Concessions, garages, loueurs et gestionnaires de flotte : confiez
+            vos livraisons clients, transferts inter-sites et retours de
+            location à des convoyeurs vérifiés. Vos véhicules sont assurés
+            pendant tout le trajet et vous suivez chaque mission en direct.
+          </p>
+          <div className="chip-row reveal">
+            <div className="chip">VÉHICULES ASSURÉS</div>
+            <div className="chip">SUIVI EN TEMPS RÉEL</div>
+            <div className="chip">FACTURATION CENTRALISÉE</div>
+          </div>
+          <Link
+            to="/devenir-client"
+            className="btn-primary reveal"
+            style={{ display: "inline-flex" }}
+          >
+            Devenir client
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </Link>
+          <p
+            className="reveal"
+            style={{
+              fontSize: 13.5,
+              color: "var(--graphite-soft)",
+              marginTop: 14,
+            }}
+          >
+            Ouverture de compte gratuite et sans engagement.
+          </p>
+        </div>
+      </section>
+
       {/* ── CONVOYEUR (dark) ───────────────────────── */}
       <section id="convoy" className="convoy" style={{ padding: "96px 32px" }}>
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
