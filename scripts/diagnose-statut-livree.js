@@ -21,7 +21,8 @@ const SYNC_STATUS_MAP = {
   cancelled: "ANNULEE",
 };
 
-const titre = (t) => console.log(`\n\x1b[1m── ${t} ${"─".repeat(58 - t.length)}\x1b[0m`);
+const titre = (t) =>
+  console.log(`\n\x1b[1m── ${t} ${"─".repeat(58 - t.length)}\x1b[0m`);
 const ok = (m) => console.log(`  \x1b[32m✓\x1b[0m ${m}`);
 const alerte = (m) => console.log(`  \x1b[33m!\x1b[0m ${m}`);
 const echec = (m) => console.log(`  \x1b[31m✗\x1b[0m ${m}`);
@@ -61,7 +62,7 @@ async function main() {
   // retrouver la mission : elle est invisible aux deux mécanismes.
   titre("Missions actives non liées à Kaze");
   const { rows: orphelines } = await db.query(
-    `SELECT id, reference, status, created_at
+    `SELECT id, vehicle_plate, status, created_at
        FROM missions
       WHERE kaze_mission_id IS NULL
         AND status NOT IN ('LIVREE', 'ANNULEE', 'EN_ATTENTE_DE_COTATION', 'DEVIS_PROPOSE')
@@ -77,7 +78,7 @@ async function main() {
         `elles ne passeront JAMAIS en LIVREE.`,
     );
     for (const m of orphelines) {
-      console.log(`      ${m.reference || m.id} — ${m.status}`);
+      console.log(`      ${m.vehicle_plate || m.id} — ${m.status}`);
     }
   }
 
@@ -117,7 +118,7 @@ async function main() {
   // le maillon rompu.
   titre("Confrontation avec les statuts réels chez Kaze");
   const { rows: aVerifier } = await db.query(
-    `SELECT id, reference, status, kaze_mission_id
+    `SELECT id, vehicle_plate, status, kaze_mission_id
        FROM missions
       WHERE kaze_mission_id IS NOT NULL
         AND status NOT IN ('LIVREE', 'ANNULEE')
@@ -139,7 +140,7 @@ async function main() {
     try {
       const job = await kazeService.fetchJob(m.kaze_mission_id);
       const attendu = SYNC_STATUS_MAP[job.status];
-      const nom = m.reference || m.id;
+      const nom = m.vehicle_plate || m.id;
 
       if (attendu && attendu !== m.status) {
         decalages++;
@@ -147,12 +148,14 @@ async function main() {
           `${nom} : DLC dit "${m.status}", Kaze dit "${job.status}" → devrait être ${attendu}`,
         );
       } else {
-        console.log(`      ${nom} : ${m.status} (Kaze: ${job.status}) — cohérent`);
+        console.log(
+          `      ${nom} : ${m.status} (Kaze: ${job.status}) — cohérent`,
+        );
       }
     } catch (err) {
       introuvables++;
       alerte(
-        `${m.reference || m.id} : job Kaze ${m.kaze_mission_id} injoignable (${err.response?.status || err.message})`,
+        `${m.vehicle_plate || m.id} : job Kaze ${m.kaze_mission_id} injoignable (${err.response?.status || err.message})`,
       );
     }
   }
