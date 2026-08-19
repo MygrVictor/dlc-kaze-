@@ -8,7 +8,6 @@ import {
   UserPlus,
   Trash2,
   RefreshCw,
-  Check,
   MessageSquare,
   Copy,
 } from "lucide-react";
@@ -282,28 +281,29 @@ export default function AdminDemandes() {
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-dark-700">
-                  {d.status === "nouvelle" && (
-                    <button
-                      onClick={() => changerStatut(d.id, "contactee")}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors flex items-center gap-1.5"
-                    >
-                      <Check size={13} /> Marquer contactée
-                    </button>
-                  )}
+                  {/* Le statut est librement modifiable dans les deux sens :
+                      une demande archivée peut redevenir « nouvelle ». */}
+                  <label className="sr-only" htmlFor={`statut-${d.id}`}>
+                    Statut de la demande
+                  </label>
+                  <select
+                    id={`statut-${d.id}`}
+                    value={d.status}
+                    onChange={(e) => changerStatut(d.id, e.target.value)}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-dark-900 border border-dark-600 text-dark-100 hover:border-dark-500 focus:border-primary-500 focus:outline-none transition-colors cursor-pointer"
+                  >
+                    {Object.entries(STATUTS).map(([valeur, { label }]) => (
+                      <option key={valeur} value={valeur}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
                   {d.status !== "convertie" && (
                     <button
                       onClick={() => ouvrirConversion(d)}
                       className="text-xs px-2.5 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white transition-colors flex items-center gap-1.5"
                     >
                       <UserPlus size={13} /> Créer le compte
-                    </button>
-                  )}
-                  {d.status !== "archivee" && (
-                    <button
-                      onClick={() => changerStatut(d.id, "archivee")}
-                      className="text-xs px-2.5 py-1.5 rounded-lg bg-dark-700 text-dark-300 hover:bg-dark-600 transition-colors"
-                    >
-                      Archiver
                     </button>
                   )}
                   <button
