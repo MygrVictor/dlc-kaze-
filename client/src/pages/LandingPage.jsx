@@ -20,158 +20,6 @@ function useReveal() {
   }, []);
 }
 
-function ContactForm() {
-  const [profile, setProfile] = useState("client");
-  const [sent, setSent] = useState(false);
-
-  const isClient = profile === "client";
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        setSent(true);
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 12,
-          marginBottom: 18,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setProfile("client")}
-          style={{
-            padding: "11px 14px",
-            borderRadius: 10,
-            border: isClient
-              ? "2px solid var(--amber)"
-              : "2px solid rgba(11,29,58,0.14)",
-            background: isClient ? "rgba(255,209,26,0.14)" : "white",
-            color: isClient ? "var(--amber-deep)" : "var(--graphite-soft)",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Client
-        </button>
-        <button
-          type="button"
-          onClick={() => setProfile("convoyeur")}
-          style={{
-            padding: "11px 14px",
-            borderRadius: 10,
-            border: !isClient
-              ? "2px solid var(--teal)"
-              : "2px solid rgba(11,29,58,0.14)",
-            background: !isClient ? "rgba(14,116,144,0.12)" : "white",
-            color: !isClient ? "var(--teal)" : "var(--graphite-soft)",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          Convoyeur
-        </button>
-      </div>
-
-      <div className="field-row">
-        <div className="field">
-          <input type="text" placeholder=" " required />
-          <label>Nom complet*</label>
-        </div>
-        <div className="field">
-          <input type="email" placeholder=" " required />
-          <label>Email*</label>
-        </div>
-      </div>
-
-      <div className="field-row">
-        <div className="field">
-          <input type="tel" placeholder=" " required />
-          <label>Téléphone*</label>
-        </div>
-        <div className="field">
-          <input type="text" placeholder=" " required />
-          <label>Ville*</label>
-        </div>
-      </div>
-
-      {isClient ? (
-        <>
-          <div className="field-row">
-            <div className="field">
-              <input type="text" placeholder=" " required />
-              <label>Nom de la société*</label>
-            </div>
-            <div className="field">
-              <input type="text" placeholder=" " required />
-              <label>SIRET (optionnel)</label>
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="field-row">
-            <div className="field">
-              <input type="text" placeholder=" " required />
-              <label>Type de permis*</label>
-            </div>
-            <div className="field">
-              <input type="text" placeholder=" " required />
-              <label>Zone de mobilité*</label>
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <input type="number" min="0" placeholder=" " required />
-              <label>Années d'expérience*</label>
-            </div>
-            <div className="field">
-              <input type="text" placeholder=" " required />
-              <label>Disponibilité*</label>
-            </div>
-          </div>
-        </>
-      )}
-
-      <div className="field">
-        <textarea placeholder=" " required />
-        <label>
-          {isClient
-            ? "Décrivez votre besoin principal*"
-            : "Présentez votre profil convoyeur*"}
-        </label>
-      </div>
-      <button
-        type="submit"
-        className="btn-primary"
-        style={{ width: "100%", justifyContent: "center", marginTop: 8 }}
-      >
-        {sent ? (
-          "Informations envoyées ✓"
-        ) : (
-          <>
-            Envoyer mes informations
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </>
-        )}
-      </button>
-    </form>
-  );
-}
-
 export default function LandingPage() {
   useReveal();
 
@@ -280,7 +128,7 @@ export default function LandingPage() {
             assurance et délais maîtrisés.
           </p>
           <div className="hero-ctas reveal">
-            <Link to="/register" className="btn-primary">
+            <Link to="/devenir-client" className="btn-primary">
               Demander un devis
               <svg
                 width="16"
@@ -485,7 +333,7 @@ export default function LandingPage() {
                 professionnels indépendants pour rendre chaque trajet plus
                 simple, plus rapide et plus sûr.
               </p>
-              <Link to="/register" className="link-arrow">
+              <a href="#contact" className="link-arrow">
                 En savoir plus
                 <svg
                   viewBox="0 0 24 24"
@@ -496,7 +344,7 @@ export default function LandingPage() {
                 >
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
-              </Link>
+              </a>
             </div>
             <div className="reveal">
               <div className="feature-item">
@@ -618,7 +466,7 @@ export default function LandingPage() {
             <div className="chip">COUVERTURE EUROPE</div>
           </div>
           <Link
-            to="/register"
+            to="/devenir-convoyeur"
             className="btn-primary reveal"
             style={{ display: "inline-flex" }}
           >
@@ -749,10 +597,129 @@ export default function LandingPage() {
               Créez votre espace
             </h3>
             <p className="sub">
-              Laissez vos informations (Client ou Convoyeur), nous créons
-              ensuite votre accès et vos identifiants.
+              Client ou convoyeur, les informations demandées diffèrent :
+              choisissez votre parcours.
             </p>
-            <ContactForm />
+
+            {/* Deux portes distinctes plutôt qu'un formulaire à bascule :
+                un transporteur et un donneur d'ordre n'ont ni les mêmes
+                attentes ni les mêmes informations à fournir. */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 16,
+                marginTop: 24,
+              }}
+            >
+              <Link
+                to="/devenir-client"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  padding: "22px 20px",
+                  borderRadius: 14,
+                  border: "2px solid rgba(255,209,26,0.55)",
+                  background: "rgba(255,209,26,0.10)",
+                  textDecoration: "none",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    color: "var(--amber-deep)",
+                  }}
+                >
+                  ENTREPRISES
+                </span>
+                <span
+                  style={{
+                    fontSize: 19,
+                    fontWeight: 800,
+                    color: "var(--navy)",
+                  }}
+                >
+                  Je fais convoyer mes véhicules
+                </span>
+                <span
+                  style={{
+                    fontSize: 13.5,
+                    lineHeight: 1.5,
+                    color: "var(--graphite-soft)",
+                  }}
+                >
+                  Concessions, garages, loueurs : recevez une offre adaptée à
+                  vos volumes.
+                </span>
+                <span
+                  style={{
+                    marginTop: 6,
+                    fontWeight: 700,
+                    color: "var(--amber-deep)",
+                  }}
+                >
+                  Devenir client →
+                </span>
+              </Link>
+
+              <Link
+                to="/devenir-convoyeur"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  padding: "22px 20px",
+                  borderRadius: 14,
+                  border: "2px solid rgba(14,116,144,0.45)",
+                  background: "rgba(14,116,144,0.08)",
+                  textDecoration: "none",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    color: "var(--teal)",
+                  }}
+                >
+                  CONVOYEURS
+                </span>
+                <span
+                  style={{
+                    fontSize: 19,
+                    fontWeight: 800,
+                    color: "var(--navy)",
+                  }}
+                >
+                  Je conduis des missions
+                </span>
+                <span
+                  style={{
+                    fontSize: 13.5,
+                    lineHeight: 1.5,
+                    color: "var(--graphite-soft)",
+                  }}
+                >
+                  Accédez aux missions disponibles et choisissez celles qui vous
+                  conviennent.
+                </span>
+                <span
+                  style={{
+                    marginTop: 6,
+                    fontWeight: 700,
+                    color: "var(--teal)",
+                  }}
+                >
+                  Devenir convoyeur →
+                </span>
+              </Link>
+            </div>
           </div>
         </div>
       </section>

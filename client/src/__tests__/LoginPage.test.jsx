@@ -52,9 +52,13 @@ describe("LoginPage", () => {
     expect(screen.getByPlaceholderText("••••••••")).toBeInTheDocument();
   });
 
-  it("affiche le lien Faire une demande", () => {
+  it("oriente vers les deux parcours d'inscription", () => {
+    // Un seul lien « Faire une demande » obligeait le visiteur à choisir
+    // son profil une fois la page ouverte ; les deux parcours sont
+    // désormais annoncés dès la connexion.
     renderLoginPage();
-    expect(screen.getByText("Faire une demande")).toBeInTheDocument();
+    expect(screen.getByText("Devenir client")).toBeInTheDocument();
+    expect(screen.getByText("devenir convoyeur")).toBeInTheDocument();
   });
 
   it("appelle login avec email et mot de passe", async () => {

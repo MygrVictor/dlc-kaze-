@@ -168,10 +168,17 @@ export default function LoginPage() {
           >
             Pas encore de compte ?{" "}
             <Link
-              to="/register"
+              to="/devenir-client"
+              style={{ color: "var(--amber-deep)", fontWeight: 600 }}
+            >
+              Devenir client
+            </Link>{" "}
+            ou{" "}
+            <Link
+              to="/devenir-convoyeur"
               style={{ color: "var(--teal)", fontWeight: 600 }}
             >
-              Faire une demande
+              devenir convoyeur
             </Link>
           </p>
         </div>
