@@ -119,7 +119,177 @@ function FitBounds({ missions }) {
   return null;
 }
 
+// ── Regroupement des marqueurs superposés ───────────────────
+/**
+ * Plusieurs missions partent souvent du même point (une concession, un
+ * parking de flotte). Superposés, leurs marqueurs sont indiscernables et
+ * seul celui du dessus est cliquable.
+ *
+ * Le regroupement se fait en coordonnées écran, pas géographiques : deux
+ * points distants de 30 km se chevauchent au zoom 6 mais se séparent au
+ * zoom 12. Le seuil est donc exprimé en pixels et recalculé à chaque
+ * changement de zoom — les groupes se défont naturellement quand on
+ * approche.
+ */
+function MarqueursGroupes({ points }) {
+  const map = useMap();
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    const rafraichir = () => setVersion((v) => v + 1);
+    map.on("zoomend", rafraichir);
+    return () => map.off("zoomend", rafraichir);
+  }, [map]);
+
+  const groupes = useMemo(() => {
+    const SEUIL_PX = 34;
+    const resultat = [];
+    for (const point of points) {
+      const ecran = map.latLngToLayerPoint([point.lat, point.lng]);
+      const proche = resultat.find(
+        (g) =>
+          Math.abs(g.ecran.x - ecran.x) < SEUIL_PX &&
+          Math.abs(g.ecran.y - ecran.y) < SEUIL_PX,
+      );
+      if (proche) {
+        proche.points.push(point);
+      } else {
+        resultat.push({
+          ecran,
+          lat: point.lat,
+          lng: point.lng,
+          points: [point],
+        });
+      }
+    }
+    return resultat;
+    // `version` force le recalcul au zoom : les positions écran ont changé.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, map, version]);
+
+  return (
+    <>
+      {groupes.map((groupe) => {
+        const premier = groupe.points[0];
+
+        // Point isolé : marqueur normal, la lisibilité prime.
+        if (groupe.points.length === 1) {
+          return (
+            <CircleMarker
+              key={premier.key}
+              center={[premier.lat, premier.lng]}
+              radius={premier.radius}
+              pathOptions={premier.pathOptions}
+            >
+              <Popup>{premier.popup}</Popup>
+            </CircleMarker>
+          );
+        }
+
+        // Groupe : pastille chiffrée. La couleur retenue est celle de la
+        // phase la plus urgente présente, pour qu'un point « à traiter »
+        // ne se cache pas derrière une pile de missions livrées.
+        const priorite = ["A_TRAITER", "EN_COURS", "TERMINEE"];
+        const dominant = groupe.points.reduce((a, b) =>
+          priorite.indexOf(a.phase) <= priorite.indexOf(b.phase) ? a : b,
+        );
+        const taille = groupe.points.length > 9 ? 34 : 28;
+
+        return (
+          <Marker
+            key={`groupe-${groupe.lat}-${groupe.lng}-${groupe.points.length}`}
+            position={[groupe.lat, groupe.lng]}
+            icon={L.divIcon({
+              className: "",
+              html: `<div style="
+                width:${taille}px;height:${taille}px;
+                background:${dominant.color};
+                border:2px solid #0f172a;
+                border-radius:50%;
+                display:flex;align-items:center;justify-content:center;
+                color:#0f172a;font-weight:700;
+                font-size:${groupe.points.length > 99 ? 10 : 12}px;
+                font-family:Inter,sans-serif;
+                box-shadow:0 2px 6px rgba(0,0,0,.4);
+              ">${groupe.points.length}</div>`,
+              iconSize: [taille, taille],
+              iconAnchor: [taille / 2, taille / 2],
+            })}
+            eventHandlers={{
+              // Un clic rapproche : à ce zoom, le groupe se scinde de
+              // lui-même et chaque mission redevient accessible.
+              click: () =>
+                map.setView([groupe.lat, groupe.lng], map.getZoom() + 3),
+            }}
+          >
+            <Popup>
+              <div className="min-w-[210px] text-sm">
+                <p className="font-bold text-dark-900 mb-2">
+                  {groupe.points.length} missions à cet endroit
+                </p>
+                <ul className="space-y-1 max-h-52 overflow-y-auto">
+                  {groupe.points.map((p) => (
+                    <li
+                      key={p.key}
+                      className="flex items-center gap-2 text-xs text-dark-700"
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: p.color }}
+                      />
+                      <span className="truncate">{p.resume}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-dark-500 mt-2">
+                  Cliquez sur la pastille pour zoomer et les séparer.
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </>
+  );
+}
+
 // ── Popup content ───────────────────────────────────────────
+function KazePopup({ job }) {
+  return (
+    <div className="min-w-[200px] text-sm">
+      <div className="font-bold text-dark-900 mb-1 flex items-center gap-1.5">
+        <span style={{ color: "#f97316" }}>⚡</span> Kaze — {job.kaze_reference}
+      </div>
+      <p className="font-medium text-dark-800 mb-1">{job.title}</p>
+      <p className="text-dark-500 text-xs mb-2">{job.address}</p>
+      <div className="space-y-1 text-xs">
+        <div className="flex justify-between">
+          <span className="text-dark-500">Statut</span>
+          <span className="font-medium" style={{ color: "#f97316" }}>
+            {job.status_name}
+          </span>
+        </div>
+        {job.performer_name && (
+          <div className="flex justify-between">
+            <span className="text-dark-500">Convoyeur</span>
+            <span className="font-medium text-dark-800">
+              {job.performer_name}
+            </span>
+          </div>
+        )}
+        {job.due_date && (
+          <div className="flex justify-between">
+            <span className="text-dark-500">Date</span>
+            <span className="text-dark-700">
+              {new Date(job.due_date).toLocaleDateString("fr-FR")}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MissionPopup({ mission, type }) {
   const cfg = STATUS_CONFIG[mission.status] || {};
   const point = type === "departure" ? mission.departure : mission.arrival;
@@ -246,6 +416,84 @@ export default function AdminMap() {
     () => kazeJobs.filter((j) => activePhases.has(phaseDeKaze(j))),
     [kazeJobs, activePhases],
   );
+
+  // Liste unique et plate de tous les marqueurs. Le regroupement ne peut
+  // fonctionner que si DLC et Kaze partagent la même structure : deux
+  // missions superposées doivent se compter ensemble même si l'une vient
+  // de la base et l'autre de l'API.
+  const pointsCarte = useMemo(() => {
+    const points = [];
+
+    filtered.forEach((m) => {
+      const phase = phaseDeStatut(m.status);
+      const cfg = PHASES[phase];
+      const terminee = phase === "TERMINEE";
+      const resume = `${m.reference || m.id} — ${m.vehicle_model || "Mission"}`;
+
+      if (m.departure) {
+        points.push({
+          key: `dep-${m.id}`,
+          lat: m.departure.lat,
+          lng: m.departure.lng,
+          phase,
+          color: cfg.color,
+          resume: `Départ · ${resume}`,
+          radius: cfg.rayon,
+          pathOptions: {
+            fillColor: cfg.color,
+            fillOpacity: terminee ? 0.5 : 1,
+            color: "#0f172a",
+            weight: 2,
+          },
+          popup: <MissionPopup mission={m} type="departure" />,
+        });
+      }
+
+      if (m.arrival) {
+        points.push({
+          key: `arr-${m.id}`,
+          lat: m.arrival.lat,
+          lng: m.arrival.lng,
+          phase,
+          color: cfg.color,
+          resume: `Arrivée · ${resume}`,
+          radius: cfg.rayon - 2,
+          pathOptions: {
+            fillColor: "#ffffff",
+            fillOpacity: terminee ? 0.5 : 0.95,
+            color: cfg.color,
+            weight: 3,
+          },
+          popup: <MissionPopup mission={m} type="arrival" />,
+        });
+      }
+    });
+
+    if (showKazeJobs) {
+      kazeFiltres.forEach((job) => {
+        const phase = phaseDeKaze(job);
+        const cfg = PHASES[phase];
+        points.push({
+          key: `kaze-${job.kaze_job_id}`,
+          lat: job.latitude,
+          lng: job.longitude,
+          phase,
+          color: cfg.color,
+          resume: `Kaze · ${job.kaze_reference || job.title}`,
+          radius: cfg.rayon,
+          pathOptions: {
+            fillColor: cfg.color,
+            fillOpacity: 1,
+            color: "#f97316", // bordure orange = provenance Kaze
+            weight: 3,
+          },
+          popup: <KazePopup job={job} />,
+        });
+      });
+    }
+
+    return points;
+  }, [filtered, kazeFiltres, showKazeJobs]);
 
   // Compteurs par phase, toutes sources confondues : c'est le volume réel
   // à traiter qui compte, pas la provenance technique de la mission.
@@ -476,112 +724,14 @@ export default function AdminMap() {
                       }}
                     />
                   )}
-
-                  {/* Marqueur départ — disque plein */}
-                  {m.departure && (
-                    <CircleMarker
-                      center={[m.departure.lat, m.departure.lng]}
-                      radius={cfg.rayon}
-                      pathOptions={{
-                        fillColor: cfg.color,
-                        fillOpacity: terminee ? 0.5 : 1,
-                        color: "#0f172a",
-                        weight: 2,
-                      }}
-                    >
-                      <Popup>
-                        <MissionPopup mission={m} type="departure" />
-                      </Popup>
-                    </CircleMarker>
-                  )}
-
-                  {/* Marqueur arrivée — anneau creux, pour distinguer
-                      d'un coup d'œil le point de chute du point de départ */}
-                  {m.arrival && (
-                    <CircleMarker
-                      center={[m.arrival.lat, m.arrival.lng]}
-                      radius={cfg.rayon - 2}
-                      pathOptions={{
-                        fillColor: "#ffffff",
-                        fillOpacity: terminee ? 0.5 : 0.95,
-                        color: cfg.color,
-                        weight: 3,
-                      }}
-                    >
-                      <Popup>
-                        <MissionPopup mission={m} type="arrival" />
-                      </Popup>
-                    </CircleMarker>
-                  )}
                 </Fragment>
               );
             })}
 
-            {/* ── Missions Kaze ──────────────────────── */}
-            {/* Même code couleur que les missions DLC : ce qui compte est
-                l'avancement, pas la provenance. La bordure orange rappelle
-                seulement qu'elles viennent de Kaze. */}
-            {showKazeJobs &&
-              kazeFiltres.map((job) => {
-                const cfg = PHASES[phaseDeKaze(job)];
-                return (
-                  <CircleMarker
-                    key={`kaze-${job.kaze_job_id}`}
-                    center={[job.latitude, job.longitude]}
-                    radius={cfg.rayon}
-                    pathOptions={{
-                      fillColor: cfg.color,
-                      fillOpacity: 1,
-                      color: "#f97316",
-                      weight: 3,
-                    }}
-                  >
-                    <Popup>
-                      <div className="min-w-[200px] text-sm">
-                        <div className="font-bold text-dark-900 mb-1 flex items-center gap-1.5">
-                          <span style={{ color: "#f97316" }}>⚡</span> Kaze —{" "}
-                          {job.kaze_reference}
-                        </div>
-                        <p className="font-medium text-dark-800 mb-1">
-                          {job.title}
-                        </p>
-                        <p className="text-dark-500 text-xs mb-2">
-                          {job.address}
-                        </p>
-                        <div className="space-y-1 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-dark-500">Statut</span>
-                            <span
-                              className="font-medium"
-                              style={{ color: "#f97316" }}
-                            >
-                              {job.status_name}
-                            </span>
-                          </div>
-                          {job.performer_name && (
-                            <div className="flex justify-between">
-                              <span className="text-dark-500">Convoyeur</span>
-                              <span className="font-medium text-dark-800">
-                                {job.performer_name}
-                              </span>
-                            </div>
-                          )}
-                          {job.due_date && (
-                            <div className="flex justify-between">
-                              <span className="text-dark-500">Date</span>
-                              <span className="text-dark-700">
-                                {new Date(job.due_date).toLocaleDateString(
-                                  "fr-FR",
-                                )}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </Popup>
-                  </CircleMarker>
-                );
-              })}
+            {/* Tous les marqueurs passent par le regroupement : un point
+                isolé reste un disque classique, une pile devient une
+                pastille chiffrée qui se défait au zoom. */}
+            <MarqueursGroupes points={pointsCarte} />
 
             {/* ── Kaze drivers GPS (cyan pulsing markers) ── */}
             {showKazeDrivers &&
