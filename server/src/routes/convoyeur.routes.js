@@ -404,19 +404,20 @@ router.get("/missions-disponibles-count", async (req, res, next) => {
 router.get("/missions-disponibles", async (req, res, next) => {
   try {
     // ── 1. Missions DLC ──────────────────────────────────────
+    //
+    // Cette liste est visible par TOUS les convoyeurs, y compris ceux
+    // qui ne prendront jamais la mission. On s'en tient donc au strict
+    // nécessaire pour décider : trajet, dates, véhicule et rémunération.
+    // Les coordonnées du client et des contacts sur place ne sont
+    // révélées qu'une fois la mission attribuée (route /missions/:id).
     const { rows } = await db.query(
-      `SELECT m.id, m.client_id, m.vehicle_plate, m.vehicle_vin, m.vehicle_brand, m.vehicle_model,
-              m.vehicle_finish, m.vehicle_energy, m.vehicle_state, m.vehicle_keys, m.vehicle_year, m.vehicle_type,
-              m.vehicle_toll_class, m.vehicle_utility_12m3,
-              m.departure_address, m.departure_date, m.departure_contact_name, m.departure_contact_phone,
-              m.departure_instructions, m.arrival_address, m.arrival_date, m.arrival_contact_name,
-              m.arrival_contact_phone, m.service_wash_exterior, m.service_clean_interior, m.service_refuel,
-              m.service_handover,
-              m.emergency_phone, m.comments, m.price_convoyeur AS price, m.status, m.kaze_mission_id,
-              m.convoyeur_id, m.created_at, m.updated_at,
-              u.full_name AS client_name
+      `SELECT m.id, m.vehicle_brand, m.vehicle_model, m.vehicle_type,
+              m.vehicle_energy, m.vehicle_toll_class, m.vehicle_utility_12m3,
+              m.departure_address, m.departure_date,
+              m.arrival_address, m.arrival_date,
+              m.price_convoyeur AS price, m.status, m.kaze_mission_id,
+              m.created_at
        FROM missions m
-       JOIN users u ON u.id = m.client_id
        WHERE m.convoyeur_id IS NULL AND m.status = 'ACCEPTEE'
        ORDER BY m.departure_date ASC NULLS LAST, m.created_at DESC`,
     );
@@ -453,9 +454,7 @@ router.get("/missions-disponibles", async (req, res, next) => {
             arrival_date: local.end_date || null,
             vehicle_brand: null,
             vehicle_model: null,
-            vehicle_plate: null,
             price: null,
-            client_name: j.owner_name || j.target_name || null,
             created_at: local.created_at,
             updated_at: local.updated_at,
           };
