@@ -77,7 +77,6 @@ describe("RegisterPage", () => {
   });
 
   it("refuse un client sans email ni téléphone", async () => {
-    const toast = await import("react-hot-toast");
     renderRegisterPage();
 
     await userEvent.type(
@@ -86,8 +85,10 @@ describe("RegisterPage", () => {
     );
     fireEvent.click(bouton());
 
+    // Le message est ancré dans le formulaire, là où la correction se
+    // fait, plutôt que confié à un toast qui disparaît.
     await waitFor(() => {
-      expect(toast.default.error).toHaveBeenCalledWith(
+      expect(screen.getByRole("alert")).toHaveTextContent(
         "Indiquez au moins un email ou un numéro à rappeler.",
       );
     });
@@ -95,7 +96,6 @@ describe("RegisterPage", () => {
   });
 
   it("refuse un convoyeur avec un numéro fixe", async () => {
-    const toast = await import("react-hot-toast");
     renderRegisterPage();
     fireEvent.click(screen.getByText("Convoyeur"));
 
@@ -113,7 +113,7 @@ describe("RegisterPage", () => {
     fireEvent.click(bouton());
 
     await waitFor(() => {
-      expect(toast.default.error).toHaveBeenCalledWith(
+      expect(screen.getByRole("alert")).toHaveTextContent(
         "Numéro de mobile invalide. Format attendu : 06 12 34 56 78.",
       );
     });
