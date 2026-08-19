@@ -187,15 +187,20 @@ describe("syncKazeStatuses — résilience", () => {
     );
   });
 
-  it("reste silencieux sur les erreurs transitoires (rate limit)", async () => {
+  it("signale les erreurs transitoires sans interrompre la passe", async () => {
+    // Ces erreurs étaient autrefois tues « pour éviter le spam », si bien
+    // qu'une synchronisation entièrement en échec se concluait par un
+    // message de succès. Le silence coûtait plus cher que le bruit.
     mockMissionsLiees([
       { id: MISSION_ID, kaze_mission_id: "kz-1", status: "ASSIGNEE" },
     ]);
     kazeService.fetchJob.mockRejectedValue(httpError(429));
 
-    await syncService.syncKazeStatuses();
+    await expect(syncService.syncKazeStatuses()).resolves.toBeUndefined();
 
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/1 mission\(s\) non vérifiée\(s\)/),
+    );
     expect(console.error).not.toHaveBeenCalled();
   });
 

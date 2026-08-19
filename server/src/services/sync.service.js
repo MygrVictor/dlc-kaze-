@@ -126,7 +126,10 @@ async function syncKazeStatuses() {
     );
 
     if (linkedMissions.length === 0) {
-      return; // Rien à synchroniser
+      console.log(
+        "ℹ️  Sync Kaze: aucune mission liée en cours — rien à synchroniser.",
+      );
+      return;
     }
 
     // 2. Au-delà du seuil, un balayage groupé remplace les appels
@@ -163,6 +166,11 @@ async function syncKazeStatuses() {
     }
 
     let updated = 0;
+    let echecs = 0;
+
+    console.log(
+      `🔎 Sync Kaze: ${linkedMissions.length} mission(s) liée(s) à vérifier (mode unitaire).`,
+    );
 
     // 2. Pour chaque mission liée, vérifier le statut côté Kaze
     for (const mission of linkedMissions) {
@@ -182,16 +190,31 @@ async function syncKazeStatuses() {
           console.log(
             `🔄 Sync Kaze: mission ${mission.id} → ${newLocalStatus} (Kaze: ${kazeStatus})`,
           );
-        }
-      } catch (err) {
-        // Si erreur sur une mission (ex: job supprimé), on continue les autres
-        if (err.response?.status === 404) {
-          console.warn(
-            `⚠️  Sync: job Kaze ${mission.kaze_mission_id} introuvable (404), mission ${mission.id} ignorée`,
+        } else {
+          // Tracer aussi l'inaction : une passe qui ne dit rien est
+          // indiscernable d'une passe qui n'a pas tourné.
+          console.log(
+            `   ${mission.id} : ${mission.status} (Kaze: ${kazeStatus}) — inchangé`,
           );
         }
-        // Ne pas log les autres erreurs pour éviter le spam (ex: rate limit)
+      } catch (err) {
+        echecs++;
+        // Toute erreur était auparavant tue « pour éviter le spam », si
+        // bien qu'une synchronisation entièrement en échec se terminait
+        // par un ✅ trompeur. Le volume de missions ne justifie pas ce
+        // silence : mieux vaut un log de trop qu'une panne invisible.
+        console.warn(
+          `⚠️  Sync: mission ${mission.id} (job ${mission.kaze_mission_id}) — ${
+            err.response?.status === 404 ? "job introuvable (404)" : err.message
+          }`,
+        );
       }
+    }
+
+    if (echecs > 0) {
+      console.warn(
+        `⚠️  Sync Kaze: ${echecs} mission(s) non vérifiée(s) sur ${linkedMissions.length}.`,
+      );
     }
 
     if (updated > 0) {
