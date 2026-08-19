@@ -83,6 +83,73 @@ if (process.env.RESEND_API_KEY) {
   console.log("📧 Email en mode dev (console uniquement)");
 }
 
+// ── Filet de sécurité anti-injection ─────────────────────────
+//
+// Les gabarits ci-dessous assemblent du HTML à partir de données qui
+// proviennent parfois de l'extérieur (formulaires publics, API Kaze).
+// Le middleware `sanitizeInputs` nettoie déjà tout ce qui entre par
+// l'API, mais il ne couvre pas les données tierces. On enveloppe donc
+// le transporteur : quel que soit le gabarit, présent ou futur, aucun
+// script ni gestionnaire d'événement ne peut sortir d'ici.
+
+/** Échappe une valeur destinée à être insérée dans du HTML. */
+function echapperHtml(valeur) {
+  if (valeur === null || valeur === undefined) return "";
+  return String(valeur)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Retire du HTML assemblé tout ce qui pourrait être exécuté. */
+function purgerHtml(html) {
+  if (typeof html !== "string") return html;
+  return (
+    html
+      // Balises exécutables, contenu compris.
+      .replace(
+        /<\s*(script|iframe|object|embed|form)\b[\s\S]*?<\s*\/\s*\1\s*>/gi,
+        "",
+      )
+      .replace(
+        /<\s*(script|iframe|object|embed|form|meta\s+http-equiv)\b[^>]*>/gi,
+        "",
+      )
+      // Gestionnaires d'événements inline : onclick, onerror, onload…
+      .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+      // URL exécutables.
+      .replace(
+        /(href|src)\s*=\s*(["']?)\s*(?:javascript|vbscript|data):[^"'\s>]*\2/gi,
+        '$1="#"',
+      )
+  );
+}
+
+/**
+ * Neutralise l'injection d'en-têtes : un retour à la ligne glissé dans
+ * un sujet ou une adresse permettrait d'ajouter un Bcc arbitraire.
+ */
+function purgerEntete(valeur) {
+  if (typeof valeur !== "string") return valeur;
+  return valeur.replace(/[\r\n]+/g, " ").trim();
+}
+
+const transporteurBrut = transporter;
+transporter = {
+  sendMail: (options = {}) =>
+    transporteurBrut.sendMail({
+      ...options,
+      to: Array.isArray(options.to)
+        ? options.to.map(purgerEntete)
+        : purgerEntete(options.to),
+      replyTo: purgerEntete(options.replyTo),
+      subject: purgerEntete(options.subject),
+      html: purgerHtml(options.html),
+    }),
+};
+
 // ── Templates d'emails ───────────────────────────────────────
 
 function baseTemplate(content) {
@@ -528,4 +595,7 @@ module.exports = {
   notifyMissionACoter,
   notifyDevisRefuse,
   notifyDemandeRecue,
+  echapperHtml,
+  purgerHtml,
+  purgerEntete,
 };
