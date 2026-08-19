@@ -618,7 +618,16 @@ router.get("/missions/map", async (req, res, next) => {
 
     let kazeJobs = [];
     try {
-      const rawJobs = await kazeService.fetchRecentJobs(60);
+      // Profondeur d'historique demandée par le client. La valeur par
+      // défaut reste courte : afficher plusieurs milliers de missions
+      // closes noierait les missions actives et alourdirait la carte.
+      // Le plafond évite qu'un paramètre fantaisiste ne déclenche un
+      // balayage sans fin de l'API Kaze.
+      const jours = Math.min(
+        Math.max(Number(req.query.jours) || 60, 1),
+        3 * 365,
+      );
+      const rawJobs = await kazeService.fetchRecentJobs(jours);
       kazeJobs = (rawJobs || []).map(kazeService.kazeJobToLocal);
 
       // La liste `/jobs` de Kaze est allégée : ni coordonnées, ni workflow,
@@ -655,17 +664,28 @@ router.get("/missions/map", async (req, res, next) => {
         allAddresses.push(mission.departure_address);
       if (mission.arrival_address) allAddresses.push(mission.arrival_address);
     });
-    // Beaucoup de jobs Kaze n'ont pas de `work_order_address` : leur point
-    // de départ vit dans le workflow. Sans ce repli, ces missions restaient
-    // invisibles sur la carte faute d'adresse à géocoder.
+
+    // Les missions DLC sont peu nombreuses : on peut géocoder à la volée
+    // celles dont l'adresse est inconnue.
+    const coordsMap = await geocodingService.geocodeBatch(allAddresses);
+
+    // Les missions Kaze, elles, se comptent en milliers dès qu'on remonte
+    // l'historique. Nominatim n'acceptant qu'une requête par seconde, les
+    // géocoder ici ferait expirer la requête HTTP bien avant la fin. On se
+    // contente donc du cache, rempli hors ligne par
+    // scripts/backfill-geocodage-kaze.js : une adresse encore inconnue est
+    // simplement absente de la carte, sans pénaliser l'affichage.
+    // Beaucoup de jobs n'ont pas de `work_order_address` — leur point de
+    // départ vit dans le workflow, d'où le repli sur `departure_address`.
+    const adressesKaze = [];
     kazeJobs
       .filter((job) => !job.latitude)
       .forEach((job) => {
         const adresse = job.address || job.departure_address;
-        if (adresse) allAddresses.push(adresse);
+        if (adresse) adressesKaze.push(adresse);
       });
-
-    const coordsMap = await geocodingService.geocodeBatch(allAddresses);
+    const cacheKaze = await geocodingService.geocodeDepuisCache(adressesKaze);
+    for (const [adresse, coords] of cacheKaze) coordsMap.set(adresse, coords);
 
     const features = missions
       .map((mission) => {

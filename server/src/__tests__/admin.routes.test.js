@@ -46,6 +46,7 @@ jest.mock("../services/email.service", () => ({
 
 jest.mock("../services/geocoding.service", () => ({
   geocodeBatch: jest.fn(),
+  geocodeDepuisCache: jest.fn(),
 }));
 
 jest.mock("../services/devis.service", () => ({ generateDevisPDF: jest.fn() }));
@@ -1113,6 +1114,7 @@ describe("GET /api/admin/missions/map", () => {
   beforeEach(() => {
     kazeService.fetchRecentJobs.mockResolvedValue([]);
     geocodingService.geocodeBatch.mockResolvedValue(new Map());
+    geocodingService.geocodeDepuisCache.mockResolvedValue(new Map());
   });
 
   it("n'accepte que les statuts connus dans le filtre", async () => {
@@ -1184,7 +1186,10 @@ describe("GET /api/admin/missions/map", () => {
     expect(res.body.kazeMissions[0].latitude).toBe(43.6);
   });
 
-  it("géocode les jobs Kaze dépourvus de coordonnées", async () => {
+  it("positionne les jobs Kaze sans coordonnées depuis le cache de géocodage", async () => {
+    // Les missions Kaze ne sont jamais géocodées à la volée : l'historique
+    // se compte en milliers et Nominatim plafonne à une requête par
+    // seconde. Seul le cache, rempli hors ligne, est consulté.
     mockDb(ADMIN, () => ({ rows: [] }));
     kazeService.fetchRecentJobs.mockResolvedValue([{ id: "kz-1" }]);
     kazeService.kazeJobToLocal.mockReturnValue({
@@ -1192,7 +1197,7 @@ describe("GET /api/admin/missions/map", () => {
       latitude: null,
       address: "Bordeaux",
     });
-    geocodingService.geocodeBatch.mockResolvedValue(
+    geocodingService.geocodeDepuisCache.mockResolvedValue(
       new Map([["Bordeaux", { lat: 44.84, lng: -0.58 }]]),
     );
 
@@ -1202,6 +1207,9 @@ describe("GET /api/admin/missions/map", () => {
       latitude: 44.84,
       longitude: -0.58,
     });
+    expect(geocodingService.geocodeBatch).not.toHaveBeenCalledWith(
+      expect.arrayContaining(["Bordeaux"]),
+    );
   });
 
   it("rend la carte même si Kaze est indisponible", async () => {

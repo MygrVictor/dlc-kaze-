@@ -146,4 +146,55 @@ async function geocodeBatch(addresses) {
   return results;
 }
 
-module.exports = { geocode, geocodeBatch, ensureCacheTable };
+/**
+ * Lecture du cache seul, en une requête, sans jamais appeler Nominatim.
+ *
+ * `geocodeBatch` interroge Nominatim pour toute adresse inconnue, à raison
+ * d'une requête par seconde. Sur quelques dizaines d'adresses c'est
+ * acceptable ; sur un historique de plusieurs milliers de missions cela
+ * représente des heures, et la requête HTTP expire bien avant.
+ *
+ * Les gros volumes passent donc par ce chemin : la carte n'affiche que ce
+ * qui est déjà connu, et le remplissage du cache est confié à un traitement
+ * hors ligne (scripts/backfill-geocodage-kaze.js). Une adresse manquante
+ * fait défaut à l'affichage, elle ne ralentit jamais la page.
+ *
+ * @param {string[]} addresses
+ * @returns {Promise<Map<string, {lat: number, lng: number}>>}
+ */
+async function geocodeDepuisCache(addresses) {
+  const uniques = [...new Set(addresses.filter(Boolean).map((a) => a.trim()))];
+  const resultats = new Map();
+  if (uniques.length === 0) return resultats;
+
+  await ensureCacheTable();
+
+  // Le hash est calculé côté Node : l'index sur address_hash reste
+  // utilisable, ce qu'une normalisation en SQL empêcherait.
+  const parHash = new Map();
+  for (const adresse of uniques) parHash.set(hashAddress(adresse), adresse);
+
+  const { rows } = await db.query(
+    "SELECT address_hash, lat, lng FROM geocode_cache WHERE address_hash = ANY($1)",
+    [[...parHash.keys()]],
+  );
+
+  for (const ligne of rows) {
+    const adresse = parHash.get(ligne.address_hash);
+    if (adresse) {
+      resultats.set(adresse, {
+        lat: parseFloat(ligne.lat),
+        lng: parseFloat(ligne.lng),
+      });
+    }
+  }
+
+  return resultats;
+}
+
+module.exports = {
+  geocode,
+  geocodeBatch,
+  geocodeDepuisCache,
+  ensureCacheTable,
+};

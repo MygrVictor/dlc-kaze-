@@ -365,6 +365,11 @@ export default function AdminMap() {
   const [showKazeJobs, setShowKazeJobs] = useState(true);
   const [showKazeDrivers, setShowKazeDrivers] = useState(true);
 
+  // Profondeur d'historique Kaze. Volontairement courte par défaut :
+  // remonter plusieurs années rapatrie des milliers de missions closes
+  // qui noieraient les missions actives.
+  const [jours, setJours] = useState(60);
+
   const fetchMapData = async () => {
     setLoading(true);
     setError(null);
@@ -375,7 +380,7 @@ export default function AdminMap() {
       const statuses = Object.keys(STATUS_CONFIG).join(",");
       const [mapRes, kazeUsersRes] = await Promise.all([
         api
-          .get(`/admin/missions/map?statuses=${statuses}`)
+          .get(`/admin/missions/map?statuses=${statuses}&jours=${jours}`)
           .catch(() => ({ data: { missions: [], kazeMissions: [] } })),
         api.get("/admin/kaze/users").catch(() => ({ data: { data: [] } })),
       ]);
@@ -392,7 +397,7 @@ export default function AdminMap() {
 
   useEffect(() => {
     fetchMapData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [jours]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const togglePhase = (phase) => {
     setActivePhases((prev) => {
@@ -544,13 +549,30 @@ export default function AdminMap() {
             {filtered.length > 1 ? "s" : ""} sur {missions.length}
           </p>
         </div>
-        <button
-          onClick={fetchMapData}
-          className="flex items-center gap-2 bg-dark-700 hover:bg-dark-600 text-dark-200 px-4 py-2 rounded-lg text-sm transition-colors"
-        >
-          <RefreshCw size={16} />
-          Actualiser
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Profondeur d'historique Kaze. Les valeurs longues ne sont
+              utiles qu'à l'analyse : elles rapatrient des milliers de
+              missions closes. */}
+          <select
+            value={jours}
+            onChange={(e) => setJours(Number(e.target.value))}
+            className="bg-dark-700 text-dark-200 px-3 py-2 rounded-lg text-sm border border-dark-600"
+            title="Profondeur de l'historique Kaze"
+          >
+            <option value={30}>30 jours</option>
+            <option value={60}>60 jours</option>
+            <option value={180}>6 mois</option>
+            <option value={365}>1 an</option>
+            <option value={1095}>3 ans</option>
+          </select>
+          <button
+            onClick={fetchMapData}
+            className="flex items-center gap-2 bg-dark-700 hover:bg-dark-600 text-dark-200 px-4 py-2 rounded-lg text-sm transition-colors"
+          >
+            <RefreshCw size={16} />
+            Actualiser
+          </button>
+        </div>
       </div>
 
       {/* ── Filtres par phase ────────────────── */}
