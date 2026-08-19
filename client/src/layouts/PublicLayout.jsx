@@ -2,6 +2,15 @@ import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 
+const LIENS = [
+  { label: "Accueil", href: "/" },
+  { label: "Nos services", href: "#services" },
+  { label: "Qui sommes-nous", href: "#about" },
+  { label: "Devenir client", href: "#entreprises" },
+  { label: "Devenez convoyeur", href: "#convoy" },
+  { label: "Contact", href: "#contact" },
+];
+
 export default function PublicLayout() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -19,7 +28,7 @@ export default function PublicLayout() {
           borderBottom: "1px solid rgba(255,209,26,0.15)",
         }}
       >
-        <div className="mx-auto flex h-[72px] max-w-[1180px] items-center justify-between px-4 sm:px-6 lg:px-8 md:h-[88px]">
+        <div className="mx-auto flex h-[72px] w-full max-w-[1700px] items-center justify-between px-4 sm:px-8 lg:px-14 xl:px-20 md:h-[88px]">
           {/* Logo */}
           <Link
             to="/"
@@ -45,17 +54,11 @@ export default function PublicLayout() {
               style={{
                 listStyle: "none",
                 display: "flex",
-                gap: 24,
+                gap: 22,
                 alignItems: "center",
               }}
             >
-              {[
-                { label: "Accueil", href: "/" },
-                { label: "Nos services", href: "#services" },
-                { label: "Qui sommes-nous", href: "#about" },
-                { label: "Devenez convoyeur", href: "#convoy" },
-                { label: "Contact", href: "#contact" },
-              ].map((item) => (
+              {LIENS.map((item) => (
                 <li key={item.label}>
                   <a
                     href={item.href}
@@ -141,13 +144,7 @@ export default function PublicLayout() {
               gap: 4,
             }}
           >
-            {[
-              { label: "Accueil", href: "/" },
-              { label: "Nos services", href: "#services" },
-              { label: "Qui sommes-nous", href: "#about" },
-              { label: "Devenez convoyeur", href: "#convoy" },
-              { label: "Contact", href: "#contact" },
-            ].map((item) => (
+            {LIENS.map((item) => (
               <a
                 key={item.label}
                 href={item.href}
