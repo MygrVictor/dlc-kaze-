@@ -60,12 +60,15 @@ async function main() {
   // ── 2. Le lien avec Kaze ───────────────────────────────────
   // Sans kaze_mission_id, ni le webhook ni le polling ne peuvent
   // retrouver la mission : elle est invisible aux deux mécanismes.
+  // Les statuts antérieurs à l'acceptation sont exclus : le job Kaze
+  // n'est créé qu'au moment où le client accepte le devis, donc leur
+  // absence de lien est normale et non un symptôme.
   titre("Missions actives non liées à Kaze");
   const { rows: orphelines } = await db.query(
     `SELECT id, vehicle_plate, status, created_at
        FROM missions
       WHERE kaze_mission_id IS NULL
-        AND status NOT IN ('LIVREE', 'ANNULEE', 'EN_ATTENTE_DE_COTATION', 'DEVIS_PROPOSE')
+        AND status IN ('ACCEPTEE', 'ASSIGNEE', 'EN_COURS')
       ORDER BY created_at DESC
       LIMIT 10`,
   );
