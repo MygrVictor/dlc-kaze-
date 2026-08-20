@@ -69,6 +69,9 @@ export default function AdminMissions() {
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [searchQuery, setSearchQuery] = useState("");
   const [priceModal, setPriceModal] = useState(null);
+  // Le même panneau sert à consulter et à coter : en lecture seule on
+  // masque simplement le formulaire de prix.
+  const [lectureSeule, setLectureSeule] = useState(false);
   const [priceValue, setPriceValue] = useState("");
   const [priceConvoyeurValue, setPriceConvoyeurValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -129,16 +132,22 @@ export default function AdminMissions() {
   }, [fetchKazeJobs]);
 
   // ── Merge DLC + Kaze missions ──
+  //
+  // La base stocke `kaze_mission_id` en texte alors que l'API Kaze renvoie
+  // un nombre : sans normalisation, la comparaison échoue et une mission
+  // née chez DLC réapparaît une seconde fois, étiquetée « Kaze ».
   const linkedKazeIds = new Set(
-    missions.filter((m) => m.kaze_mission_id).map((m) => m.kaze_mission_id),
+    missions
+      .filter((m) => m.kaze_mission_id)
+      .map((m) => String(m.kaze_mission_id)),
   );
 
   const uniqueKazeJobs = Array.from(
-    new Map((kazeJobs || []).map((j) => [j.kaze_job_id, j])).values(),
+    new Map((kazeJobs || []).map((j) => [String(j.kaze_job_id), j])).values(),
   );
 
   const kazeOnlyJobs = uniqueKazeJobs
-    .filter((j) => !linkedKazeIds.has(j.kaze_job_id))
+    .filter((j) => !linkedKazeIds.has(String(j.kaze_job_id)))
     .map((j) => ({
       id: `kaze-${j.kaze_job_id}`,
       source: "kaze",
@@ -488,7 +497,11 @@ export default function AdminMissions() {
               {displayMissions.map((m) => (
                 <tr
                   key={m.id}
-                  className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors"
+                  onClick={() => {
+                    setPriceModal(m);
+                    setLectureSeule(true);
+                  }}
+                  className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors cursor-pointer"
                 >
                   <td className="py-3 px-4" data-label="Source">
                     {m.source === "kaze" ? (
@@ -580,7 +593,10 @@ export default function AdminMissions() {
                     )}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <div className="flex flex-wrap items-center gap-2 justify-end">
+                    <div
+                      className="flex flex-wrap items-center gap-2 justify-end"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {m.source === "dlc" &&
                         ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
                           m.status,
@@ -588,6 +604,7 @@ export default function AdminMissions() {
                           <button
                             onClick={() => {
                               setPriceModal(m);
+                              setLectureSeule(false);
                               setPriceValue("");
                               setPriceConvoyeurValue("");
                             }}
@@ -654,9 +671,13 @@ export default function AdminMissions() {
                   <FileText size={20} className="text-primary-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Coter la mission</h3>
+                  <h3 className="text-lg font-bold">
+                    {lectureSeule ? "Détail de la mission" : "Coter la mission"}
+                  </h3>
                   <p className="text-xs text-dark-400">
-                    Consultez le détail avant de proposer un prix
+                    {lectureSeule
+                      ? "Toutes les informations enregistrées"
+                      : "Consultez le détail avant de proposer un prix"}
                   </p>
                 </div>
               </div>
@@ -964,102 +985,126 @@ export default function AdminMissions() {
 
             {/* Sticky bottom: price input + buttons */}
             <div className="flex-shrink-0 border-t border-dark-600 pt-4">
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                  Prix client (€ TTC)
-                </label>
-                <div className="relative">
-                  <Euro
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={priceValue}
-                    onChange={(e) => setPriceValue(e.target.value)}
-                    className="input-field pl-10"
-                    placeholder="350.00"
-                    autoFocus
-                  />
-                </div>
-                <p className="text-xs text-dark-500 mt-1">
-                  Montant facturé au client
-                </p>
-              </div>
-
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                  Prix convoyeur (€ TTC)
-                </label>
-                <div className="relative">
-                  <Truck
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-accent-400"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={priceConvoyeurValue}
-                    onChange={(e) => setPriceConvoyeurValue(e.target.value)}
-                    className="input-field pl-10"
-                    placeholder="200.00"
-                  />
-                </div>
-                <p className="text-xs text-dark-500 mt-1">
-                  Rémunération du convoyeur
-                </p>
-              </div>
-
-              {priceValue &&
-                priceConvoyeurValue &&
-                Number(priceValue) > 0 &&
-                Number(priceConvoyeurValue) > 0 && (
-                  <div className="mb-4 p-3 bg-accent-500/5 border border-accent-500/10 rounded-lg flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-dark-400">Marge</p>
-                      <p className="text-lg font-bold text-accent-400">
-                        {formatPrice(
-                          Number(priceValue) - Number(priceConvoyeurValue),
-                        )}
-                        <span className="text-xs font-normal text-dark-500 ml-2">
-                          (
-                          {(
-                            (1 -
-                              Number(priceConvoyeurValue) /
-                                Number(priceValue)) *
-                            100
-                          ).toFixed(1)}
-                          %)
+              {lectureSeule ? (
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-dark-400">Prix client</p>
+                    <p className="text-lg font-bold">
+                      {priceModal.price ? formatPrice(priceModal.price) : "—"}
+                      {priceModal.price_convoyeur && (
+                        <span className="ml-3 text-sm font-normal text-accent-400">
+                          Convoyeur {formatPrice(priceModal.price_convoyeur)}
                         </span>
-                      </p>
-                    </div>
-                    {Number(priceConvoyeurValue) > Number(priceValue) && (
-                      <span className="text-red-400 text-xs flex items-center gap-1">
-                        <AlertTriangle size={12} /> Convoyeur &gt; Client
-                      </span>
-                    )}
+                      )}
+                    </p>
                   </div>
-                )}
+                  <button
+                    onClick={() => setPriceModal(null)}
+                    className="btn-secondary"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Prix client (€ TTC)
+                    </label>
+                    <div className="relative">
+                      <Euro
+                        size={18}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={priceValue}
+                        onChange={(e) => setPriceValue(e.target.value)}
+                        className="input-field pl-10"
+                        placeholder="350.00"
+                        autoFocus
+                      />
+                    </div>
+                    <p className="text-xs text-dark-500 mt-1">
+                      Montant facturé au client
+                    </p>
+                  </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setPriceModal(null)}
-                  className="btn-secondary flex-1"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleProposerPrix}
-                  disabled={submitting}
-                  className="btn-primary flex-1 flex items-center justify-center gap-2"
-                >
-                  <Send size={16} />
-                  {submitting ? "Envoi…" : "Proposer le devis"}
-                </button>
-              </div>
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Prix convoyeur (€ TTC)
+                    </label>
+                    <div className="relative">
+                      <Truck
+                        size={18}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-accent-400"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={priceConvoyeurValue}
+                        onChange={(e) => setPriceConvoyeurValue(e.target.value)}
+                        className="input-field pl-10"
+                        placeholder="200.00"
+                      />
+                    </div>
+                    <p className="text-xs text-dark-500 mt-1">
+                      Rémunération du convoyeur
+                    </p>
+                  </div>
+
+                  {priceValue &&
+                    priceConvoyeurValue &&
+                    Number(priceValue) > 0 &&
+                    Number(priceConvoyeurValue) > 0 && (
+                      <div className="mb-4 p-3 bg-accent-500/5 border border-accent-500/10 rounded-lg flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-dark-400">Marge</p>
+                          <p className="text-lg font-bold text-accent-400">
+                            {formatPrice(
+                              Number(priceValue) - Number(priceConvoyeurValue),
+                            )}
+                            <span className="text-xs font-normal text-dark-500 ml-2">
+                              (
+                              {(
+                                (1 -
+                                  Number(priceConvoyeurValue) /
+                                    Number(priceValue)) *
+                                100
+                              ).toFixed(1)}
+                              %)
+                            </span>
+                          </p>
+                        </div>
+                        {Number(priceConvoyeurValue) > Number(priceValue) && (
+                          <span className="text-red-400 text-xs flex items-center gap-1">
+                            <AlertTriangle size={12} /> Convoyeur &gt; Client
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setPriceModal(null)}
+                      className="btn-secondary flex-1"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={handleProposerPrix}
+                      disabled={submitting}
+                      className="btn-primary flex-1 flex items-center justify-center gap-2"
+                    >
+                      <Send size={16} />
+                      {submitting ? "Envoi…" : "Proposer le devis"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
