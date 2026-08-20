@@ -7,6 +7,15 @@
 
 const PDFDocument = require("pdfkit");
 
+// ─── Identité de l'émetteur ───────────────────────────────
+const SOCIETE = {
+  nom: "DLC DRIVE LINE CONNECT",
+  ville: "Angers",
+  siret: "982 423 113 00025",
+};
+
+const MENTIONS_LEGALES = `${SOCIETE.nom} — ${SOCIETE.ville} — SIRET : ${SOCIETE.siret}`;
+
 // ─── Couleurs ────────────────────────────────────────────────────
 const COLORS = {
   primary: "#6366f1", // indigo-500
@@ -487,11 +496,7 @@ function generateDevisPDF(mission, client) {
       50,
       y + 12,
     )
-    .text(
-      "DLC Kaze — Convoyage Automobile Professionnel — SIRET : XXX XXX XXX XXXXX",
-      50,
-      y + 24,
-    );
+    .text(MENTIONS_LEGALES, 50, y + 24);
 
   // ── FOOTER ────────────────────────────────────────────────────
   doc.rect(0, doc.page.height - 8, doc.page.width, 8).fill(COLORS.primary);
@@ -783,11 +788,7 @@ function generateDevisGroupePDF(missions, client) {
       50,
       y + 12,
     )
-    .text(
-      "DLC Kaze — Convoyage Automobile Professionnel — SIRET : XXX XXX XXX XXXXX",
-      50,
-      y + 24,
-    );
+    .text(MENTIONS_LEGALES, 50, y + 24);
 
   doc.rect(0, doc.page.height - 8, doc.page.width, 8).fill(COLORS.primary);
 
