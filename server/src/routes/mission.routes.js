@@ -9,6 +9,7 @@ const {
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
 const whatsappService = require("../services/whatsapp.service");
+const telegramService = require("../services/telegram.service");
 const {
   generateDevisPDF,
   generateDevisGroupePDF,
@@ -421,33 +422,50 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
       return { kazeMissionId };
     });
 
-    // 4. Notifier tous les convoyeurs (asynchrone, ne bloque pas la réponse)
+    // 4. Annoncer la mission aux convoyeurs (asynchrone, ne bloque pas
+    //    la réponse). Le canal par défaut est Telegram : une mission =
+    //    un message dans le salon commun, quel que soit le nombre de
+    //    convoyeurs. WhatsApp facturant chaque destinataire, il n'est
+    //    conservé qu'en repli, si aucun salon Telegram n'est configuré.
     try {
-      const { rows: convoyeurs } = await db.query(
-        "SELECT id, email, full_name, phone FROM users WHERE role = 'convoyeur'",
+      const { rows: fullMission } = await db.query(
+        "SELECT * FROM missions WHERE id = $1",
+        [req.body.missionId || req.params.id],
       );
-      if (convoyeurs.length > 0) {
-        // Récupérer la mission complète pour la notification
-        const { rows: fullMission } = await db.query(
-          "SELECT * FROM missions WHERE id = $1",
-          [req.body.missionId || req.params.id],
-        );
-        if (fullMission[0]) {
-          // Le numéro de téléphone est obligatoire pour les convoyeurs :
-          // la notification passe exclusivement par WhatsApp.
-          whatsappService
-            .notifierMissionDisponible(convoyeurs, fullMission[0])
+
+      if (fullMission[0]) {
+        const lienMission = process.env.CLIENT_URL
+          ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+          : undefined;
+
+        if (telegramService.actif) {
+          telegramService
+            .annoncerMissionDisponible(fullMission[0], lienMission)
             .catch((err) => {
               console.error(
-                "⚠️ Erreur lors de la notification des convoyeurs :",
+                "⚠️ Erreur lors de l'annonce Telegram :",
                 err.message,
               );
             });
+        } else {
+          const { rows: convoyeurs } = await db.query(
+            "SELECT id, email, full_name, phone FROM users WHERE role = 'convoyeur'",
+          );
+          if (convoyeurs.length > 0) {
+            whatsappService
+              .notifierMissionDisponible(convoyeurs, fullMission[0])
+              .catch((err) => {
+                console.error(
+                  "⚠️ Erreur lors de la notification des convoyeurs :",
+                  err.message,
+                );
+              });
+          }
         }
       }
     } catch (notifyErr) {
       console.error(
-        "⚠️ Erreur lors de la récupération des convoyeurs :",
+        "⚠️ Erreur lors de l'annonce de la mission :",
         notifyErr.message,
       );
     }

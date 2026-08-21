@@ -1021,6 +1021,10 @@ describe("POST /api/missions/:id/accepter", () => {
 
   it("récupère le téléphone des convoyeurs à notifier", async () => {
     mockDb(CLIENT, (sql) => {
+      // La mission doit exister : sans elle, il n'y a rien à annoncer
+      // et les convoyeurs ne sont plus interrogés inutilement.
+      if (/FROM missions WHERE id/i.test(sql))
+        return { rows: [{ id: MISSION_ID }] };
       if (/role = 'convoyeur'/i.test(sql)) return { rows: [] };
     });
     mockTransaction({
