@@ -108,6 +108,46 @@ async function appliquerTransitions(transitions) {
   return total;
 }
 
+// Clé arbitraire mais stable du verrou consultatif PostgreSQL. `isSyncing`
+// ne protège que le processus courant : le serveur web et le cron
+// `sync-once.js` sont deux processus distincts qui écriraient les mêmes
+// lignes. Le verrou, lui, est partagé par toute la base.
+const VERROU_SYNC = 4_073_219_001;
+
+/**
+ * Exécute `travail` seulement si aucune autre synchronisation ne tourne,
+ * tous processus confondus. Retourne `false` si le verrou est déjà pris.
+ *
+ * Le verrou est de portée transactionnelle : PostgreSQL le relâche à la
+ * fin de la transaction, y compris si le processus meurt en cours de
+ * route. Aucun risque de verrou orphelin.
+ */
+async function avecVerrouSync(travail) {
+  // Les tests unitaires ne simulent que `db.query` ; sans transaction
+  // disponible, on retombe sur la seule protection intra-processus.
+  if (typeof db.transaction !== "function") {
+    await travail();
+    return true;
+  }
+
+  return db.transaction(async (client) => {
+    const { rows } = await client.query(
+      "SELECT pg_try_advisory_xact_lock($1) AS obtenu",
+      [VERROU_SYNC],
+    );
+
+    if (!rows[0]?.obtenu) {
+      console.log(
+        "ℹ️  Sync Kaze: une autre synchronisation est déjà en cours — passe ignorée.",
+      );
+      return false;
+    }
+
+    await travail();
+    return true;
+  });
+}
+
 /**
  * Synchronise les statuts Kaze → DLC pour toutes les missions liées.
  */
@@ -115,6 +155,16 @@ async function syncKazeStatuses() {
   if (isSyncing) return; // Éviter les exécutions parallèles
   isSyncing = true;
 
+  try {
+    await avecVerrouSync(syncKazeStatusesInterne);
+  } catch (err) {
+    console.error("❌ Erreur sync Kaze:", err.message);
+  } finally {
+    isSyncing = false;
+  }
+}
+
+async function syncKazeStatusesInterne() {
   try {
     // 1. Récupérer toutes les missions DLC qui ont un kaze_mission_id
     //    et qui ne sont pas déjà terminées (LIVREE, ANNULEE)
@@ -224,8 +274,6 @@ async function syncKazeStatuses() {
     }
   } catch (err) {
     console.error("❌ Erreur sync Kaze:", err.message);
-  } finally {
-    isSyncing = false;
   }
 }
 

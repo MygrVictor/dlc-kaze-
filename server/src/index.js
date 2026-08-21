@@ -314,9 +314,13 @@ app.listen(PORT, () => {
 
   // Sync Kaze → DLC. Le polling interne suppose un processus permanent.
   // En hébergement mutualisé (Passenger endort l'application entre deux
-  // visites), on le désactive avec SYNC_INTERVAL_MS=0 et on confie la
-  // synchronisation au cron : scripts/sync-once.js.
-  const intervalle = Number(process.env.SYNC_INTERVAL_MS ?? 60_000);
+  // visites), le cron scripts/sync-once.js fait déjà le travail : garder
+  // en plus un polling toutes les 60 s multipliait par 6 le volume
+  // d'appels à l'API Kaze pour un résultat identique. En production, le
+  // polling est donc éteint par défaut ; SYNC_INTERVAL_MS permet de le
+  // rallumer si l'application migre un jour vers un processus permanent.
+  const defautIntervalle = process.env.NODE_ENV === "production" ? 0 : 60_000;
+  const intervalle = Number(process.env.SYNC_INTERVAL_MS ?? defautIntervalle);
 
   if (intervalle > 0) {
     startSync(intervalle);
