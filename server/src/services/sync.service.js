@@ -159,6 +159,12 @@ async function syncKazeStatuses() {
     await avecVerrouSync(syncKazeStatusesInterne);
   } catch (err) {
     console.error("❌ Erreur sync Kaze:", err.message);
+    // La sync tourne sans témoin humain : sans alerte, une panne de
+    // l'API Kaze passerait inaperçue jusqu'à ce qu'un client s'étonne
+    // que son statut ne bouge plus.
+    await require("./alerte.service")
+      .alerter({ contexte: "sync Kaze", erreur: err })
+      .catch(() => {});
   } finally {
     isSyncing = false;
   }

@@ -206,11 +206,25 @@ const attachAuditLog = (req, _res, next) => {
 
 // ─── 8. Protection contre les réponses trop verbeuses ────────
 // Empêche d'exposer des erreurs détaillées en production
-const safeErrorHandler = (err, _req, res, _next) => {
+const safeErrorHandler = (err, req, res, _next) => {
   console.error("💥 Erreur :", err.message || err);
+  if (err.stack) console.error(err.stack);
 
   const status = err.status || 500;
   const isDev = process.env.NODE_ENV === "development";
+
+  // Seules les 500 méritent une alerte : une 400 ou une 404 relève de
+  // l'usage normal et noierait les vrais incidents. Chargé ici plutôt
+  // qu'en tête de fichier pour éviter un cycle d'imports.
+  if (status >= 500) {
+    require("../services/alerte.service")
+      .alerter({
+        contexte: `${req.method} ${req.originalUrl || req.url}`,
+        erreur: err,
+        detail: req.user?.id ? `utilisateur ${req.user.id}` : undefined,
+      })
+      .catch(() => {});
+  }
 
   res.status(status).json({
     error:
