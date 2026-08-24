@@ -1,0 +1,79 @@
+# Intégration continue — DLC Kaze
+#
+# Vérifie chaque poussée et chaque proposition de fusion : tests serveur,
+# tests client, build de production et audit des dépendances.
+#
+# Les 861 tests serveur et 70 tests client n'avaient jusqu'ici aucun
+# déclencheur automatique : rien n'empêchait de pousser du code cassé.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Une poussée rapide annule la vérification précédente encore en cours :
+# seul l'état le plus récent de la branche mérite des minutes de calcul.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests et build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Node 22
+        uses: actions/setup-node@v4
+        with:
+          # Aligné sur la version de production (o2switch).
+          node-version: "22"
+          cache: npm
+
+      # `npm ci` installe les versions exactes du package-lock, sans jamais
+      # le modifier — c'est ce qui rend la vérification reproductible.
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Tests serveur
+        run: npm run test:server
+        env:
+          NODE_ENV: test
+
+      - name: Tests client
+        run: npm run test:client
+
+      # Un build qui casse ne se voit dans aucun test unitaire : import
+      # manquant, variable non définie, erreur de syntaxe JSX.
+      - name: Build de production
+        run: npm run build
+
+  audit:
+    name: Audit des dépendances
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # Seules les dépendances de production comptent : une faille dans un
+      # outil de développement n'est pas exposée aux utilisateurs.
+      #
+      # Ce travail est informatif — il signale sans bloquer. Trois failles
+      # connues subsistent aujourd'hui (path-to-regexp verrouillé par
+      # Express 4, react-router en attente de la v7) : les traiter exige
+      # des migrations majeures, et faire échouer la CI sur un problème
+      # sans correctif disponible reviendrait à apprendre à l'ignorer.
+      - name: Vulnérabilités connues
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
