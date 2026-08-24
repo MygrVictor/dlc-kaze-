@@ -1,9 +1,13 @@
 /**
  * Tests unitaires — geocoding.service
  *
- * Le service convertit une adresse en coordonnées via Nominatim, avec un
- * cache PostgreSQL et un rate-limit de 1,1 s imposé par l'usage gratuit
- * de l'API. Les appels réseau et l'horloge sont simulés.
+ * Le service convertit une adresse en coordonnées via la Base Adresse
+ * Nationale, avec repli sur Nominatim pour l'étranger et cache
+ * PostgreSQL. Les appels réseau et l'horloge sont simulés.
+ *
+ * Le point sensible couvert ici est l'ordre des fournisseurs : Nominatim
+ * interdit l'usage commercial systématique, il ne doit jamais redevenir
+ * le chemin principal.
  */
 jest.mock("axios", () => ({ get: jest.fn() }));
 jest.mock("../db", () => ({ query: jest.fn() }));
@@ -21,8 +25,20 @@ const db = require("../db");
  */
 let geocodingService;
 
-/** Réponse Nominatim minimale. */
+/** Réponse Nominatim minimale (repli). */
 const reponseNominatim = (lat, lon) => ({ data: [{ lat, lon }] });
+
+/** Réponse BAN minimale — GeoJSON, coordonnées en [lng, lat]. */
+const reponseBan = (lat, lng, score = 0.9) => ({
+  data: {
+    features: [
+      { geometry: { coordinates: [lng, lat] }, properties: { score } },
+    ],
+  },
+});
+
+/** Réponse BAN sans résultat. */
+const banVide = () => ({ data: { features: [] } });
 
 let consoleSpies;
 
@@ -144,78 +160,125 @@ describe("geocode — cache PostgreSQL", () => {
 });
 
 // ═════════════════════════════════════════════════════════════
-describe("geocode — appel Nominatim", () => {
-  it("retourne les coordonnées converties en nombres", async () => {
-    axios.get.mockResolvedValue(reponseNominatim("48.8566", "2.3522"));
+describe("geocode — appel à la Base Adresse Nationale", () => {
+  it("retourne les coordonnées issues du GeoJSON", async () => {
+    axios.get.mockResolvedValue(reponseBan(48.8566, 2.3522));
 
     const res = await avecTimers(geocodingService.geocode("Paris, France"));
 
+    // GeoJSON ordonne [lng, lat] : l'inversion est le piège classique.
     expect(res).toEqual({ lat: 48.8566, lng: 2.3522 });
   });
 
-  it("restreint la recherche aux pays desservis et à un seul résultat", async () => {
-    axios.get.mockResolvedValue(reponseNominatim("48.85", "2.35"));
+  it("interroge la BAN en premier, jamais Nominatim", async () => {
+    axios.get.mockResolvedValue(reponseBan(48.85, 2.35));
 
     await avecTimers(geocodingService.geocode("Paris, France"));
 
     const [url] = axios.get.mock.calls[0];
-    expect(url).toMatch(/limit=1/);
-    expect(url).toMatch(/countrycodes=fr,be,lu,ch,de,es,it,nl,pt,gb/);
+    expect(url).toContain("api-adresse.data.gouv.fr");
+    expect(axios.get).toHaveBeenCalledTimes(1);
   });
 
-  it("encode l'adresse dans l'URL", async () => {
-    axios.get.mockResolvedValue(reponseNominatim("48.85", "2.35"));
+  it("passe l'adresse en paramètre et borne le nombre de résultats", async () => {
+    axios.get.mockResolvedValue(reponseBan(48.85, 2.35));
 
     await avecTimers(geocodingService.geocode("10 rue de l'Église, Paris"));
 
-    expect(axios.get.mock.calls[0][0]).toContain(
-      encodeURIComponent("10 rue de l'Église, Paris"),
-    );
+    expect(axios.get.mock.calls[0][1]).toMatchObject({
+      params: { q: "10 rue de l'Église, Paris", limit: 1 },
+      timeout: 10000,
+    });
   });
 
-  it("s'identifie auprès de Nominatim et borne le délai d'attente", async () => {
-    axios.get.mockResolvedValue(reponseNominatim("48.85", "2.35"));
+  it("écarte une correspondance au score trop faible", async () => {
+    // La BAN répond toujours quelque chose : sans seuil, une saisie
+    // farfelue serait localisée au hasard.
+    axios.get
+      .mockResolvedValueOnce(reponseBan(48.85, 2.35, 0.1))
+      .mockResolvedValueOnce(reponseNominatim("47.21", "-1.55"));
 
-    await avecTimers(geocodingService.geocode("Paris, France"));
+    const res = await avecTimers(geocodingService.geocode("Zzz qqq vvv"));
 
-    expect(axios.get.mock.calls[0][1]).toMatchObject({
+    expect(res).toEqual({ lat: 47.21, lng: -1.55 });
+  });
+
+  it("ignore un résultat aux coordonnées inexploitables", async () => {
+    axios.get
+      .mockResolvedValueOnce({
+        data: { features: [{ geometry: {}, properties: { score: 0.9 } }] },
+      })
+      .mockResolvedValueOnce({ data: [] });
+
+    const res = await avecTimers(geocodingService.geocode("Paris, France"));
+
+    expect(res).toBeNull();
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+describe("geocode — repli Nominatim et échecs", () => {
+  it("court-circuite la BAN pour une adresse explicitement étrangère", async () => {
+    // La BAN répondrait « Grand-Place Bruxelles » par une voie française
+    // homonyme, au score indiscernable d'une vraie adresse.
+    axios.get.mockResolvedValueOnce(reponseNominatim("50.85", "4.35"));
+
+    const res = await avecTimers(
+      geocodingService.geocode("Grand-Place, Bruxelles, Belgique"),
+    );
+
+    expect(res).toEqual({ lat: 50.85, lng: 4.35 });
+    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(axios.get.mock.calls[0][0]).toContain("nominatim");
+  });
+
+  it("bascule sur Nominatim quand la BAN ne trouve rien", async () => {
+    axios.get
+      .mockResolvedValueOnce(banVide())
+      .mockResolvedValueOnce(reponseNominatim("50.85", "4.35"));
+
+    const res = await avecTimers(
+      geocodingService.geocode("Lieu introuvable 44000 Nantes"),
+    );
+
+    expect(res).toEqual({ lat: 50.85, lng: 4.35 });
+    expect(axios.get.mock.calls[1][0]).toContain("nominatim");
+  });
+
+  it("s'identifie auprès de Nominatim et restreint les pays", async () => {
+    axios.get
+      .mockResolvedValueOnce(banVide())
+      .mockResolvedValueOnce(reponseNominatim("50.85", "4.35"));
+
+    await avecTimers(geocodingService.geocode("Lieu introuvable 44000 Nantes"));
+
+    const [url, options] = axios.get.mock.calls[1];
+    expect(url).toMatch(/limit=1/);
+    expect(url).toMatch(/countrycodes=fr,be,lu,ch,de,es,it,nl,pt,gb/);
+    expect(options).toMatchObject({
       timeout: 10000,
       headers: expect.objectContaining({
         "User-Agent": expect.stringContaining("DLC-Kaze"),
       }),
     });
   });
-});
 
-// ═════════════════════════════════════════════════════════════
-describe("geocode — repli et échecs", () => {
-  it("réessaie sur les deux derniers mots quand l'adresse complète échoue", async () => {
+  it("bascule sur Nominatim si la BAN est injoignable", async () => {
+    // Une panne du service public ne doit pas priver l'application de
+    // géocodage.
     axios.get
-      .mockResolvedValueOnce({ data: [] })
-      .mockResolvedValueOnce(reponseNominatim("47.21", "-1.55"));
+      .mockRejectedValueOnce(new Error("ETIMEDOUT"))
+      .mockResolvedValueOnce(reponseNominatim("48.85", "2.35"));
 
-    const res = await avecTimers(
-      geocodingService.geocode("Lieu-dit introuvable 44000 Nantes"),
-    );
+    const res = await avecTimers(geocodingService.geocode("Paris, France"));
 
-    expect(res).toEqual({ lat: 47.21, lng: -1.55 });
-    expect(axios.get).toHaveBeenCalledTimes(2);
-    expect(axios.get.mock.calls[1][0]).toContain(
-      encodeURIComponent("44000 Nantes"),
-    );
+    expect(res).toEqual({ lat: 48.85, lng: 2.35 });
   });
 
-  it("ne tente pas de repli sur une adresse d'un seul mot", async () => {
-    axios.get.mockResolvedValue({ data: [] });
-
-    const res = await avecTimers(geocodingService.geocode("Zzzzzz"));
-
-    expect(res).toBeNull();
-    expect(axios.get).toHaveBeenCalledTimes(1);
-  });
-
-  it("retourne null quand le repli échoue aussi", async () => {
-    axios.get.mockResolvedValue({ data: [] });
+  it("retourne null quand les deux fournisseurs échouent", async () => {
+    axios.get
+      .mockResolvedValueOnce(banVide())
+      .mockResolvedValueOnce({ data: [] });
 
     const res = await avecTimers(
       geocodingService.geocode("Adresse totalement inconnue"),
@@ -227,20 +290,18 @@ describe("geocode — repli et échecs", () => {
     );
   });
 
-  it("retourne null si Nominatim est injoignable", async () => {
+  it("retourne null si les deux fournisseurs sont injoignables", async () => {
     axios.get.mockRejectedValue(new Error("ETIMEDOUT"));
 
     const res = await avecTimers(geocodingService.geocode("Paris, France"));
 
     expect(res).toBeNull();
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringMatching(/Erreur géocodage/),
-      "ETIMEDOUT",
-    );
   });
 
   it("ne met rien en cache lorsque le géocodage a échoué", async () => {
-    axios.get.mockResolvedValue({ data: [] });
+    axios.get
+      .mockResolvedValueOnce(banVide())
+      .mockResolvedValueOnce({ data: [] });
 
     await avecTimers(geocodingService.geocode("Adresse inconnue ici"));
 
@@ -256,8 +317,8 @@ describe("geocode — repli et échecs", () => {
 describe("geocodeBatch", () => {
   it("retourne une Map indexée par adresse", async () => {
     axios.get
-      .mockResolvedValueOnce(reponseNominatim("48.85", "2.35"))
-      .mockResolvedValueOnce(reponseNominatim("45.76", "4.83"));
+      .mockResolvedValueOnce(reponseBan(48.85, 2.35))
+      .mockResolvedValueOnce(reponseBan(45.76, 4.83));
 
     const res = await avecTimers(
       geocodingService.geocodeBatch(["Paris, France", "Lyon, France"]),
@@ -269,7 +330,7 @@ describe("geocodeBatch", () => {
   });
 
   it("dédoublonne les adresses avant de les géocoder", async () => {
-    axios.get.mockResolvedValue(reponseNominatim("48.85", "2.35"));
+    axios.get.mockResolvedValue(reponseBan(48.85, 2.35));
 
     await avecTimers(
       geocodingService.geocodeBatch([

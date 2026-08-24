@@ -603,6 +603,11 @@ router.get("/missions/map", async (req, res, next) => {
       : allowedStatuses;
 
     const placeholders = filterStatuses.map((_, i) => `$${i + 1}`).join(", ");
+    // Le nombre de missions affichables est borné : la carte devient
+    // illisible bien avant, et sans plafond la requête grossit avec tout
+    // l'historique — plusieurs milliers de lignes après un an d'activité
+    // soutenue, pour un rendu identique.
+    const PLAFOND_MISSIONS = 500;
     const { rows: missions } = await db.query(
       `SELECT m.id, m.status, m.departure_address, m.arrival_address, m.vehicle_brand, m.vehicle_model, m.vehicle_plate,
               m.departure_date, m.arrival_date, m.price,
@@ -612,7 +617,8 @@ router.get("/missions/map", async (req, res, next) => {
        JOIN users u ON u.id = m.client_id
        LEFT JOIN users c ON c.id = m.convoyeur_id
        WHERE m.status IN (${placeholders})
-       ORDER BY m.created_at DESC`,
+       ORDER BY m.created_at DESC
+       LIMIT ${PLAFOND_MISSIONS}`,
       filterStatuses,
     );
 
@@ -665,16 +671,17 @@ router.get("/missions/map", async (req, res, next) => {
       if (mission.arrival_address) allAddresses.push(mission.arrival_address);
     });
 
-    // Les missions DLC sont peu nombreuses : on peut géocoder à la volée
-    // celles dont l'adresse est inconnue.
-    const coordsMap = await geocodingService.geocodeBatch(allAddresses);
+    // Le géocodage à la volée était tenable tant que les missions se
+    // comptaient en dizaines. Au-delà, chaque adresse inconnue ajoute un
+    // aller-retour réseau à la construction de la carte : quelques
+    // centaines suffisent à faire expirer la requête HTTP. On ne lit donc
+    // que le cache, alimenté à la création des missions et, pour le
+    // rattrapage, par scripts/backfill-geocodage-kaze.js. Une adresse
+    // encore inconnue manque à la carte sans jamais la ralentir.
+    const coordsMap = await geocodingService.geocodeDepuisCache(allAddresses);
 
-    // Les missions Kaze, elles, se comptent en milliers dès qu'on remonte
-    // l'historique. Nominatim n'acceptant qu'une requête par seconde, les
-    // géocoder ici ferait expirer la requête HTTP bien avant la fin. On se
-    // contente donc du cache, rempli hors ligne par
-    // scripts/backfill-geocodage-kaze.js : une adresse encore inconnue est
-    // simplement absente de la carte, sans pénaliser l'affichage.
+    // Même principe pour les jobs Kaze, qui se comptent en milliers dès
+    // qu'on remonte l'historique.
     // Beaucoup de jobs n'ont pas de `work_order_address` — leur point de
     // départ vit dans le workflow, d'où le repli sur `departure_address`.
     const adressesKaze = [];

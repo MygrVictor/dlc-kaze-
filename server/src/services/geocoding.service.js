@@ -1,24 +1,62 @@
 /**
  * Service de géocodage — convertit les adresses en coordonnées GPS.
  *
- * Utilise OpenStreetMap Nominatim (gratuit, pas de clé API).
- * Les résultats sont mis en cache en base PostgreSQL pour :
- *  - éviter de re-géocoder la même adresse
- *  - respecter le rate-limit Nominatim (1 req/sec)
+ * ── Pourquoi deux fournisseurs ─────────────────────────────────
+ * La Base Adresse Nationale (api-adresse.data.gouv.fr) est le service
+ * officiel français : gratuit, sans clé, sans limite de débit pour un
+ * usage raisonnable, et explicitement ouvert au commercial. Elle est
+ * aussi nettement plus précise que Nominatim sur les adresses
+ * françaises, qui représentent la quasi-totalité des convoyages.
+ *
+ * Nominatim reste en repli pour les rares trajets hors de France. Son
+ * usage systématique par un service commercial est interdit par la
+ * politique d'OpenStreetMap et expose à un blocage d'IP : il ne doit
+ * donc jamais redevenir le chemin principal.
+ *
+ * Les résultats sont mis en cache en base PostgreSQL pour éviter de
+ * re-géocoder une adresse déjà connue.
  *
  * ┌─────────────────────────────────────────────────┐
  * │  geocode("12 rue de Paris, Lyon")               │
  * │    → { lat: 45.764, lng: 4.8357 }               │
  * │                                                   │
  * │  1. Cherche en cache DB (geocode_cache)          │
- * │  2. Sinon → appel Nominatim + stockage cache     │
+ * │  2. Sinon → BAN, puis Nominatim si échec         │
+ * │  3. Stocke le résultat en cache                  │
  * └─────────────────────────────────────────────────┘
  */
 
 const axios = require("axios");
 const db = require("../db");
 
-// ── Rate limiter simple (1 req / 1.1s pour Nominatim) ────────
+const URL_BAN = "https://api-adresse.data.gouv.fr/search/";
+const URL_NOMINATIM = "https://nominatim.openstreetmap.org/search";
+
+// Score en deçà duquel la BAN a trouvé quelque chose de trop approximatif
+// pour être exploité : mieux vaut alors laisser sa chance au repli.
+const SCORE_MINIMAL_BAN = 0.4;
+
+// Pays desservis hors France. La BAN ne connaît que le territoire
+// français, mais répond quand même à une adresse étrangère en la
+// rapprochant d'une voie française homonyme : « Grand-Place Bruxelles »
+// obtient ainsi un score de 0,56, indiscernable d'une vraie adresse.
+// Le score seul ne peut donc pas trancher — on regarde le pays cité.
+const PAYS_ETRANGERS =
+  /\b(belgique|belgium|luxembourg|suisse|switzerland|schweiz|allemagne|germany|deutschland|espagne|spain|españa|italie|italy|italia|pays[- ]bas|netherlands|nederland|portugal|royaume[- ]uni|angleterre|united kingdom|england)\b/i;
+
+/**
+ * Indique si l'adresse désigne explicitement un pays étranger.
+ *
+ * Sert à court-circuiter la BAN, qui produirait sinon une coordonnée
+ * française plausible mais fausse.
+ */
+function estEtrangere(adresse) {
+  return PAYS_ETRANGERS.test(adresse);
+}
+
+// ── Rate limiter — Nominatim uniquement (1 req / 1.1s) ────────
+// La BAN n'impose pas de tel délai ; l'y appliquer ralentirait
+// inutilement le chemin principal.
 let lastRequestTime = 0;
 const MIN_INTERVAL = 1100; // ms
 
@@ -40,6 +78,52 @@ async function rateLimitedRequest(url) {
   return response.data;
 }
 
+/**
+ * Interroge la Base Adresse Nationale.
+ *
+ * @returns {Promise<{lat: number, lng: number}|null>}
+ */
+async function geocoderViaBan(adresse) {
+  const { data } = await axios.get(URL_BAN, {
+    params: { q: adresse, limit: 1 },
+    timeout: 10000,
+  });
+
+  const trouve = data?.features?.[0];
+  if (!trouve) return null;
+
+  // La BAN répond toujours quelque chose, même pour une saisie farfelue ;
+  // le score distingue une vraie correspondance d'un rapprochement vague.
+  if (
+    typeof trouve.properties?.score === "number" &&
+    trouve.properties.score < SCORE_MINIMAL_BAN
+  ) {
+    return null;
+  }
+
+  // GeoJSON : les coordonnées sont ordonnées [longitude, latitude].
+  const [lng, lat] = trouve.geometry?.coordinates || [];
+  if (typeof lat !== "number" || typeof lng !== "number") return null;
+
+  return { lat, lng };
+}
+
+/**
+ * Repli Nominatim, réservé aux adresses hors de France.
+ *
+ * @returns {Promise<{lat: number, lng: number}|null>}
+ */
+async function geocoderViaNominatim(adresse) {
+  const encoded = encodeURIComponent(adresse);
+  const url = `${URL_NOMINATIM}?format=json&q=${encoded}&limit=1&countrycodes=fr,be,lu,ch,de,es,it,nl,pt,gb`;
+
+  const resultats = await rateLimitedRequest(url);
+  if (!resultats || resultats.length === 0) return null;
+
+  const { lat, lon } = resultats[0];
+  return { lat: parseFloat(lat), lng: parseFloat(lon) };
+}
+
 // ── Initialisation de la table cache ──────────────────────────
 let cacheTableReady = false;
 
@@ -58,11 +142,27 @@ async function ensureCacheTable() {
   cacheTableReady = true;
 }
 
-// ── Hash simple d'une adresse (normalisation + SHA256) ────────
+// ── Hash d'une adresse (normalisation + SHA256) ───────────────
 const crypto = require("crypto");
 
+/**
+ * Réduit une adresse à une forme canonique avant hachage.
+ *
+ * Sans cette normalisation, « 12 Rue de Paris, LYON » et
+ * « 12 rue de paris lyon » produisent deux entrées de cache distinctes
+ * pour un même lieu — et donc deux appels au géocodeur.
+ */
 function hashAddress(address) {
-  const normalized = address.toLowerCase().trim().replace(/\s+/g, " ");
+  const normalized = address
+    .toLowerCase()
+    // Les accents ne changent pas le lieu désigné, mais changent le hash.
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    // Virgules, points et tirets sont de simples séparateurs ici.
+    .replace(/[.,;:\-']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
   return crypto
     .createHash("sha256")
     .update(normalized)
@@ -89,32 +189,35 @@ async function geocode(address) {
     };
   }
 
-  // 2. Appeler Nominatim
+  // 2. Interroger les fournisseurs : la BAN d'abord, Nominatim ensuite.
+  //    Une adresse explicitement étrangère va directement au repli : la
+  //    BAN lui trouverait une correspondance française trompeuse.
   try {
-    const encoded = encodeURIComponent(address);
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encoded}&limit=1&countrycodes=fr,be,lu,ch,de,es,it,nl,pt,gb`;
+    let coords = null;
 
-    let results = await rateLimitedRequest(url);
-
-    // Fallback : si l'adresse complète ne donne rien, essayer avec les 2 derniers mots (ville + CP)
-    if ((!results || results.length === 0) && address.includes(" ")) {
-      const words = address.trim().split(/\s+/);
-      // Essayer les 2 derniers mots (ex: "44000 Nantes" ou "Nantes France")
-      const fallback = words.slice(-2).join(" ");
-      console.warn(
-        `📍 Géocodage : fallback sur "${fallback}" pour "${address}"`,
-      );
-      const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallback)}&limit=1&countrycodes=fr,be,lu,ch,de,es,it,nl,pt,gb`;
-      results = await rateLimitedRequest(fallbackUrl);
+    if (!estEtrangere(address)) {
+      try {
+        coords = await geocoderViaBan(address);
+      } catch (err) {
+        console.warn(`📍 BAN indisponible pour "${address}" : ${err.message}`);
+      }
     }
 
-    if (!results || results.length === 0) {
+    if (!coords) {
+      // Adresse étrangère, ou introuvable dans le référentiel français.
+      try {
+        coords = await geocoderViaNominatim(address);
+      } catch (err) {
+        console.warn(
+          `📍 Nominatim indisponible pour "${address}" : ${err.message}`,
+        );
+      }
+    }
+
+    if (!coords) {
       console.warn(`📍 Géocodage introuvable : "${address}"`);
       return null;
     }
-
-    const { lat, lon } = results[0];
-    const coords = { lat: parseFloat(lat), lng: parseFloat(lon) };
 
     // 3. Stocker en cache
     await db.query(

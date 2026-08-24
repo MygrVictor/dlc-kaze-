@@ -1153,7 +1153,9 @@ describe("GET /api/admin/missions/map", () => {
 
   it("expose les missions géocodées avec leur véhicule agrégé", async () => {
     mockDb(ADMIN, () => ({ rows: [mission] }));
-    geocodingService.geocodeBatch.mockResolvedValue(
+    // Les missions DLC passent elles aussi par le cache seul : géocoder à
+    // la volée ajouterait un aller-retour réseau par adresse inconnue.
+    geocodingService.geocodeDepuisCache.mockResolvedValue(
       new Map([
         ["Paris", { lat: 48.85, lng: 2.35 }],
         ["Lyon", { lat: 45.76, lng: 4.83 }],
@@ -1168,6 +1170,20 @@ describe("GET /api/admin/missions/map", () => {
       departure: { address: "Paris", lat: 48.85, lng: 2.35 },
       arrival: { address: "Lyon", lat: 45.76, lng: 4.83 },
     });
+  });
+
+  it("plafonne le nombre de missions remontées", async () => {
+    // Sans LIMIT, la requête grossit avec tout l'historique : plusieurs
+    // milliers de lignes jointes après un an, pour une carte illisible.
+    let requete;
+    mockDb(ADMIN, (sql) => {
+      if (/FROM missions m/i.test(sql)) requete = sql;
+      return { rows: [] };
+    });
+
+    await carte();
+
+    expect(requete).toMatch(/LIMIT \d+/);
   });
 
   it("conserve les jobs Kaze déjà géolocalisés", async () => {
