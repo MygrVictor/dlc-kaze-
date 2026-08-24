@@ -876,16 +876,41 @@ describe("createMission", () => {
     expect(signature).toBe(true);
   });
 
-  it("n'envoie le récapitulatif qu'au contact de livraison de la mission", async () => {
+  /** Adresses configurées pour le récapitulatif de fin dans le payload. */
+  const destinatairesRecap = () => {
+    const trouves = [];
+    JSON.stringify(client.post.mock.calls[0][1], (cle, valeur) => {
+      if (cle === "email_addresses") trouves.push(valeur);
+      return valeur;
+    });
+    return trouves;
+  };
+
+  it("adresse le récapitulatif au client, pas au contact de livraison", async () => {
+    // Le PV, les photos et les réserves sont opposables à celui qui
+    // paie. Le contact d'arrivée a le véhicule sous les yeux quand le
+    // mail partirait : il n'en a aucun usage.
     await kaze.createMission({
       ...MISSION,
       client_email: "compte-client@test.com",
       arrival_contact_email: "livraison@test.com",
     });
 
-    const brut = JSON.stringify(client.post.mock.calls[0][1]);
-    expect(brut).toContain("livraison@test.com");
-    expect(brut).not.toContain("compte-client@test.com");
+    expect(destinatairesRecap()).toContain("compte-client@test.com");
+    expect(destinatairesRecap()).not.toContain("livraison@test.com");
+  });
+
+  it("préfère l'adresse de récapitulatif choisie à la création", async () => {
+    // Le client peut router le récapitulatif ailleurs que sur la boîte
+    // de son compte — vers sa comptabilité, par exemple.
+    await kaze.createMission({
+      ...MISSION,
+      client_email: "compte-client@test.com",
+      recap_email: "compta@entreprise.fr",
+    });
+
+    expect(destinatairesRecap()).toContain("compta@entreprise.fr");
+    expect(destinatairesRecap()).not.toContain("compte-client@test.com");
   });
 
   it("avertit lorsqu'aucun email ne permet d'envoyer le récapitulatif", async () => {

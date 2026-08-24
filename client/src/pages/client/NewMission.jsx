@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import {
   parCategorie,
   classeDePeage,
@@ -99,6 +100,7 @@ const BRANDS = [
 const OUI_NON = ["OUI", "NON"];
 
 const STEPS = [
+  { label: "Récapitulatif", icon: Mail },
   { label: "Véhicule", icon: Car },
   { label: "Départ", icon: MapPin },
   { label: "Livraison", icon: Truck },
@@ -117,8 +119,22 @@ const emptyVehicle = () => ({
 
 export default function NewMission() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // Destinataire du récapitulatif de fin de mission (PV, photos,
+  // réserves) émis par Kaze. Pré-rempli avec l'adresse du compte : le
+  // cas courant est que le commanditaire le reçoive lui-même, mais il
+  // peut vouloir le router ailleurs — comptabilité, gestionnaire de
+  // flotte, client final.
+  const [recapEmail, setRecapEmail] = useState("");
+
+  useEffect(() => {
+    // L'utilisateur arrive parfois avant que le contexte soit résolu :
+    // on ne pré-remplit que si le champ n'a pas déjà été modifié.
+    if (user?.email) setRecapEmail((actuel) => actuel || user.email);
+  }, [user?.email]);
 
   const [vehicles, setVehicles] = useState([emptyVehicle()]);
 
@@ -171,18 +187,20 @@ export default function NewMission() {
   };
 
   // ── Validation par étape ──
+  // Volontairement permissif : une adresse mal formée est refusée par
+  // le champ email du navigateur, on ne vérifie ici que la présence.
+  const emailValide = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recapEmail.trim());
+
   const canNext = () => {
     switch (step) {
       case 0:
-        return vehicles.every((v) => v.plate || v.vin || v.model);
+        return emailValide;
       case 1:
-        return departure.address.trim() !== "";
+        return vehicles.every((v) => v.plate || v.vin || v.model);
       case 2:
-        return arrival.address.trim() !== "";
+        return departure.address.trim() !== "";
       case 3:
-        return true;
-      case 4:
-        return true;
+        return arrival.address.trim() !== "";
       default:
         return true;
     }
@@ -193,6 +211,7 @@ export default function NewMission() {
     setLoading(true);
     try {
       const payload = {
+        recapEmail: recapEmail.trim() || null,
         vehicles: vehicles.map((v) => ({
           plate: v.plate,
           vin: v.vin,
@@ -287,8 +306,53 @@ export default function NewMission() {
         })}
       </div>
 
-      {/* ═══════════ ÉTAPE 1 : VÉHICULE ═══════════ */}
+      {/* ═══════════ ÉTAPE 1 : RÉCAPITULATIF ═══════════ */}
       {step === 0 && (
+        <div className="card space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Mail size={20} className="text-primary-400" />
+            Réception du récapitulatif
+          </h3>
+
+          <p className="text-sm text-dark-400">
+            À la livraison, un récapitulatif complet vous sera adressé :
+            procès-verbal, photos du véhicule et réserves éventuelles. Indiquez
+            l&apos;adresse qui doit le recevoir.
+          </p>
+
+          <div>
+            <label className="label">
+              Adresse de réception <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="email"
+              className="input"
+              value={recapEmail}
+              onChange={(e) => setRecapEmail(e.target.value)}
+              placeholder="vous@entreprise.fr"
+            />
+            {recapEmail.trim() !== "" && !emailValide && (
+              <p className="text-xs text-red-400 mt-1">
+                Adresse email invalide.
+              </p>
+            )}
+            {user?.email && recapEmail.trim() === user.email && (
+              <p className="text-xs text-dark-500 mt-1">
+                Adresse de votre compte.
+              </p>
+            )}
+          </div>
+
+          <p className="text-xs text-dark-500">
+            Vous pourrez renseigner plus loin les contacts sur place, au départ
+            et à l&apos;arrivée. Ils servent au convoyeur pour les joindre et ne
+            reçoivent pas ce récapitulatif.
+          </p>
+        </div>
+      )}
+
+      {/* ═══════════ ÉTAPE 2 : VÉHICULE ═══════════ */}
+      {step === 1 && (
         <div className="space-y-4">
           {vehicles.map((v, idx) => (
             <div key={idx} className="card relative">
@@ -458,7 +522,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 2 : DÉPART ═══════════ */}
-      {step === 1 && (
+      {step === 2 && (
         <div className="card">
           <div className="flex items-center gap-2 mb-5">
             <MapPin size={20} className="text-green-400" />
@@ -598,7 +662,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 3 : LIVRAISON ═══════════ */}
-      {step === 2 && (
+      {step === 3 && (
         <div className="card">
           <div className="flex items-center gap-2 mb-5">
             <Truck size={20} className="text-blue-400" />
@@ -764,7 +828,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 4 : SERVICES / RÉTRIBUTION / URGENCE ═══════════ */}
-      {step === 3 && (
+      {step === 4 && (
         <div className="space-y-4">
           {/* Rétribution */}
           <div className="card">
@@ -924,7 +988,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 5 : OBSERVATIONS ═══════════ */}
-      {step === 4 && (
+      {step === 5 && (
         <div className="card">
           <div className="flex items-center gap-2 mb-5">
             <FileText size={20} className="text-yellow-400" />

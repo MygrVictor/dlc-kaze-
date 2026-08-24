@@ -218,6 +218,14 @@ const migrate = async () => {
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS emergency_contact_name  VARCHAR(150);
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS emergency_contact_email VARCHAR(255);
 
+    -- Destinataire du récapitulatif de fin de mission émis par Kaze
+    -- (PV, photos, réserves). Choisi par le client au tout début du
+    -- formulaire, avec son adresse de compte proposée par défaut :
+    -- un cabinet peut vouloir router ces pièces vers sa comptabilité
+    -- plutôt que vers la boîte de la personne qui a saisi la demande.
+    -- Vide = on retombe sur l'email du compte.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS recap_email VARCHAR(255);
+
     -- Refus de devis : motif saisi par le client + horodatage, pour que
     -- l'équipe puisse le rappeler et ajuster la proposition.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS refus_motif  TEXT;

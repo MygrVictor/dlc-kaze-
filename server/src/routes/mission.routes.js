@@ -76,6 +76,9 @@ router.post(
         comments,
       } = req.body;
 
+      // Destinataire du récapitulatif Kaze, choisi en tête de formulaire.
+      const { recapEmail } = req.body;
+
       // Date souhaitée par le client et marqueur d'urgence : deux notions
       // internes à DLC, jamais transmises à Kaze.
       const { desiredDeliveryDate, isUrgent } = req.body;
@@ -132,7 +135,8 @@ router.post(
             service_refuel, service_document_management, service_handover,
             retribution_details,
             emergency_contact_name, emergency_phone, emergency_contact_email,
-            comments, desired_delivery_date, is_urgent, batch_id, status
+            comments, desired_delivery_date, is_urgent, batch_id, status,
+            recap_email
           ) VALUES (
             $1,
             $2, $3, $4, $5, $6,
@@ -146,7 +150,8 @@ router.post(
             $27, $28, $29,
             $30,
             $31, $32, $33,
-            $34, $35, $36, $37, 'EN_ATTENTE_DE_COTATION'
+            $34, $35, $36, $37, 'EN_ATTENTE_DE_COTATION',
+            $38
           ) RETURNING *`,
           [
             req.user.id,
@@ -188,6 +193,8 @@ router.post(
             desiredDeliveryDate || null,
             Boolean(isUrgent),
             batchId,
+            // Vide = le service Kaze retombera sur l'email du compte.
+            recapEmail || null,
           ],
         );
         createdMissions.push(rows[0]);

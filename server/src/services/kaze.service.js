@@ -1050,13 +1050,18 @@ const createMission = async (mission) => {
       // donc rien à gérer côté DLC, il suffit de renseigner
       // l'adresse à la création du job.
       //
-      // Un seul destinataire : le contact de livraison renseigné sur
-      // la mission, car c'est lui qui réceptionne le véhicule. On ne
-      // retombe sur l'email du compte client que si aucun contact
-      // d'arrivée n'a été saisi — sans quoi la même personne reçoit
-      // deux fois le récap.
+      // Destinataire : l'adresse choisie par le client en tête du
+      // formulaire de création. Elle vaut par défaut celle de son
+      // compte, mais reste modifiable — un cabinet peut router le PV,
+      // les photos et les réserves vers sa comptabilité plutôt que vers
+      // la boîte de la personne qui a saisi la demande.
+      //
+      // Les contacts de départ et d'arrivée n'en sont pas destinataires :
+      // le premier s'est dessaisi du véhicule deux jours plus tôt, le
+      // second l'a sous les yeux au moment où le mail partirait. Leurs
+      // adresses restent stockées pour que le convoyeur les joigne.
       // ──────────────────────────────────────────────────────
-      const recapEmails = mission.arrival_contact_email || mission.client_email;
+      const recapEmails = mission.recap_email || mission.client_email;
 
       if (recapEmails) {
         const clientSignature = findNode(workflow, {
@@ -1080,6 +1085,17 @@ const createMission = async (mission) => {
         console.warn(
           `⚠️ Kaze: aucun email client pour la mission ${mission.id} — récap de fin de mission non configuré.`,
         );
+        // Depuis que le récap ne vise plus que le client, cette absence
+        // est un point de rupture unique : la mission se déroulerait
+        // normalement mais personne ne recevrait le PV. Une trace en
+        // console ne serait vue par personne.
+        require("./alerte.service")
+          .alerter({
+            contexte: "création mission Kaze",
+            erreur: "aucun email client — récapitulatif de fin non configuré",
+            detail: `mission ${mission.id}`,
+          })
+          .catch(() => {});
       }
 
       // ──────────────────────────────────────────────────────

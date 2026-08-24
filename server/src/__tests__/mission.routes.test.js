@@ -257,8 +257,9 @@ describe("POST /api/missions — création", () => {
       comments: "Livraison délicate",
     });
 
-    // 34 champs du formulaire + date souhaitée + urgence + identifiant de lot
-    expect(params).toHaveLength(37);
+    // 34 champs du formulaire + date souhaitée + urgence + identifiant
+    // de lot + destinataire du récapitulatif
+    expect(params).toHaveLength(38);
     expect(params).toEqual(
       expect.arrayContaining([
         CLIENT.id,
@@ -276,6 +277,49 @@ describe("POST /api/missions — création", () => {
         "urgence@dlc.fr",
       ]),
     );
+  });
+
+  it("persiste le destinataire du récapitulatif choisi par le client", async () => {
+    // Cette adresse commande à qui Kaze enverra le PV, les photos et
+    // les réserves à la livraison.
+    let params;
+    mockDb(CLIENT, (sql, p) => {
+      if (/INSERT INTO missions/i.test(sql)) {
+        params = p;
+        return { rows: [{ id: MISSION_ID }] };
+      }
+    });
+
+    await creer({
+      departureAddress: "Paris",
+      arrivalAddress: "Lyon",
+      recapEmail: "compta@entreprise.fr",
+    });
+
+    expect(params).toContain("compta@entreprise.fr");
+  });
+
+  it("enregistre NULL quand le client ne fournit pas d'adresse", async () => {
+    // Le service Kaze retombera sur l'email du compte : une chaîne vide
+    // passerait la garde et priverait la mission de récapitulatif.
+    let sqlVu;
+    let params;
+    mockDb(CLIENT, (sql, p) => {
+      if (/INSERT INTO missions/i.test(sql)) {
+        sqlVu = sql;
+        params = p;
+        return { rows: [{ id: MISSION_ID }] };
+      }
+    });
+
+    await creer({
+      departureAddress: "Paris",
+      arrivalAddress: "Lyon",
+      recapEmail: "",
+    });
+
+    expect(sqlVu).toMatch(/recap_email/);
+    expect(params[params.length - 1]).toBeNull();
   });
 });
 
@@ -528,7 +572,7 @@ describe("POST /api/missions — dates et urgence", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(capture.params).toHaveLength(37);
+      expect(capture.params).toHaveLength(38);
       expect(capture.sql).toMatch(/service_handover/);
     });
   });
