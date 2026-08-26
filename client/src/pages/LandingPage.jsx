@@ -775,7 +775,7 @@ export default function LandingPage() {
                     color: "var(--navy)",
                   }}
                 >
-                  Je conduis des missions
+                  Je convoies des véhicules
                 </span>
                 <span
                   style={{
