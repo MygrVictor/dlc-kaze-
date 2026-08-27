@@ -121,18 +121,19 @@ if [[ -x "$RACINE/scripts/backup-db.sh" ]]; then
 fi
 
 # ── 6. Dépendances ───────────────────────────────────────────
-# `--include=dev` est indispensable : cPanel exporte NODE_ENV=production,
-# ce qui transforme un `npm install` nu en `--omit=dev` et élague les
-# outils nécessaires au build du front. On force donc l'installation
-# complète, quel que soit l'environnement hérité du shell.
+# Deux réglages hérités de l'hébergement faussent une installation nue :
+# cPanel exporte NODE_ENV=production, qui écarte les dépendances de
+# développement nécessaires au build ; et ~/.npmrc porte « omit=optional »,
+# qui prive le projet de ses binaires natifs. On neutralise les deux le
+# temps de l'installation, sans toucher à la configuration du compte.
 echo "📦 Installation des dépendances…"
-npm install --include=dev
+NODE_ENV=development npm install --include=dev --include=optional
 
-# Un élagage laisse une arborescence incomplète sans qu'npm ne renvoie
-# d'erreur : il considère ensuite cet état comme « à jour ». On vérifie
-# donc sur le disque, car la panne se manifesterait sinon au milieu des
-# migrations. Les workspaces hoistent à la racine, mais un module peut
-# aussi rester local au paquet : les deux emplacements sont acceptés.
+# Sur cPanel, node_modules est un lien symbolique vers l'environnement
+# virtuel : npm peut annoncer « up to date » sur un arbre pourtant
+# incomplet. On vérifie donc la présence réelle des modules, sans jamais
+# supprimer le lien — sa disparition met l'application hors ligne, et sa
+# reconstruction relève de cPanel, pas de la ligne de commande.
 echo "🔍 Vérification des dépendances…"
 MANQUANTS=()
 for MODULE in dotenv pg express; do
@@ -141,25 +142,16 @@ for MODULE in dotenv pg express; do
   fi
 done
 
-# Réinstallation propre : npm ne recalcule l'arborescence qu'une fois
-# node_modules supprimé, un simple `npm install` le laissant en l'état.
 if [[ ${#MANQUANTS[@]} -gt 0 ]]; then
-  echo "⚠️  Modules absents : ${MANQUANTS[*]}"
-  echo "   Réinstallation complète…"
-  rm -rf "$RACINE/node_modules" "$RACINE/server/node_modules" \
-         "$RACINE/client/node_modules"
-  # NODE_ENV neutralisé le temps de l'installation : c'est lui qui
-  # pousse npm à écarter les dépendances de développement.
-  NODE_ENV=development npm install --include=dev
-
-  for MODULE in "${MANQUANTS[@]}"; do
-    if [[ ! -d "$RACINE/node_modules/$MODULE" && ! -d "$RACINE/server/node_modules/$MODULE" ]]; then
-      echo "❌ Module « $MODULE » toujours introuvable après réinstallation." >&2
-      echo "   Vérifiez ~/.npmrc et $RACINE/.npmrc : une directive" >&2
-      echo "   « omit=dev » ou « production=true » bloquerait l'installation." >&2
-      exit 1
-    fi
-  done
+  echo "❌ Modules introuvables : ${MANQUANTS[*]}" >&2
+  echo "" >&2
+  echo "   L'installation est incomplète. Passez par l'interface :" >&2
+  echo "     cPanel > Setup Node.js App > votre application" >&2
+  echo "     puis « Run NPM Install »." >&2
+  echo "" >&2
+  echo "   Déploiement interrompu : les migrations ne peuvent pas" >&2
+  echo "   s'exécuter sans ces modules." >&2
+  exit 1
 fi
 echo "✅ Dépendances complètes."
 
