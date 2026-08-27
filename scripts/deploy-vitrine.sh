@@ -47,8 +47,14 @@ if ! command -v node > /dev/null 2>&1; then
   fi
 
   echo "🔧 Activation de Node : $ACTIVATION"
+  # Le script d'activation cPanel lit des variables qu'il n'initialise pas
+  # toujours (CL_VIRTUAL_ENV). Sous `set -u`, cette simple lecture avorte
+  # le déploiement : on relâche le mode strict le temps de la source, puis
+  # on le rétablit pour la suite, qui doit rester intransigeante.
+  set +u
   # shellcheck disable=SC1090
   source "$ACTIVATION"
+  set -u
   cd "$RACINE"
 fi
 
@@ -75,7 +81,29 @@ fi
 # ── 4. Récupérer le code ─────────────────────────────────────
 if [[ -d "$RACINE/.git" ]]; then
   echo "📥 Récupération du code…"
+
+  # npm réécrit parfois package.json sur le serveur pour y inscrire un
+  # binaire natif propre à Linux : ces modifications feraient échouer la
+  # fusion. On les met de côté le temps du pull, puis on les restaure —
+  # les supprimer risquerait de casser une réinstallation ultérieure.
+  REMISE=0
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "   Mise de côté des modifications locales…"
+    git stash push --quiet --message "deploy-vitrine automatique"
+    REMISE=1
+  fi
+
   git pull --ff-only
+
+  if [[ "$REMISE" -eq 1 ]]; then
+    echo "   Restauration des modifications locales…"
+    # Un conflit ici demande un arbitrage humain : mieux vaut s'arrêter
+    # que déployer un package.json à moitié fusionné.
+    if ! git stash pop; then
+      echo "❌ Conflit lors de la restauration. Résolvez-le puis relancez." >&2
+      exit 1
+    fi
+  fi
 else
   echo "⚠️  Pas de dépôt git : code supposé déjà téléversé."
 fi
@@ -93,8 +121,12 @@ if [[ -x "$RACINE/scripts/backup-db.sh" ]]; then
 fi
 
 # ── 6. Dépendances ───────────────────────────────────────────
+# Installation complète, dépendances de développement comprises : le build
+# du front a besoin de vite. Les écarter ici obligerait à les réinstaller
+# juste après, avec le risque qu'npm désinstalle entre-temps ce dont le
+# build dépend.
 echo "📦 Installation des dépendances…"
-npm install --omit=dev --workspaces --include-workspace-root
+npm install
 
 # ── 7. Migrations ────────────────────────────────────────────
 # job_title : champ « poste » du formulaire de rappel.
@@ -103,10 +135,7 @@ echo "🗄️  Migrations…"
 npm run db:migrate:vitrine
 
 # ── 8. Build du front ────────────────────────────────────────
-# vite est une dépendance de développement : on l'installe le temps
-# du build, que `--omit=dev` a écartée à l'étape précédente.
 echo "🏗️  Build du front…"
-npm install --workspace=client --include=dev
 npm run build
 
 # ── 9. Redémarrer l'application ──────────────────────────────
