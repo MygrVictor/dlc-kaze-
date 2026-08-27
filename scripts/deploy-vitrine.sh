@@ -121,12 +121,27 @@ if [[ -x "$RACINE/scripts/backup-db.sh" ]]; then
 fi
 
 # ── 6. Dépendances ───────────────────────────────────────────
-# Installation complète, dépendances de développement comprises : le build
-# du front a besoin de vite. Les écarter ici obligerait à les réinstaller
-# juste après, avec le risque qu'npm désinstalle entre-temps ce dont le
-# build dépend.
+# `--include=dev` est indispensable : cPanel exporte NODE_ENV=production,
+# ce qui transforme un `npm install` nu en `--omit=dev` et élague les
+# outils nécessaires au build du front. On force donc l'installation
+# complète, quel que soit l'environnement hérité du shell.
 echo "📦 Installation des dépendances…"
-npm install
+npm install --include=dev
+
+# Un élagage mal venu laisse une arborescence incomplète sans que npm ne
+# renvoie d'erreur : on vérifie avant d'aller plus loin, car la panne se
+# manifesterait sinon au milieu des migrations.
+echo "🔍 Vérification des dépendances…"
+for MODULE in dotenv pg express; do
+  if ! node -e "require.resolve('$MODULE')" > /dev/null 2>&1; then
+    echo "❌ Module « $MODULE » introuvable après installation." >&2
+    echo "   Tentez une réinstallation propre :" >&2
+    echo "     rm -rf node_modules server/node_modules client/node_modules" >&2
+    echo "     npm install --include=dev" >&2
+    exit 1
+  fi
+done
+echo "✅ Dépendances complètes."
 
 # ── 7. Migrations ────────────────────────────────────────────
 # job_title : champ « poste » du formulaire de rappel.
