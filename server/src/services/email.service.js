@@ -461,19 +461,68 @@ async function notifyMissionDisponible(convoyeurs, mission) {
 async function notifyNouvelleDemande(demande) {
   const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
   const estConvoyeur = demande.type === "convoyeur";
+
+  // Les prospects clients sont traités commercialement : ils partent chez
+  // le responsable commercial quand l'adresse est configurée, l'admin
+  // restant en copie pour garder la trace. Les candidatures convoyeur
+  // continuent d'aller à l'admin, qui les qualifie en amont.
+  const commercial = process.env.SALES_EMAIL || null;
+  const destinataire = !estConvoyeur && commercial ? commercial : adminEmail;
+  const copie = !estConvoyeur && commercial ? adminEmail : undefined;
+
   const identite = estConvoyeur
     ? `${demande.first_name || ""} ${demande.last_name || ""}`.trim()
     : demande.company || "Structure non précisée";
+
+  const contact = [demande.first_name, demande.last_name]
+    .filter(Boolean)
+    .join(" ");
+
+  // La qualification conditionne l'éligibilité : elle doit être visible dans
+  // l'email, sans quoi il faut ouvrir l'admin pour décider d'un rappel.
+  const libelleStatut = {
+    oui: "Oui",
+    en_cours: "En cours d'obtention",
+    non: "Non",
+  };
+  const ligne = (label, valeur) =>
+    valeur
+      ? `<div class="info-row"><span class="info-label">${label}</span><span class="info-value">${valeur}</span></div>`
+      : "";
+
+  const qualification = estConvoyeur
+    ? [
+        ligne("SIRET", demande.siret),
+        ligne("RC Circulation", libelleStatut[demande.rc_circulation]),
+        ligne("RC Pro", libelleStatut[demande.rc_pro]),
+        ligne(
+          "Certification W garage",
+          typeof demande.w_garage === "boolean"
+            ? demande.w_garage
+              ? "Oui"
+              : "Non"
+            : null,
+        ),
+      ].join("")
+    : "";
 
   const html = baseTemplate(`
     <h2>Nouvelle demande ${estConvoyeur ? "convoyeur" : "client"}</h2>
     <p>Un visiteur souhaite être recontacté :</p>
     <div class="info-box">
       <div class="info-row"><span class="info-label">${estConvoyeur ? "Nom" : "Structure"}</span><span class="info-value">${identite}</span></div>
+      ${!estConvoyeur && contact ? `<div class="info-row"><span class="info-label">Contact</span><span class="info-value">${contact}</span></div>` : ""}
+      ${demande.job_title ? `<div class="info-row"><span class="info-label">Poste</span><span class="info-value">${demande.job_title}</span></div>` : ""}
       ${demande.email ? `<div class="info-row"><span class="info-label">Email</span><span class="info-value">${demande.email}</span></div>` : ""}
       ${demande.phone ? `<div class="info-row"><span class="info-label">Téléphone</span><span class="info-value">${demande.phone}</span></div>` : ""}
+      ${qualification}
       ${demande.message ? `<div class="info-row"><span class="info-label">Message</span><span class="info-value">${demande.message}</span></div>` : ""}
     </div>
+    ${
+      estConvoyeur
+        ? ""
+        : `<p style="text-align:center;font-weight:600;">Engagement pris sur le site : rappel sous 48 heures.</p>`
+    }
     <p style="text-align: center;">
       <a href="${process.env.CLIENT_URL}/admin/demandes" class="btn">Voir les demandes</a>
     </p>
@@ -481,7 +530,8 @@ async function notifyNouvelleDemande(demande) {
 
   return transporter.sendMail({
     from: FROM,
-    to: adminEmail,
+    to: destinataire,
+    cc: copie,
     replyTo: demande.email || undefined,
     subject: `Nouvelle demande ${estConvoyeur ? "convoyeur" : "client"} — ${identite}`,
     html,

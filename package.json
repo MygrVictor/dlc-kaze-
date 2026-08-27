@@ -19,6 +19,7 @@
     "sync:once": "node scripts/sync-once.js",
     "db:migrate": "npm run migrate --workspace=server",
     "db:migrate:lot": "npm run migrate:lot --workspace=server",
+    "db:migrate:vitrine": "npm run migrate:vitrine --workspace=server",
     "db:seed": "npm run seed --workspace=server",
     "test": "npm run test --workspace=server && npm run test --workspace=client",
     "test:server": "npm run test --workspace=server",

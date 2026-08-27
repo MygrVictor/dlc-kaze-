@@ -11,6 +11,7 @@ const {
 } = require("../middleware/security.middleware");
 const emailService = require("../services/email.service");
 const kazeService = require("../services/kaze.service");
+const { isValidSiret, normaliserSiret } = require("../lib/siret");
 
 const { authenticate, authorize } = require("../middleware/auth.middleware");
 const crypto = require("crypto");
@@ -208,8 +209,20 @@ router.post(
 // ══════════════════════════════════════════════════════════════
 router.post("/demande", authLimiter, async (req, res, next) => {
   try {
-    const { type, firstName, lastName, company, email, phone, message } =
-      req.body;
+    const {
+      type,
+      firstName,
+      lastName,
+      company,
+      jobTitle,
+      email,
+      phone,
+      message,
+      siret,
+      rcCirculation,
+      rcPro,
+      wGarage,
+    } = req.body;
 
     const allowedTypes = ["client", "convoyeur"];
     if (!allowedTypes.includes(type)) {
@@ -226,7 +239,7 @@ router.post("/demande", authLimiter, async (req, res, next) => {
     }
 
     // Longueurs bornées : ces valeurs sont réaffichées dans l'espace admin.
-    const champs = { firstName, lastName, company };
+    const champs = { firstName, lastName, company, jobTitle };
     for (const [nom, valeur] of Object.entries(champs)) {
       if (valeur && valeur.length > 150) {
         return res.status(400).json({ error: `Champ ${nom} trop long.` });
@@ -237,6 +250,10 @@ router.post("/demande", authLimiter, async (req, res, next) => {
         .status(400)
         .json({ error: "Le message ne doit pas dépasser 2000 caractères." });
     }
+
+    // Champs de qualification, propres aux candidatures convoyeur.
+    let siretNet = null;
+    const STATUTS = ["oui", "en_cours", "non"];
 
     if (type === "convoyeur") {
       // Un convoyeur est alerté des missions par WhatsApp : sans mobile
@@ -252,6 +269,43 @@ router.post("/demande", authLimiter, async (req, res, next) => {
           error:
             "Numéro de mobile invalide. Format attendu : 06 12 34 56 78 ou +33 6 12 34 56 78.",
         });
+      }
+
+      // Le SIRET atteste d'une activité déclarée : c'est le premier filtre
+      // contre les candidatures non professionnelles.
+      if (!siret) {
+        return res.status(400).json({ error: "Le SIRET est obligatoire." });
+      }
+      if (!isValidSiret(siret)) {
+        return res.status(400).json({
+          error:
+            "SIRET invalide. Vérifiez les 14 chiffres figurant sur votre extrait Kbis.",
+        });
+      }
+      siretNet = normaliserSiret(siret);
+
+      // Sans RC Circulation — acquise ou en cours — aucun véhicule ne peut
+      // être confié : la candidature n'aboutirait pas.
+      if (!STATUTS.includes(rcCirculation)) {
+        return res.status(400).json({
+          error: "Précisez votre situation vis-à-vis de la RC Circulation.",
+        });
+      }
+      if (rcCirculation === "non") {
+        return res.status(400).json({
+          error:
+            "La RC Circulation est indispensable pour convoyer. Recontactez-nous dès vos démarches engagées.",
+        });
+      }
+      if (rcPro !== undefined && rcPro !== null && !STATUTS.includes(rcPro)) {
+        return res.status(400).json({ error: "Statut RC Pro invalide." });
+      }
+      if (
+        wGarage !== undefined &&
+        wGarage !== null &&
+        typeof wGarage !== "boolean"
+      ) {
+        return res.status(400).json({ error: "Réponse W garage invalide." });
       }
     } else {
       if (!company) {
@@ -269,17 +323,23 @@ router.post("/demande", authLimiter, async (req, res, next) => {
 
     const { rows } = await db.query(
       `INSERT INTO contact_requests
-         (type, first_name, last_name, company, email, phone, message, ip)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         (type, first_name, last_name, company, job_title, email, phone, message,
+          siret, rc_circulation, rc_pro, w_garage, ip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING id, type, created_at`,
       [
         type,
         firstName ? firstName.trim() : null,
         lastName ? lastName.trim() : null,
         company ? company.trim() : null,
+        jobTitle ? jobTitle.trim() : null,
         mail,
         tel,
         message ? message.trim() : null,
+        siretNet,
+        type === "convoyeur" ? rcCirculation : null,
+        type === "convoyeur" && STATUTS.includes(rcPro) ? rcPro : null,
+        type === "convoyeur" && typeof wGarage === "boolean" ? wGarage : null,
         req.ip || null,
       ],
     );
@@ -295,16 +355,23 @@ router.post("/demande", authLimiter, async (req, res, next) => {
 
     // Les notifications ne doivent jamais faire échouer l'enregistrement :
     // la demande est déjà en base, c'est le seul point qui compte.
+    const contexte = {
+      ...demande,
+      first_name: firstName,
+      last_name: lastName,
+      company,
+      job_title: jobTitle,
+      email: mail,
+      phone: tel,
+      message,
+      siret: siretNet,
+      rc_circulation: rcCirculation,
+      rc_pro: rcPro,
+      w_garage: wGarage,
+    };
+
     try {
-      await emailService.notifyNouvelleDemande({
-        ...demande,
-        first_name: firstName,
-        last_name: lastName,
-        company,
-        email: mail,
-        phone: tel,
-        message,
-      });
+      await emailService.notifyNouvelleDemande(contexte);
     } catch (emailErr) {
       console.error(
         "⚠️ Email admin (nouvelle demande) non envoyé :",

@@ -188,6 +188,8 @@ describe("POST /api/auth/demande", () => {
       lastName: "Driver",
       email: "driver@test.com",
       phone: "0612345678",
+      siret: "73282932000074",
+      rcCirculation: "oui",
     });
     expect(res.status).toBe(201);
   });

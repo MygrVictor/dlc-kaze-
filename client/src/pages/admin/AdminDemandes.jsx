@@ -34,6 +34,13 @@ const STATUTS = {
   },
 };
 
+/** Libellés courts des statuts d'assurance, pour tenir dans un badge. */
+const ASSURANCE = {
+  oui: "OK",
+  en_cours: "en cours",
+  non: "non",
+};
+
 export default function AdminDemandes() {
   const [demandes, setDemandes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -269,6 +276,41 @@ export default function AdminDemandes() {
                     </a>
                   )}
                 </div>
+
+                {/* Qualification convoyeur : elle décide de la suite donnée
+                    à la candidature, elle doit donc être lisible sans avoir
+                    à ouvrir le détail. */}
+                {d.type === "convoyeur" &&
+                  (d.siret || d.rc_circulation || d.w_garage !== null) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {d.siret && (
+                        <span className="badge text-xs bg-dark-900 border border-dark-700 text-dark-200">
+                          SIRET {d.siret}
+                        </span>
+                      )}
+                      {d.rc_circulation && (
+                        <span
+                          className={`badge text-xs ${
+                            d.rc_circulation === "oui"
+                              ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                              : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                          }`}
+                        >
+                          RC Circ. {ASSURANCE[d.rc_circulation]}
+                        </span>
+                      )}
+                      {d.rc_pro && (
+                        <span className="badge text-xs bg-dark-900 border border-dark-700 text-dark-200">
+                          RC Pro {ASSURANCE[d.rc_pro]}
+                        </span>
+                      )}
+                      {typeof d.w_garage === "boolean" && d.w_garage && (
+                        <span className="badge text-xs bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                          W garage
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                 {d.message && (
                   <p className="text-xs text-dark-300 bg-dark-900/60 border border-dark-700 rounded-lg px-3 py-2 whitespace-pre-wrap flex gap-2">

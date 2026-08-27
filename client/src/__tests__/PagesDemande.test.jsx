@@ -138,7 +138,11 @@ describe("DevenirClientPage", () => {
 });
 
 describe("DevenirConvoyeurPage", () => {
-  const remplir = async ({ phone }) => {
+  // SIRET réel (INSEE) : la clé de Luhn est vérifiée côté client, une suite
+  // arbitraire de 14 chiffres serait rejetée avant l'envoi.
+  const SIRET_VALIDE = "732 829 320 00074";
+
+  const remplir = async ({ phone, qualifier = true }) => {
     await userEvent.type(screen.getByPlaceholderText("Jean"), "Marc");
     await userEvent.type(screen.getByPlaceholderText("Dupont"), "Driver");
     await userEvent.type(
@@ -149,6 +153,15 @@ describe("DevenirConvoyeurPage", () => {
       screen.getByPlaceholderText("+33 6 12 34 56 78"),
       phone,
     );
+    if (qualifier) {
+      await userEvent.type(
+        screen.getByPlaceholderText("123 456 789 00012"),
+        SIRET_VALIDE,
+      );
+      await userEvent.click(
+        screen.getAllByRole("radio", { name: /je la détiens/i })[0],
+      );
+    }
   };
 
   it("ne demande jamais de structure : ce champ ne concerne que les clients", () => {
@@ -160,7 +173,7 @@ describe("DevenirConvoyeurPage", () => {
 
   it("refuse un numéro fixe", async () => {
     afficher(DevenirConvoyeurPage);
-    await remplir({ phone: "0145678901" });
+    await remplir({ phone: "0145678901", qualifier: false });
     fireEvent.click(bouton());
 
     await waitFor(() => {
@@ -200,9 +213,50 @@ describe("DevenirConvoyeurPage", () => {
         email: "marc@test.com",
         phone: "0612345678",
         message: undefined,
+        // Le SIRET part normalisé : la mise en forme n'est qu'une aide à la
+        // relecture, elle ne doit pas atteindre la base.
+        siret: "73282932000074",
+        rcCirculation: "oui",
+        rcPro: undefined,
+        wGarage: undefined,
       });
     });
     expect(await screen.findByText("Demande envoyée")).toBeInTheDocument();
+  });
+
+  it("refuse un SIRET dont la clé de contrôle est fausse", async () => {
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678", qualifier: false });
+    await userEvent.type(
+      screen.getByPlaceholderText("123 456 789 00012"),
+      "12345678901234",
+    );
+    fireEvent.click(bouton());
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(/SIRET invalide/i);
+    });
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("écarte un candidat sans RC Circulation ni démarche engagée", async () => {
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678", qualifier: false });
+    await userEvent.type(
+      screen.getByPlaceholderText("123 456 789 00012"),
+      SIRET_VALIDE,
+    );
+    await userEvent.click(
+      screen.getAllByRole("radio", { name: /non, pas encore/i })[0],
+    );
+    fireEvent.click(bouton());
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /RC Circulation est indispensable/i,
+      );
+    });
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   it("efface l'erreur dès que la saisie reprend", async () => {

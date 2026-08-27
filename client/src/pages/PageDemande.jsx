@@ -78,6 +78,7 @@ export function Requis({ couleur }) {
  * @param {Function} props.valider               (form) => string|null
  * @param {Function} props.children              (outils) => JSX des champs
  * @param {Function} [props.preparer]            (form) => corps de requête
+ * @param {object}   [props.champsInitiaux]       champs propres à la page
  * @param {JSX}      [props.argumentaire]        colonne de gauche facultative
  */
 export default function PageDemande({
@@ -89,10 +90,14 @@ export default function PageDemande({
   confirmation,
   valider,
   preparer,
+  champsInitiaux,
   argumentaire,
   children,
 }) {
-  const [form, setForm] = useState(FORMULAIRE_VIDE);
+  // Le socle ne connaît que les champs communs ; chaque page complète l'état
+  // initial avec les siens, sinon leur première saisie ferait passer
+  // l'`input` de non contrôlé à contrôlé.
+  const [form, setForm] = useState({ ...FORMULAIRE_VIDE, ...champsInitiaux });
   const [loading, setLoading] = useState(false);
   const [envoye, setEnvoye] = useState(false);
   const [erreur, setErreur] = useState(null);
@@ -246,7 +251,7 @@ export default function PageDemande({
             noValidate
             style={{ display: "flex", flexDirection: "column", gap: 16 }}
           >
-            {children({ form, handleChange, accent })}
+            {children({ form, handleChange, setForm, accent })}
 
             {/* L'erreur est ancrée au-dessus du bouton plutôt que confiée à
                 un toast fugace : elle reste lisible pendant la correction. */}

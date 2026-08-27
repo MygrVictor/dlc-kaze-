@@ -630,6 +630,123 @@ describe("Routes publiques — cas résiduels", () => {
       lastName: "Driver",
       email: "driver@test.com",
       phone: "0612345678",
+      siret: "73282932000074",
+      rcCirculation: "oui",
+    });
+    expect(res.status).toBe(201);
+  });
+
+  // ── Qualification des candidatures convoyeur ──
+  // Le formulaire filtre en amont les profils qui ne pourraient pas
+  // convoyer, pour éviter des rappels sans issue.
+
+  it("refuse une demande de convoyeur sans SIRET (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      rcCirculation: "oui",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/siret/i);
+  });
+
+  it("refuse un SIRET dont la clé de contrôle est fausse (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "12345678901234",
+      rcCirculation: "oui",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/siret invalide/i);
+  });
+
+  it("refuse un SIREN à 9 chiffres saisi à la place du SIRET (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "732829320",
+      rcCirculation: "oui",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/siret invalide/i);
+  });
+
+  it("refuse une demande sans réponse sur la RC Circulation (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "73282932000074",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/rc circulation/i);
+  });
+
+  it("refuse un convoyeur sans RC Circulation ni démarche engagée (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "73282932000074",
+      rcCirculation: "non",
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/rc circulation/i);
+  });
+
+  // Un candidat ayant engagé ses démarches reste un bon profil : il sera
+  // simplement rappelé plus tard, pas écarté.
+  it("accepte un convoyeur dont la RC Circulation est en cours", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "73282932000074",
+      rcCirculation: "en_cours",
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("accepte un SIRET saisi avec des espaces", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "732 829 320 00074",
+      rcCirculation: "oui",
+      wGarage: true,
+    });
+    expect(res.status).toBe(201);
+  });
+
+  // Le SIRET n'a de sens que pour une candidature convoyeur : une demande
+  // de rappel côté client ne doit pas se voir imposer ces contraintes.
+  it("n'exige ni SIRET ni assurance pour une demande client", async () => {
+    const res = await demander({
+      type: "client",
+      company: "ACME",
+      firstName: "Camille",
+      lastName: "Dupont",
+      jobTitle: "Responsable logistique",
+      phone: "0612345678",
     });
     expect(res.status).toBe(201);
   });

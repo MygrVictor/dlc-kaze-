@@ -4,11 +4,12 @@ import { useState } from "react";
 
 const LIENS = [
   { label: "Accueil", href: "/" },
-  { label: "Nos services", href: "#services" },
+  { label: "Nos solutions", href: "#solutions" },
+  { label: "Références", href: "#references" },
+  { label: "Nos chiffres", href: "#chiffres" },
   { label: "Qui sommes-nous", href: "#about" },
-  { label: "Devenir client", href: "#entreprises" },
   { label: "Devenez convoyeur", href: "#convoy" },
-  { label: "Contact", href: "#contact" },
+  { label: "Être rappelé", href: "#rappel" },
 ];
 
 export default function PublicLayout() {

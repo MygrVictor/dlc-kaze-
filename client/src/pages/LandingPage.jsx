@@ -1,17 +1,28 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import RappelForm from "../components/RappelForm";
+import LogoClient from "../components/LogoClient";
+import SectionChiffres from "../components/SectionChiffres";
+import Compteur from "../components/Compteur";
 
 function useReveal() {
   useEffect(() => {
     const items = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
       (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
+        // Les éléments d'une même grille entrent ensemble dans le viewport :
+        // les décaler légèrement crée un effet de cascade plutôt qu'une
+        // apparition en bloc, sans multiplier les observateurs.
+        entries
+          .filter((e) => e.isIntersecting)
+          .forEach((e, rang) => {
+            e.target.style.setProperty(
+              "--reveal-delay",
+              `${Math.min(rang, 5) * 0.09}s`,
+            );
             e.target.classList.add("in");
             io.unobserve(e.target);
-          }
-        });
+          });
       },
       { threshold: 0.12 },
     );
@@ -128,8 +139,8 @@ export default function LandingPage() {
             assurance et délais maîtrisés.
           </p>
           <div className="hero-ctas reveal">
-            <Link to="/devenir-client" className="btn-primary">
-              Demander un devis
+            <a href="#solutions" className="btn-primary">
+              Découvrez nos solutions
               <svg
                 width="16"
                 height="16"
@@ -140,29 +151,48 @@ export default function LandingPage() {
               >
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
-            </Link>
-            <a href="#services" className="btn-outline">
-              Découvrir nos services
+            </a>
+            <a href="#rappel" className="btn-outline">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.7a2 2 0 01-.4 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.5 2.7.6a2 2 0 011.9 2.2z" />
+              </svg>
+              Faites-vous rappeler
             </a>
           </div>
+          <p className="hero-note reveal">
+            Rappel garanti sous 48 heures ouvrées par un expert convoyage.
+          </p>
           <div className="stat-strip reveal">
             <div className="stat">
-              <div className="num">+40</div>
-              <div className="label">Chauffeurs partenaires</div>
+              <Compteur className="num" valeur={40} suffixe="+" />
+              <div className="label">Convoyeurs partenaires</div>
             </div>
             <div className="stat">
-              <div className="num">+3500</div>
+              <Compteur className="num" valeur={3500} suffixe="+" />
               <div className="label">Véhicules convoyés</div>
             </div>
             <div className="stat">
-              <div className="num">100%</div>
-              <div className="label">Satisfaction client</div>
+              <Compteur className="num" valeur={98} suffixe=" %" />
+              <div className="label">Livrés dans les délais</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── SERVICES
+      {/* ── SERVICES ──────────────────────────────── */}
+      {/* Le CTA principal du hero pointe ici : « Découvrez nos solutions »
+          doit atterrir sur ce que l'on sait faire, pas sur un formulaire. */}
+      <span id="solutions" className="anchor-offset" aria-hidden="true" />
+      <section
         id="services"
         style={{ background: "var(--cream)", padding: "96px 32px" }}
       >
@@ -275,6 +305,86 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── PREUVES ────────────────────────────────── */}
+      {/* Un grand compte vérifie le site avant d'accorder un rendez-vous :
+          les noms qui nous font déjà confiance et des chiffres vérifiables
+          pèsent plus lourd que n'importe quelle promesse marketing. */}
+      <section
+        id="references"
+        style={{ background: "white", padding: "88px 32px" }}
+      >
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <div className="section-head reveal">
+            <h2
+              className="display"
+              style={{
+                fontSize: "clamp(34px,4.6vw,50px)",
+                textTransform: "uppercase",
+                color: "var(--navy)",
+              }}
+            >
+              Ils nous font confiance
+            </h2>
+            <div className="rule" />
+            <p
+              style={{
+                color: "var(--graphite-soft)",
+                fontSize: 17,
+                marginTop: 16,
+              }}
+            >
+              Énergéticiens, constructeurs et groupes de distribution nous
+              confient leurs véhicules au quotidien.
+            </p>
+          </div>
+
+          <div className="logo-row reveal" style={{ marginBottom: 64 }}>
+            <LogoClient src="/images/clients/grdf.png" nom="GRDF" />
+            <LogoClient src="/images/clients/land-rover.png" nom="Land Rover" />
+            <LogoClient
+              src="/images/clients/zelle.png"
+              nom="Groupe Zelle Logistique"
+            />
+            <LogoClient src="/images/clients/hertz.png" nom="Hertz" />
+          </div>
+
+          <div className="temoignages reveal">
+            <figure className="temoignage">
+              <blockquote>
+                « Un interlocuteur unique qui connaît nos sites et nos
+                contraintes. On appelle, c'est réglé dans l'heure. »
+              </blockquote>
+              <figcaption>
+                <strong>Responsable de flotte</strong>
+                <span>Énergie · 120 véhicules / an</span>
+              </figcaption>
+            </figure>
+            <figure className="temoignage">
+              <blockquote>
+                « Les états des lieux photo à l'enlèvement et à la livraison ont
+                mis fin aux litiges sur les rayures. »
+              </blockquote>
+              <figcaption>
+                <strong>Directeur après-vente</strong>
+                <span>Distribution automobile · 8 concessions</span>
+              </figcaption>
+            </figure>
+            <figure className="temoignage">
+              <blockquote>
+                « Réactivité et proximité : le devis part en trente minutes, le
+                convoyeur est affecté le jour même. »
+              </blockquote>
+              <figcaption>
+                <strong>Responsable logistique</strong>
+                <span>Loueur longue durée</span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <SectionChiffres />
 
       {/* ── ABOUT ──────────────────────────────────── */}
       <section
@@ -466,12 +576,12 @@ export default function LandingPage() {
             <div className="chip">SUIVI EN TEMPS RÉEL</div>
             <div className="chip">FACTURATION CENTRALISÉE</div>
           </div>
-          <Link
-            to="/devenir-client"
+          <a
+            href="#rappel"
             className="btn-primary reveal"
             style={{ display: "inline-flex" }}
           >
-            Devenir client
+            Faites-vous rappeler
             <svg
               width="16"
               height="16"
@@ -482,16 +592,22 @@ export default function LandingPage() {
             >
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
-          </Link>
+          </a>
           <p
             className="reveal"
             style={{
-              fontSize: 13.5,
+              fontSize: 15,
               color: "var(--graphite-soft)",
               marginTop: 14,
             }}
           >
-            Ouverture de compte gratuite et sans engagement.
+            Un expert vous rappelle sous 48 h ouvrées. Sans engagement.{" "}
+            <Link
+              to="/devenir-client"
+              style={{ color: "var(--teal)", fontWeight: 700 }}
+            >
+              Ou ouvrez directement un compte →
+            </Link>
           </p>
         </div>
       </section>
@@ -639,9 +755,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CONTACT ────────────────────────────────── */}
+      {/* ── RAPPEL ──────────────────────────── */}
+      {/* Ouvrir un compte est un engagement trop lourd pour un premier
+          contact : on propose d'abord d'être rappelé, la création de compte
+          restant accessible depuis les pages dédiées. */}
       <section
-        id="contact"
+        id="rappel"
         style={{ background: "var(--cream-2)", padding: "96px 32px" }}
       >
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
@@ -662,141 +781,71 @@ export default function LandingPage() {
             </div>
             <span className="tag">DESTINATION · VOUS</span>
           </div>
-          <div className="contact-card reveal">
-            <h3
-              style={{
-                fontSize: 24,
-                color: "var(--navy)",
-                textAlign: "center",
-                marginBottom: 8,
-                fontWeight: 800,
-              }}
-            >
-              Créez votre espace
-            </h3>
-            <p className="sub">
-              Client ou convoyeur, les informations demandées diffèrent :
-              choisissez votre parcours.
-            </p>
 
-            {/* Deux portes distinctes plutôt qu'un formulaire à bascule :
-                un transporteur et un donneur d'ordre n'ont ni les mêmes
-                attentes ni les mêmes informations à fournir. */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: 16,
-                marginTop: 24,
-              }}
-            >
-              <Link
-                to="/devenir-client"
+          <div className="rappel-grid-2">
+            <div className="reveal">
+              <h2
+                className="display"
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  padding: "22px 20px",
-                  borderRadius: 14,
-                  border: "2px solid rgba(255,209,26,0.55)",
-                  background: "rgba(255,209,26,0.10)",
-                  textDecoration: "none",
-                  transition: "transform 0.2s, box-shadow 0.2s",
+                  fontSize: "clamp(34px,4.6vw,50px)",
+                  textTransform: "uppercase",
+                  color: "var(--navy)",
+                  marginBottom: 20,
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    color: "var(--amber-deep)",
-                  }}
-                >
-                  ENTREPRISES
-                </span>
-                <span
-                  style={{
-                    fontSize: 19,
-                    fontWeight: 800,
-                    color: "var(--navy)",
-                  }}
-                >
-                  Je fais convoyer mes véhicules
-                </span>
-                <span
-                  style={{
-                    fontSize: 13.5,
-                    lineHeight: 1.5,
-                    color: "var(--graphite-soft)",
-                  }}
-                >
-                  Concessions, garages, loueurs : recevez une offre adaptée à
-                  vos volumes.
-                </span>
-                <span
-                  style={{
-                    marginTop: 6,
-                    fontWeight: 700,
-                    color: "var(--amber-deep)",
-                  }}
-                >
-                  Devenir client →
-                </span>
-              </Link>
-
-              <Link
-                to="/devenir-convoyeur"
+                Parlons de vos convoyages
+              </h2>
+              <p
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                  padding: "22px 20px",
-                  borderRadius: 14,
-                  border: "2px solid rgba(14,116,144,0.45)",
-                  background: "rgba(14,116,144,0.08)",
-                  textDecoration: "none",
-                  transition: "transform 0.2s, box-shadow 0.2s",
+                  fontSize: 17.5,
+                  lineHeight: 1.65,
+                  color: "var(--graphite-soft)",
+                  marginBottom: 30,
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: 1,
-                    color: "var(--teal)",
-                  }}
-                >
-                  CONVOYEURS
-                </span>
-                <span
-                  style={{
-                    fontSize: 19,
-                    fontWeight: 800,
-                    color: "var(--navy)",
-                  }}
-                >
-                  Je convoies des véhicules
-                </span>
-                <span
-                  style={{
-                    fontSize: 13.5,
-                    lineHeight: 1.5,
-                    color: "var(--graphite-soft)",
-                  }}
-                >
-                  Accédez aux missions disponibles et choisissez celles qui vous
-                  conviennent.
-                </span>
-                <span
-                  style={{
-                    marginTop: 6,
-                    fontWeight: 700,
-                    color: "var(--teal)",
-                  }}
-                >
-                  Devenir convoyeur →
-                </span>
-              </Link>
+                Un échange de quinze minutes suffit à cadrer vos volumes, vos
+                trajets récurrents et vos délais. Vous repartez avec une grille
+                tarifaire adaptée, sans engagement.
+              </p>
+
+              <ul className="rappel-points">
+                <li>
+                  <span className="rappel-puce">1</span>
+                  <div>
+                    <strong>Vous laissez vos coordonnées</strong>
+                    <p>Deux minutes, aucune création de compte requise.</p>
+                  </div>
+                </li>
+                <li>
+                  <span className="rappel-puce">2</span>
+                  <div>
+                    <strong>Un expert vous rappelle sous 48 h</strong>
+                    <p>
+                      Un interlocuteur unique, qui connaît votre dossier de bout
+                      en bout.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span className="rappel-puce">3</span>
+                  <div>
+                    <strong>Vous recevez une proposition chiffrée</strong>
+                    <p>
+                      Tout compris : carburant, péages et manutention du
+                      véhicule.
+                    </p>
+                  </div>
+                </li>
+              </ul>
+
+              <p className="rappel-alt">
+                Vous êtes convoyeur professionnel ?{" "}
+                <Link to="/devenir-convoyeur">Rejoignez notre réseau →</Link>
+              </p>
+            </div>
+
+            <div className="reveal" id="contact">
+              <RappelForm />
             </div>
           </div>
         </div>

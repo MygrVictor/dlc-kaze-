@@ -287,7 +287,8 @@ router.get("/demandes", async (req, res, next) => {
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const { rows } = await db.query(
-      `SELECT id, type, first_name, last_name, company, email, phone, message,
+      `SELECT id, type, first_name, last_name, company, job_title, email, phone, message,
+              siret, rc_circulation, rc_pro, w_garage,
               status, admin_note, converted_user_id, handled_at, created_at
          FROM contact_requests
          ${where}
