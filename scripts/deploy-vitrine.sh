@@ -128,19 +128,39 @@ fi
 echo "📦 Installation des dépendances…"
 npm install --include=dev
 
-# Un élagage mal venu laisse une arborescence incomplète sans que npm ne
-# renvoie d'erreur : on vérifie avant d'aller plus loin, car la panne se
-# manifesterait sinon au milieu des migrations.
+# Un élagage laisse une arborescence incomplète sans qu'npm ne renvoie
+# d'erreur : il considère ensuite cet état comme « à jour ». On vérifie
+# donc sur le disque, car la panne se manifesterait sinon au milieu des
+# migrations. Les workspaces hoistent à la racine, mais un module peut
+# aussi rester local au paquet : les deux emplacements sont acceptés.
 echo "🔍 Vérification des dépendances…"
+MANQUANTS=()
 for MODULE in dotenv pg express; do
-  if ! node -e "require.resolve('$MODULE')" > /dev/null 2>&1; then
-    echo "❌ Module « $MODULE » introuvable après installation." >&2
-    echo "   Tentez une réinstallation propre :" >&2
-    echo "     rm -rf node_modules server/node_modules client/node_modules" >&2
-    echo "     npm install --include=dev" >&2
-    exit 1
+  if [[ ! -d "$RACINE/node_modules/$MODULE" && ! -d "$RACINE/server/node_modules/$MODULE" ]]; then
+    MANQUANTS+=("$MODULE")
   fi
 done
+
+# Réinstallation propre : npm ne recalcule l'arborescence qu'une fois
+# node_modules supprimé, un simple `npm install` le laissant en l'état.
+if [[ ${#MANQUANTS[@]} -gt 0 ]]; then
+  echo "⚠️  Modules absents : ${MANQUANTS[*]}"
+  echo "   Réinstallation complète…"
+  rm -rf "$RACINE/node_modules" "$RACINE/server/node_modules" \
+         "$RACINE/client/node_modules"
+  # NODE_ENV neutralisé le temps de l'installation : c'est lui qui
+  # pousse npm à écarter les dépendances de développement.
+  NODE_ENV=development npm install --include=dev
+
+  for MODULE in "${MANQUANTS[@]}"; do
+    if [[ ! -d "$RACINE/node_modules/$MODULE" && ! -d "$RACINE/server/node_modules/$MODULE" ]]; then
+      echo "❌ Module « $MODULE » toujours introuvable après réinstallation." >&2
+      echo "   Vérifiez ~/.npmrc et $RACINE/.npmrc : une directive" >&2
+      echo "   « omit=dev » ou « production=true » bloquerait l'installation." >&2
+      exit 1
+    fi
+  done
+fi
 echo "✅ Dépendances complètes."
 
 # ── 7. Migrations ────────────────────────────────────────────
