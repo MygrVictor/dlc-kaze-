@@ -6,9 +6,7 @@
  * n'appellent pas la même réponse commerciale. L'information est stockée à
  * part plutôt que noyée dans `message`, pour rester filtrable côté admin.
  */
-require("dotenv").config({
-  path: require("path").resolve(__dirname, "../../../.env"),
-});
+require("../lib/charger-env").chargerEnv();
 const db = require("./index");
 
 const migrate = async () => {

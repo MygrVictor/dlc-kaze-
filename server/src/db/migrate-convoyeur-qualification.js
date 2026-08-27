@@ -12,9 +12,7 @@
  *    trois valeurs plutôt qu'un simple booléen ;
  *  - la certification W garage, exigée par certains donneurs d'ordre.
  */
-require("dotenv").config({
-  path: require("path").resolve(__dirname, "../../../.env"),
-});
+require("../lib/charger-env").chargerEnv();
 const db = require("./index");
 
 const migrate = async () => {
