@@ -320,10 +320,10 @@ export default function PageDemande({
                 <>
                   Vous expédiez ?{" "}
                   <Link
-                    to="/devenir-client"
+                    to="/etre-rappele"
                     style={{ color: "var(--amber-deep)", fontWeight: 600 }}
                   >
-                    Devenir client
+                    Faites-vous rappeler
                   </Link>
                 </>
               )}

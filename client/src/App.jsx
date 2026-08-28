@@ -8,8 +8,8 @@ import DashboardLayout from "./layouts/DashboardLayout";
 // Pages publiques
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
-import DevenirClientPage from "./pages/DevenirClientPage";
 import DevenirConvoyeurPage from "./pages/DevenirConvoyeurPage";
+import EtreRappelePage from "./pages/EtreRappelePage";
 
 // Pages Client
 import ClientDashboard from "./pages/client/ClientDashboard";
@@ -69,14 +69,19 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/devenir-client" element={<DevenirClientPage />} />
         <Route path="/devenir-convoyeur" element={<DevenirConvoyeurPage />} />
-        {/* Ancien parcours unique, où le visiteur choisissait son profil
-            avant de savoir ce qu'on attendait de lui. Les liens externes
+        <Route path="/etre-rappele" element={<EtreRappelePage />} />
+        {/* L'ouverture de compte en libre-service laissait entrer des
+            dossiers non qualifiés : les comptes clients sont désormais
+            créés par nos soins après l'entretien téléphonique. Les liens
             et signets existants restent valides. */}
         <Route
+          path="/devenir-client"
+          element={<Navigate to="/etre-rappele" replace />}
+        />
+        <Route
           path="/register"
-          element={<Navigate to="/devenir-client" replace />}
+          element={<Navigate to="/etre-rappele" replace />}
         />
       </Route>
 

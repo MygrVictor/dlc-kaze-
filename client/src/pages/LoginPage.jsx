@@ -168,10 +168,10 @@ export default function LoginPage() {
           >
             Pas encore de compte ?{" "}
             <Link
-              to="/devenir-client"
+              to="/etre-rappele"
               style={{ color: "var(--amber-deep)", fontWeight: 600 }}
             >
-              Devenir client
+              Faites-vous rappeler
             </Link>{" "}
             ou{" "}
             <Link

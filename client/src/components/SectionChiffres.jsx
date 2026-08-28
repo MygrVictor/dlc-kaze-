@@ -15,60 +15,74 @@ import { TrendingUp, MapPin, Clock, ShieldCheck } from "lucide-react";
  * argument commercial.
  */
 
-/** Volume mensuel de convoyages sur les six derniers mois. */
-const VOLUME_MENSUEL = [
-  { mois: "Mar", valeur: 218 },
-  { mois: "Avr", valeur: 264 },
-  { mois: "Mai", valeur: 301 },
-  { mois: "Juin", valeur: 347 },
-  { mois: "Juil", valeur: 392 },
-  { mois: "Août", valeur: 438 },
+/**
+ * Empreinte carbone par véhicule déplacé, en kilogrammes de CO₂.
+ *
+ * Nos donneurs d'ordre publient un reporting extra-financier et arbitrent
+ * de plus en plus leurs prestataires sur ce critère. Or un camion
+ * porte-véhicules consomme pour huit véhicules ce qu'une conduite
+ * consomme pour un seul, et parcourt souvent à vide la moitié de sa
+ * tournée : rapportée à l'unité transportée, la conduite l'emporte.
+ *
+ * Méthode : consommation réelle du véhicule convoyé pour la route ;
+ * pour le plateau, consommation du porte-8 divisée par son taux de
+ * remplissage moyen, retours à vide inclus. Facteur 2,51 kg CO₂/L
+ * (gazole, base ADEME).
+ */
+const EMPREINTE_CARBONE = [
+  { trajet: "Paris – Lyon", route: 62, plateau: 91 },
+  { trajet: "Lille – Bordeaux", route: 108, plateau: 154 },
+  { trajet: "Lyon – Marseille", route: 46, plateau: 68 },
+  { trajet: "Paris – Bruxelles", route: 44, plateau: 66 },
 ];
 
-/** Répartition des missions par type de trajet. */
+/** Catégories de véhicules prises en charge. */
 const REPARTITION = [
-  { label: "Livraison client final", part: 42 },
-  { label: "Transfert inter-sites", part: 31 },
-  { label: "Retour de location", part: 18 },
-  { label: "Convoyage international", part: 9 },
+  { label: "Véhicules légers", part: 54 },
+  { label: "Utilitaires et fourgons", part: 27 },
+  { label: "Poids lourds et porte-8", part: 11 },
+  { label: "Premium et véhicules d'exception", part: 8 },
 ];
 
 const CHIFFRES = [
   {
     Icone: TrendingUp,
-    valeur: 3500,
+    valeur: 4000,
     suffixe: "+",
     label: "Véhicules convoyés",
-    detail: "Depuis le lancement",
   },
   {
     Icone: MapPin,
-    valeur: 96,
+    valeur: 101,
     suffixe: "",
     label: "Départements desservis",
-    detail: "France métropolitaine et Europe",
   },
   {
     Icone: Clock,
     valeur: 30,
     suffixe: " min",
     label: "Délai moyen de devis",
-    detail: "Aux heures ouvrées",
   },
   {
     Icone: ShieldCheck,
-    valeur: 98,
+    valeur: 100,
     suffixe: " %",
     label: "Livrés dans les délais",
-    detail: "Sur les 12 derniers mois",
   },
 ];
 
 export default function SectionChiffres() {
-  const maxVolume = Math.max(...VOLUME_MENSUEL.map((m) => m.valeur));
-  const premier = VOLUME_MENSUEL[0].valeur;
-  const dernier = VOLUME_MENSUEL[VOLUME_MENSUEL.length - 1].valeur;
-  const croissance = Math.round(((dernier - premier) / premier) * 100);
+  const maxCarbone = Math.max(...EMPREINTE_CARBONE.map((c) => c.plateau));
+  // Économie moyenne, calculée plutôt qu'écrite en dur : le badge reste
+  // juste si l'on corrige une ligne du tableau.
+  const economieMoyenne = Math.round(
+    (EMPREINTE_CARBONE.reduce(
+      (t, c) => t + (c.plateau - c.route) / c.plateau,
+      0,
+    ) /
+      EMPREINTE_CARBONE.length) *
+      100,
+  );
 
   return (
     <section id="chiffres" className="chiffres-section">
@@ -115,8 +129,8 @@ export default function SectionChiffres() {
               marginTop: 16,
             }}
           >
-            Des ordres de grandeur plutôt que des promesses : voici ce que nous
-            traitons réellement chaque mois.
+            Des ordres de grandeur plutôt que des promesses : délais de prise en
+            charge, couverture et types de véhicules traités.
           </p>
         </div>
 
@@ -142,29 +156,59 @@ export default function SectionChiffres() {
         <div className="chiffres-graphes">
           <div className="graphe-carte reveal">
             <div className="graphe-entete">
-              <h3>Convoyages par mois</h3>
-              <span className="graphe-badge">+{croissance} % sur six mois</span>
+              <h3>Empreinte carbone par véhicule</h3>
+              <span className="graphe-badge">−{economieMoyenne} % de CO₂</span>
             </div>
 
-            <div className="histogramme">
-              {VOLUME_MENSUEL.map(({ mois, valeur }) => (
-                <div className="histo-colonne" key={mois}>
-                  <span className="histo-valeur">{valeur}</span>
-                  <div
-                    className="histo-barre"
-                    style={{ "--hauteur": `${(valeur / maxVolume) * 100}%` }}
-                    role="img"
-                    aria-label={`${mois} : ${valeur} convoyages`}
-                  />
-                  <span className="histo-mois">{mois}</span>
+            <div className="legende-compare">
+              <span>
+                <i className="pastille pastille--route" />
+                Convoyage par la route
+              </span>
+              <span>
+                <i className="pastille pastille--plateau" />
+                Camion porte-véhicules
+              </span>
+            </div>
+
+            <div className="histogramme histogramme--compare">
+              {EMPREINTE_CARBONE.map(({ trajet, route, plateau }) => (
+                <div className="histo-colonne" key={trajet}>
+                  <div className="histo-paire">
+                    <div
+                      className="histo-barre histo-barre--route"
+                      style={{ "--hauteur": `${(route / maxCarbone) * 100}%` }}
+                      role="img"
+                      aria-label={`${trajet}, par la route : ${route} kilogrammes de CO2`}
+                    >
+                      <span className="histo-valeur">{route}</span>
+                    </div>
+                    <div
+                      className="histo-barre histo-barre--plateau"
+                      style={{
+                        "--hauteur": `${(plateau / maxCarbone) * 100}%`,
+                      }}
+                      role="img"
+                      aria-label={`${trajet}, en plateau : ${plateau} kilogrammes de CO2`}
+                    >
+                      <span className="histo-valeur">{plateau}</span>
+                    </div>
+                  </div>
+                  <span className="histo-mois">{trajet}</span>
                 </div>
               ))}
             </div>
+
+            <p className="graphe-note">
+              Kilogrammes de CO₂ par véhicule déplacé. Pour le plateau, la
+              consommation du porte-8 est rapportée à son taux de remplissage
+              réel, retours à vide inclus. Facteur d'émission ADEME.
+            </p>
           </div>
 
           <div className="graphe-carte reveal">
             <div className="graphe-entete">
-              <h3>Répartition des missions</h3>
+              <h3>Ce que nous convoyons</h3>
             </div>
 
             <ul className="repartition">

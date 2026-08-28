@@ -1,20 +1,65 @@
 import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const LIENS = [
   { label: "Accueil", href: "/" },
-  { label: "Nos solutions", href: "#solutions" },
-  { label: "Références", href: "#references" },
+  { label: "Nos solutions clients", href: "#solutions" },
   { label: "Nos chiffres", href: "#chiffres" },
   { label: "Qui sommes-nous", href: "#about" },
   { label: "Devenez convoyeur", href: "#convoy" },
-  { label: "Être rappelé", href: "#rappel" },
 ];
+
+/**
+ * Suit la section actuellement à l'écran pour souligner le lien
+ * correspondant.
+ *
+ * On déclenche le changement lorsque la section franchit le tiers supérieur
+ * de la fenêtre plutôt qu'à son entrée : à la lecture, c'est la partie
+ * haute de l'écran que l'on considère comme « l'endroit où l'on est ».
+ * La dernière section franchie l'emporte, ce qui évite les hésitations
+ * quand deux sections sont visibles simultanément.
+ */
+function useSectionActive() {
+  const [actif, setActif] = useState("");
+
+  useEffect(() => {
+    const ancres = LIENS.filter((l) => l.href.startsWith("#")).map((l) =>
+      l.href.slice(1),
+    );
+
+    const relever = () => {
+      const seuil = window.innerHeight / 3;
+      let courant = "";
+
+      for (const id of ancres) {
+        const section = document.getElementById(id);
+        if (section && section.getBoundingClientRect().top <= seuil) {
+          courant = id;
+        }
+      }
+
+      // Tout en haut de page, aucune section n'est encore atteinte :
+      // c'est « Accueil » qui doit être mis en avant.
+      setActif(window.scrollY < 120 ? "accueil" : courant);
+    };
+
+    relever();
+    window.addEventListener("scroll", relever, { passive: true });
+    window.addEventListener("resize", relever);
+    return () => {
+      window.removeEventListener("scroll", relever);
+      window.removeEventListener("resize", relever);
+    };
+  }, []);
+
+  return actif;
+}
 
 export default function PublicLayout() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const sectionActive = useSectionActive();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -29,7 +74,7 @@ export default function PublicLayout() {
           borderBottom: "1px solid rgba(255,209,26,0.15)",
         }}
       >
-        <div className="mx-auto flex h-[72px] w-full max-w-[1700px] items-center justify-between px-4 sm:px-8 lg:px-14 xl:px-20 md:h-[88px]">
+        <div className="mx-auto flex h-[72px] w-full max-w-[1700px] items-center justify-between gap-4 px-4 sm:px-8 lg:px-10 xl:px-20 md:h-[88px]">
           {/* Logo */}
           <Link
             to="/"
@@ -50,34 +95,32 @@ export default function PublicLayout() {
           </Link>
 
           {/* Nav desktop */}
-          <nav className="hidden md:block">
+          <nav className="nav-desktop hidden md:block">
             <ul
               style={{
                 listStyle: "none",
                 display: "flex",
-                gap: 22,
                 alignItems: "center",
               }}
             >
-              {LIENS.map((item) => (
-                <li key={item.label}>
-                  <a
-                    href={item.href}
-                    style={{
-                      color: "rgba(255,255,255,0.75)",
-                      fontSize: 14.5,
-                      fontWeight: 500,
-                      transition: "color 0.2s",
-                    }}
-                    onMouseEnter={(e) => (e.target.style.color = "white")}
-                    onMouseLeave={(e) =>
-                      (e.target.style.color = "rgba(255,255,255,0.75)")
-                    }
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
+              {LIENS.map((item) => {
+                const cible = item.href.startsWith("#")
+                  ? item.href.slice(1)
+                  : "accueil";
+                const estActif = sectionActive === cible;
+
+                return (
+                  <li key={item.label}>
+                    <a
+                      href={item.href}
+                      className={`nav-lien${estActif ? " nav-lien--actif" : ""}`}
+                      aria-current={estActif ? "true" : undefined}
+                    >
+                      {item.label}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
 

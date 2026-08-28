@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import RappelForm from "../components/RappelForm";
-import LogoClient from "../components/LogoClient";
+import BandeauClients from "../components/BandeauClients";
 import SectionChiffres from "../components/SectionChiffres";
 import Compteur from "../components/Compteur";
 
@@ -134,9 +133,9 @@ export default function LandingPage() {
             <span style={{ color: "var(--amber)" }}>Notre route.</span>
           </h1>
           <p className="hero-sub reveal">
-            Drive Line Connect relie entreprises et convoyeurs professionnels
-            pour livrer vos véhicules partout en France et en Europe — suivi,
-            assurance et délais maîtrisés.
+            Drive Line Connect livre vos véhicules partout en France et en
+            Europe. Un interlocuteur unique, des conducteurs formés à nos
+            procédures, une assurance et des délais garantis.
           </p>
           <div className="hero-ctas reveal">
             <a href="#solutions" className="btn-primary">
@@ -152,7 +151,7 @@ export default function LandingPage() {
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </a>
-            <a href="#rappel" className="btn-outline">
+            <Link to="/etre-rappele" className="btn-outline">
               <svg
                 width="16"
                 height="16"
@@ -166,27 +165,29 @@ export default function LandingPage() {
                 <path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.7a2 2 0 01-.4 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.5 2.7.6a2 2 0 011.9 2.2z" />
               </svg>
               Faites-vous rappeler
-            </a>
+            </Link>
           </div>
           <p className="hero-note reveal">
             Rappel garanti sous 48 heures ouvrées par un expert convoyage.
           </p>
           <div className="stat-strip reveal">
             <div className="stat">
-              <Compteur className="num" valeur={40} suffixe="+" />
-              <div className="label">Convoyeurs partenaires</div>
+              <Compteur className="num" valeur={50} suffixe="+" />
+              <div className="label">chauffeurs partenaires</div>
             </div>
             <div className="stat">
-              <Compteur className="num" valeur={3500} suffixe="+" />
+              <Compteur className="num" valeur={4000} suffixe="+" />
               <div className="label">Véhicules convoyés</div>
             </div>
             <div className="stat">
-              <Compteur className="num" valeur={98} suffixe=" %" />
+              <Compteur className="num" valeur={100} suffixe=" %" />
               <div className="label">Livrés dans les délais</div>
             </div>
           </div>
         </div>
       </section>
+
+      <BandeauClients />
 
       {/* ── SERVICES ──────────────────────────────── */}
       {/* Le CTA principal du hero pointe ici : « Découvrez nos solutions »
@@ -234,7 +235,7 @@ export default function LandingPage() {
               }}
             >
               Trois façons de faire voyager un véhicule, du premier kilomètre à
-              la remise des clés.
+              la remise des clés — et un interlocuteur unique pour en parler.
             </p>
           </div>
           <div className="card-grid">
@@ -303,6 +304,60 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
+
+          {/* Enchaîner directement sur l'invitation : un visiteur qui vient
+              de lire ce que nous savons faire est au moment précis où il se
+              demande à qui s'adresser. Le renvoyer plus bas dans la page
+              faisait perdre cet élan. */}
+          <span id="entreprises" className="anchor-offset" aria-hidden="true" />
+          <div className="services-appel reveal">
+            <div>
+              <h3 className="services-appel__titre">
+                Concessions, loueurs, gestionnaires de flotte
+              </h3>
+              <p className="services-appel__texte">
+                Confiez vos livraisons clients, transferts inter-sites et
+                retours de location à Drive Line Connect. Nous assurons vos
+                véhicules pendant tout le trajet et vous suivez chaque mission
+                en direct.
+              </p>
+              <div className="chip-row" style={{ marginBottom: 0 }}>
+                <div className="chip">VÉHICULES ASSURÉS</div>
+                <div className="chip">SUIVI EN TEMPS RÉEL</div>
+                <div className="chip">FACTURATION CENTRALISÉE</div>
+              </div>
+            </div>
+
+            <div className="services-appel__action">
+              <p className="services-appel__action-titre">
+                Un projet de convoyage ?
+              </p>
+              <p className="services-appel__note">
+                Quinze minutes au téléphone suffisent à cadrer vos volumes, vos
+                trajets récurrents et vos délais.
+              </p>
+              <Link
+                to="/etre-rappele"
+                className="btn-primary"
+                style={{ display: "inline-flex" }}
+              >
+                Faites-vous rappeler
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </Link>
+              <p className="services-appel__note">
+                Réponse sous 48 h ouvrées. Sans engagement.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -324,29 +379,9 @@ export default function LandingPage() {
                 color: "var(--navy)",
               }}
             >
-              Ils nous font confiance
+              Ce qu'ils en disent
             </h2>
             <div className="rule" />
-            <p
-              style={{
-                color: "var(--graphite-soft)",
-                fontSize: 17,
-                marginTop: 16,
-              }}
-            >
-              Énergéticiens, constructeurs et groupes de distribution nous
-              confient leurs véhicules au quotidien.
-            </p>
-          </div>
-
-          <div className="logo-row reveal" style={{ marginBottom: 64 }}>
-            <LogoClient src="/images/clients/grdf.png" nom="GRDF" />
-            <LogoClient src="/images/clients/land-rover.png" nom="Land Rover" />
-            <LogoClient
-              src="/images/clients/zelle.png"
-              nom="Groupe Zelle Logistique"
-            />
-            <LogoClient src="/images/clients/hertz.png" nom="Hertz" />
           </div>
 
           <div className="temoignages reveal">
@@ -439,11 +474,11 @@ export default function LandingPage() {
                   marginBottom: 22,
                 }}
               >
-                Nous mettons en relation entreprises et convoyeurs
-                professionnels indépendants pour rendre chaque trajet plus
-                simple, plus rapide et plus sûr.
+                Nous prenons en charge vos véhicules de bout en bout, avec nos
+                propres procédures et nos conducteurs professionnels : un seul
+                interlocuteur, une seule responsabilité, la nôtre.
               </p>
-              <a href="#contact" className="link-arrow">
+              <Link to="/etre-rappele" className="link-arrow">
                 En savoir plus
                 <svg
                   viewBox="0 0 24 24"
@@ -454,7 +489,7 @@ export default function LandingPage() {
                 >
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
-              </a>
+              </Link>
             </div>
             <div className="reveal">
               <div className="feature-item">
@@ -480,13 +515,12 @@ export default function LandingPage() {
                       fontWeight: 700,
                     }}
                   >
-                    Réseau efficace et sécurisé
+                    Prise en charge sécurisée
                   </h4>
                   <p style={{ fontSize: 14, color: "var(--graphite-soft)" }}>
-                    Un réseau de convoyeurs professionnels qui garantit des
-                    services rapides et fiables, avec des délais maîtrisés —
-                    livraison 24h en France, transfert sécurisé à travers
-                    l'Europe.
+                    Des conducteurs professionnels formés à nos procédures et
+                    des délais que nous garantissons — livraison en 24 h en
+                    France, transfert sécurisé à travers l'Europe.
                   </p>
                 </div>
               </div>
@@ -525,90 +559,6 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ── CLIENT ─────────────────────────────────── */}
-      {/* Pendant clair de la section convoyeur : les deux publics ont
-          désormais chacun leur invitation, au lieu d'un unique appel qui
-          renvoyait tout le monde vers le même formulaire. */}
-      <section
-        id="entreprises"
-        className="section-claire"
-        style={{ background: "var(--cream)", padding: "96px 32px" }}
-      >
-        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <div className="waypoint-label reveal">
-            <div className="waypoint">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--amber)"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ width: 22, height: 22 }}
-              >
-                <path d="M3 21h18M5 21V7l7-4 7 4v14" />
-                <path d="M9 21v-6h6v6" />
-              </svg>
-            </div>
-            <span className="tag">KM 180 · ENTREPRISES</span>
-          </div>
-          <h2
-            className="display reveal"
-            style={{
-              fontSize: "clamp(36px,5vw,54px)",
-              textTransform: "uppercase",
-              color: "var(--navy)",
-            }}
-          >
-            Devenez client
-          </h2>
-          <p className="desc reveal">
-            Concessions, garages, loueurs et gestionnaires de flotte : confiez
-            vos livraisons clients, transferts inter-sites et retours de
-            location à des convoyeurs vérifiés. Vos véhicules sont assurés
-            pendant tout le trajet et vous suivez chaque mission en direct.
-          </p>
-          <div className="chip-row reveal">
-            <div className="chip">VÉHICULES ASSURÉS</div>
-            <div className="chip">SUIVI EN TEMPS RÉEL</div>
-            <div className="chip">FACTURATION CENTRALISÉE</div>
-          </div>
-          <a
-            href="#rappel"
-            className="btn-primary reveal"
-            style={{ display: "inline-flex" }}
-          >
-            Faites-vous rappeler
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </a>
-          <p
-            className="reveal"
-            style={{
-              fontSize: 15,
-              color: "var(--graphite-soft)",
-              marginTop: 14,
-            }}
-          >
-            Un expert vous rappelle sous 48 h ouvrées. Sans engagement.{" "}
-            <Link
-              to="/devenir-client"
-              style={{ color: "var(--teal)", fontWeight: 700 }}
-            >
-              Ou ouvrez directement un compte →
-            </Link>
-          </p>
         </div>
       </section>
 
@@ -676,178 +626,6 @@ export default function LandingPage() {
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
           </Link>
-        </div>
-      </section>
-
-      {/* ── ASSURANCE ──────────────────────────────── */}
-      <section
-        style={{
-          background: "var(--cream)",
-          padding: "96px 32px",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <div className="waypoint-label reveal">
-            <div className="waypoint">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--amber)"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ width: 22, height: 22 }}
-              >
-                <path d="M12 2l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" />
-                <path d="M9 12l2 2 4-4" />
-              </svg>
-            </div>
-            <span className="tag">KM 410 · ASSURANCE</span>
-          </div>
-          <div className="section-head reveal">
-            <h2
-              className="display"
-              style={{
-                fontSize: "clamp(36px,5vw,54px)",
-                textTransform: "uppercase",
-                color: "var(--navy)",
-              }}
-            >
-              Assurance &amp; confiance
-            </h2>
-            <div className="rule" />
-            <p
-              style={{
-                color: "var(--graphite-soft)",
-                fontSize: 16,
-                marginTop: 14,
-              }}
-            >
-              La sécurité et le bien-être de nos convoyeurs sont au cœur de nos
-              préoccupations. En collaboration avec nos partenaires, nous
-              offrons une couverture complète des véhicules et des conducteurs.
-            </p>
-          </div>
-          <div className="logo-row reveal">
-            <div className="logo-card">
-              <img
-                src="/images/assurance/areas.png"
-                alt="Areas Assurances"
-                style={{ height: 52, width: "auto", objectFit: "contain" }}
-              />
-            </div>
-            <div className="logo-card">
-              <img
-                src="/images/assurance/tetris.png"
-                alt="Tetris Assurance"
-                style={{ height: 52, width: "auto", objectFit: "contain" }}
-              />
-            </div>
-            <div className="logo-card">
-              <img
-                src="/images/assurance/generali.png"
-                alt="Generali"
-                style={{ height: 52, width: "auto", objectFit: "contain" }}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── RAPPEL ──────────────────────────── */}
-      {/* Ouvrir un compte est un engagement trop lourd pour un premier
-          contact : on propose d'abord d'être rappelé, la création de compte
-          restant accessible depuis les pages dédiées. */}
-      <section
-        id="rappel"
-        style={{ background: "var(--cream-2)", padding: "96px 32px" }}
-      >
-        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <div className="waypoint-label reveal">
-            <div className="waypoint">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--amber)"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ width: 22, height: 22 }}
-              >
-                <path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0118 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-            </div>
-            <span className="tag">DESTINATION · VOUS</span>
-          </div>
-
-          <div className="rappel-grid-2">
-            <div className="reveal">
-              <h2
-                className="display"
-                style={{
-                  fontSize: "clamp(34px,4.6vw,50px)",
-                  textTransform: "uppercase",
-                  color: "var(--navy)",
-                  marginBottom: 20,
-                }}
-              >
-                Parlons de vos convoyages
-              </h2>
-              <p
-                style={{
-                  fontSize: 17.5,
-                  lineHeight: 1.65,
-                  color: "var(--graphite-soft)",
-                  marginBottom: 30,
-                }}
-              >
-                Un échange de quinze minutes suffit à cadrer vos volumes, vos
-                trajets récurrents et vos délais. Vous repartez avec une grille
-                tarifaire adaptée, sans engagement.
-              </p>
-
-              <ul className="rappel-points">
-                <li>
-                  <span className="rappel-puce">1</span>
-                  <div>
-                    <strong>Vous laissez vos coordonnées</strong>
-                    <p>Deux minutes, aucune création de compte requise.</p>
-                  </div>
-                </li>
-                <li>
-                  <span className="rappel-puce">2</span>
-                  <div>
-                    <strong>Un expert vous rappelle sous 48 h</strong>
-                    <p>
-                      Un interlocuteur unique, qui connaît votre dossier de bout
-                      en bout.
-                    </p>
-                  </div>
-                </li>
-                <li>
-                  <span className="rappel-puce">3</span>
-                  <div>
-                    <strong>Vous recevez une proposition chiffrée</strong>
-                    <p>
-                      Tout compris : carburant, péages et manutention du
-                      véhicule.
-                    </p>
-                  </div>
-                </li>
-              </ul>
-
-              <p className="rappel-alt">
-                Vous êtes convoyeur professionnel ?{" "}
-                <Link to="/devenir-convoyeur">Rejoignez notre réseau →</Link>
-              </p>
-            </div>
-
-            <div className="reveal" id="contact">
-              <RappelForm />
-            </div>
-          </div>
         </div>
       </section>
     </>

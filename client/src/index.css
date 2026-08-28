@@ -736,9 +736,232 @@
   height: 26px;
   max-width: 100%;
 }
+/* À partir de la tablette, la hauteur suit la largeur de la fenêtre : sur
+   un écran étroit, un logo fixe à 40 px mangeait la place nécessaire aux
+   sept liens, qui repassaient alors à la ligne. */
 @media (min-width: 768px) {
   .nav-logo {
-    height: 40px;
+    height: clamp(26px, 2.6vw, 40px);
+  }
+}
+
+/* ── Liens de navigation, à partir de la tablette ────────────────
+   Sept intitulés, dont « Qui sommes-nous » et « Devenez convoyeur »,
+   doivent tenir sur une seule ligne quelle que soit la largeur. On agit
+   sur trois leviers à la fois : interdiction du retour à la ligne,
+   espacement et corps de texte proportionnels à la fenêtre. Le menu
+   mobile, lui, n'est pas concerné : il s'affiche en colonne. */
+@media (min-width: 768px) {
+  .nav-desktop ul {
+    flex-wrap: nowrap;
+    gap: clamp(10px, 1.35vw, 22px);
+  }
+  .nav-desktop a {
+    white-space: nowrap;
+    font-size: clamp(12.5px, 1.02vw, 14.5px);
+  }
+  /* Le bouton de compte ne doit ni se comprimer ni se scinder. */
+  .btn-account {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* ── Page « Faites-vous rappeler » ──────────────────────────
+   Reprend la mise en page à deux colonnes qu'occupait la section en pied
+   d'accueil, mais sur toute la hauteur : rien d'autre ne sollicite
+   l'attention. */
+.page-rappel {
+  background: var(--cream-2);
+  padding: 72px 32px 96px;
+  min-height: calc(100vh - var(--navbar-h, 88px));
+}
+.page-rappel__inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: start;
+}
+.page-rappel__chapo {
+  font-size: 17.5px;
+  line-height: 1.65;
+  color: var(--graphite-soft);
+  margin: 20px 0 30px;
+}
+/* Le formulaire reste visible pendant que l'on relit les trois étapes. */
+@media (min-width: 981px) {
+  .page-rappel__form {
+    position: sticky;
+    top: calc(var(--navbar-h, 88px) + 24px);
+  }
+}
+@media (max-width: 980px) {
+  .page-rappel__inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .page-rappel {
+    padding: 48px 20px 72px;
+  }
+}
+
+/* ── Assureurs, sous le bandeau des clients ────────────────────
+   Rangée fixe et logos plus discrets que ceux des clients : ce sont des
+   cautions, pas des références commerciales. Le filet supérieur marque la
+   séparation sans introduire une nouvelle section. */
+.bandeau-assureurs {
+  margin-top: 30px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(11, 29, 58, 0.07);
+  text-align: center;
+}
+.bandeau-assureurs__titre {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--graphite-soft);
+  margin-bottom: 18px;
+}
+.bandeau-assureurs__liste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bandeau-assureurs .logo-card {
+  width: 168px;
+  height: 84px;
+  flex: 0 0 168px;
+}
+.bandeau-assureurs .logo-image {
+  max-height: 60px;
+}
+
+/* ── Appel client au pied des services ────────────────────────────
+   Le bandeau prolonge la grille de services sans rompre la section :
+   fond légèrement contrasté, pas de nouveau titre de niveau 2, afin que
+   l'ensemble se lise comme un seul mouvement — voici ce que nous
+   faisons, voici comment nous joindre. */
+.services-appel {
+  margin-top: 56px;
+  padding: 38px 40px;
+  border-radius: 18px;
+  background: white;
+  border: 1px solid rgba(11, 29, 58, 0.09);
+  display: grid;
+  /* Deux moitiés strictes : l'argumentaire et l'invitation se répondent
+     à poids égal, plutôt qu'un bloc de texte flanqué d'un bouton. */
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.services-appel__titre {
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 10px;
+}
+.services-appel__texte {
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--graphite-soft);
+  margin-bottom: 20px;
+  max-width: 62ch;
+}
+.services-appel__action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  /* Un fond légèrement teinté et un filet séparent les deux moitiés sans
+     recourir à une bordure verticale, qui trancherait trop. */
+  background: var(--cream);
+  border-radius: 14px;
+  padding: 26px 28px;
+  height: 100%;
+  justify-content: center;
+}
+.services-appel__action-titre {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.services-appel__note {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--graphite-soft);
+}
+.services-appel__note a {
+  color: var(--teal);
+  font-weight: 700;
+}
+/* Sous 900 px, la colonne d'action passe dessous plutôt que de comprimer
+   le texte à une largeur illisible. */
+@media (max-width: 900px) {
+  .services-appel {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 30px 26px;
+  }
+}
+
+/* ── Lien de navigation : soulignement de la section courante ──────
+   Le trait est un pseudo-élément mis à l'échelle depuis le centre plutôt
+   qu'une bordure que l'on ferait apparaître : la transition porte alors
+   sur `transform`, que le navigateur compose sans recalculer la mise en
+   page. La réserve verticale est constante, donc les liens ne bougent pas
+   quand le soulignement apparaît. */
+.nav-lien {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 6px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nav-lien::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--amber);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav-lien:hover {
+  color: white;
+}
+.nav-lien:hover::after {
+  transform: scaleX(0.55);
+}
+.nav-lien--actif {
+  color: white;
+}
+.nav-lien--actif::after,
+.nav-lien--actif:hover::after {
+  transform: scaleX(1);
+}
+/* Le clavier doit signaler le lien visé aussi nettement que la souris. */
+.nav-lien:focus-visible {
+  color: white;
+  outline: 2px solid var(--amber);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-lien::after {
+    transition: none;
   }
 }
 .logo-mark {
@@ -1072,31 +1295,113 @@
   gap: 24px;
   flex-wrap: wrap;
 }
-.logo-card {
+
+/* ── Bandeau déroulant « Ils nous font confiance » ──────────────
+   Placé sous le hero. Les logos défilent en continu : la piste
+   contient deux copies de la liste, et l'animation translate d'une
+   demi-largeur, si bien que la seconde copie occupe exactement la
+   position de départ de la première au moment où la boucle reprend. */
+.bandeau-clients {
   background: white;
-  border: 1px solid rgba(11, 29, 58, 0.08);
-  border-radius: 12px;
-  padding: 26px 40px;
+  border-top: 1px solid rgba(11, 29, 58, 0.07);
+  border-bottom: 1px solid rgba(11, 29, 58, 0.07);
+  padding: 34px 0 38px;
+  overflow: hidden;
+}
+.bandeau-clients__titre {
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--graphite-soft);
+  margin-bottom: 26px;
+}
+.bandeau-clients__piste {
+  display: flex;
+  width: max-content;
+  animation: defile-clients 38s linear infinite;
+}
+/* Le survol suspend le défilement : on laisse le temps de lire un nom. */
+.bandeau-clients__piste:hover {
+  animation-play-state: paused;
+}
+.bandeau-clients__defile {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 12px;
+  margin: 0;
+  list-style: none;
+}
+@keyframes defile-clients {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+/* Sans mouvement : on retombe sur une grille centrée, et la copie
+   dupliquée n'a plus lieu d'être affichée. */
+@media (prefers-reduced-motion: reduce) {
+  .bandeau-clients__piste {
+    animation: none;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .bandeau-clients__defile[aria-hidden="true"] {
+    display: none;
+  }
+  .bandeau-clients__defile {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.logo-card {
+  /* Ni fond ni bordure : les logos se posent directement sur le bandeau.
+     Une grille de cadres blancs alourdissait la lecture et faisait
+     ressortir le contenant plutôt que les marques. */
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 8px 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 180px;
-  transition:
-    box-shadow 0.2s,
-    transform 0.2s;
+  /* Dimensions fixes : c'est la carte qui impose le rythme, pas le logo.
+     Sans cela, un lettrage allongé écraserait visuellement une pastille
+     ronde placée juste à côté. */
+  width: 220px;
+  height: 120px;
+  flex: 0 0 220px;
+  box-sizing: border-box;
+  transition: transform 0.2s;
+}
+/* L'image s'inscrit dans la carte sans jamais la déborder ni se déformer :
+   `contain` préserve les proportions, les deux maximums bornent l'emprise. */
+.logo-image {
+  max-width: 100%;
+  max-height: 96px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }
 .logo-card:hover {
-  box-shadow: 0 14px 30px -14px rgba(11, 29, 58, 0.25);
   transform: translateY(-3px);
 }
-/* Repli quand le fichier de logo n'est pas encore fourni par l'enseigne. */
+/* Repli quand le fichier de logo n'est pas encore fourni par l'enseigne.
+   La taille s'adapte pour qu'un nom long tienne dans la même carte. */
 .logo-wordmark {
   font-family: "Bebas Neue", sans-serif;
-  font-size: 25px;
+  font-size: clamp(19px, 2.4vw, 30px);
   letter-spacing: 0.05em;
   color: var(--navy);
   text-align: center;
   line-height: 1.15;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 /* ── Témoignages ────────────────────────────────── */
@@ -1434,6 +1739,82 @@
 }
 .reveal.in .histo-barre {
   height: var(--hauteur);
+}
+
+/* ── Histogramme comparatif : deux barres accolées par trajet ──────
+   La valeur est posée à l'intérieur du sommet de chaque barre plutôt
+   qu'au-dessus : avec deux barres de hauteurs très différentes, des
+   étiquettes flottantes se chevaucheraient. */
+.histogramme--compare {
+  height: 240px;
+  gap: 20px;
+}
+.histo-paire {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+}
+.histo-paire .histo-barre {
+  max-width: 34px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.histo-paire .histo-valeur {
+  position: absolute;
+  top: -19px;
+  white-space: nowrap;
+  font-size: 11px;
+}
+/* Unité rappelée une seule fois, sous l'en-tête : la répéter sur chacune
+   des huit barres surchargerait la lecture sans rien apprendre. */
+.graphe-unite {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+/* Le convoyage par la route porte la couleur de marque ; le plateau,
+   auquel on se compare, reste volontairement neutre. */
+.histo-barre--route {
+  background: linear-gradient(180deg, var(--amber), rgba(255, 209, 26, 0.4));
+}
+.histo-barre--plateau {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.26),
+    rgba(255, 255, 255, 0.09)
+  );
+}
+.legende-compare {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 22px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.68);
+}
+.legende-compare span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.pastille {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex: 0 0 11px;
+}
+.pastille--route {
+  background: var(--amber);
+}
+.pastille--plateau {
+  background: rgba(255, 255, 255, 0.3);
 }
 .histo-mois {
   font-family: "JetBrains Mono", monospace;

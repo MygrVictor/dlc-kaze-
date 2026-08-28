@@ -53,11 +53,11 @@ describe("LoginPage", () => {
   });
 
   it("oriente vers les deux parcours d'inscription", () => {
-    // Un seul lien « Faire une demande » obligeait le visiteur à choisir
-    // son profil une fois la page ouverte ; les deux parcours sont
-    // désormais annoncés dès la connexion.
+    // Les entreprises ne créent plus leur compte elles-mêmes : la demande
+    // de rappel remplace l'inscription libre, le compte étant ouvert par
+    // nos soins après l'entretien téléphonique.
     renderLoginPage();
-    expect(screen.getByText("Devenir client")).toBeInTheDocument();
+    expect(screen.getByText("Faites-vous rappeler")).toBeInTheDocument();
     expect(screen.getByText("devenir convoyeur")).toBeInTheDocument();
   });
 
