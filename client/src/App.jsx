@@ -15,6 +15,7 @@ import EtreRappelePage from "./pages/EtreRappelePage";
 import ClientDashboard from "./pages/client/ClientDashboard";
 import NewMission from "./pages/client/NewMission";
 import MissionDetail from "./pages/client/MissionDetail";
+import ClientFactures from "./pages/client/ClientFactures";
 
 // Pages Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -23,12 +24,14 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminDemandes from "./pages/admin/AdminDemandes";
 import AdminMap from "./pages/admin/AdminMap";
 import AdminKaze from "./pages/admin/AdminKaze";
+import AdminFactures from "./pages/admin/AdminFactures";
 
 // Pages Convoyeur
 import ConvoyeurDashboard from "./pages/convoyeur/ConvoyeurDashboard";
 import MissionsDisponibles from "./pages/convoyeur/MissionsDisponibles";
 import ConvoyeurHistorique from "./pages/convoyeur/ConvoyeurHistorique";
 import ConvoyeurProfil from "./pages/convoyeur/ConvoyeurProfil";
+import ConvoyeurFactures from "./pages/convoyeur/ConvoyeurFactures";
 // ── Route protégée ──────────────────────────────────────────
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -97,6 +100,7 @@ export default function App() {
         <Route index element={<ClientDashboard />} />
         <Route path="nouvelle-mission" element={<NewMission />} />
         <Route path="missions/:id" element={<MissionDetail />} />
+        <Route path="factures" element={<ClientFactures />} />
       </Route>
 
       {/* ── Dashboard Admin ──────────────────── */}
@@ -113,6 +117,7 @@ export default function App() {
         <Route path="carte" element={<AdminMap />} />
         <Route path="utilisateurs" element={<AdminUsers />} />
         <Route path="demandes" element={<AdminDemandes />} />
+        <Route path="factures" element={<AdminFactures />} />
         <Route path="kaze" element={<AdminKaze />} />
       </Route>
 
@@ -129,6 +134,7 @@ export default function App() {
         <Route path="disponibles" element={<MissionsDisponibles />} />{" "}
         <Route path="historique" element={<ConvoyeurHistorique />} />{" "}
         <Route path="profil" element={<ConvoyeurProfil />} />
+        <Route path="factures" element={<ConvoyeurFactures />} />
       </Route>
 
       {/* ── Raccourci dashboard ──────────────── */}

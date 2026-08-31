@@ -11,6 +11,7 @@
     "migrate:lot": "node src/db/migrate-lot.js",
     "migrate:demande-poste": "node src/db/migrate-demande-poste.js",
     "migrate:convoyeur-qualif": "node src/db/migrate-convoyeur-qualification.js",
+    "migrate:factures": "node src/db/migrate-factures.js",
     "migrate:vitrine": "npm run migrate:demande-poste && npm run migrate:convoyeur-qualif",
     "seed": "node src/db/seed.js",
     "test": "cross-env NODE_ENV=test jest --forceExit",

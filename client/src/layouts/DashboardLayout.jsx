@@ -16,6 +16,7 @@ import {
   MapPin,
   Zap,
   Inbox,
+  Receipt,
   History,
   Sun,
   Moon,
@@ -47,6 +48,7 @@ const NAV_ITEMS = {
       path: "/client/nouvelle-mission",
       icon: PlusCircle,
     },
+    { label: "Mes factures", path: "/client/factures", icon: Receipt },
   ],
   admin: [
     { label: "Tableau de bord", path: "/admin", icon: BarChart3 },
@@ -54,6 +56,7 @@ const NAV_ITEMS = {
     { label: "Carte", path: "/admin/carte", icon: MapPin },
     { label: "Utilisateurs", path: "/admin/utilisateurs", icon: Users },
     { label: "Demandes", path: "/admin/demandes", icon: Inbox },
+    { label: "Factures", path: "/admin/factures", icon: Receipt },
     { label: "Gestion Kaze", path: "/admin/kaze", icon: Zap },
   ],
   convoyeur: [
@@ -68,6 +71,7 @@ const NAV_ITEMS = {
       path: "/convoyeur/historique",
       icon: History,
     },
+    { label: "Mes factures", path: "/convoyeur/factures", icon: Receipt },
     {
       label: "Mon profil & Kaze",
       path: "/convoyeur/profil",

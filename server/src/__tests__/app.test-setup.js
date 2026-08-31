@@ -23,6 +23,7 @@ const authRoutes = require("../routes/auth.routes");
 const missionRoutes = require("../routes/mission.routes");
 const adminRoutes = require("../routes/admin.routes");
 const convoyeurRoutes = require("../routes/convoyeur.routes");
+const factureRoutes = require("../routes/facture.routes");
 
 // Désactiver le rate limiter global pour les tests
 const rateLimit = require("express-rate-limit");
@@ -47,6 +48,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/missions", missionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/convoyeur", convoyeurRoutes);
+app.use("/api/factures", factureRoutes);
 
 app.use(safeErrorHandler);
 

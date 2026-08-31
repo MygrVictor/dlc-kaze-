@@ -12,6 +12,7 @@ const authRoutes = require("./routes/auth.routes");
 const missionRoutes = require("./routes/mission.routes");
 const adminRoutes = require("./routes/admin.routes");
 const convoyeurRoutes = require("./routes/convoyeur.routes");
+const factureRoutes = require("./routes/facture.routes");
 const webhookRoutes = require("./routes/webhook.routes");
 const partnerRoutes = require("./routes/partner.routes");
 const {
@@ -195,6 +196,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/missions", missionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/convoyeur", convoyeurRoutes);
+app.use("/api/factures", factureRoutes);
 app.use("/api/v1", partnerRoutes);
 
 // ── Fichiers uploadés (documents convoyeurs) ─────────────────
@@ -246,19 +248,33 @@ app.get("/uploads/*", async (req, res) => {
     }
 
     const cheminRelatif = `/uploads/${req.params[0]}`;
+
+    // Deux familles de fichiers cohabitent sous /uploads : les pièces
+    // d'identité des convoyeurs et les factures des clients. Chacune a sa
+    // propre règle de propriété, on interroge donc les deux tables.
     const { rows: docs } = await db.query(
       "SELECT convoyeur_id FROM convoyeur_documents WHERE file_path = $1",
       [cheminRelatif],
     );
     const document = docs[0];
 
+    let proprietaireId = document?.convoyeur_id ?? null;
+
+    if (!document) {
+      const { rows: factures } = await db.query(
+        "SELECT destinataire_id FROM factures WHERE file_path = $1",
+        [cheminRelatif],
+      );
+      if (factures[0]) proprietaireId = factures[0].destinataire_id;
+    }
+
     // Un fichier inconnu de la base n'a aucune raison d'être servi :
     // on répond 404 plutôt que 403 pour ne rien révéler de son existence.
-    if (!document) {
+    if (!proprietaireId) {
       return res.status(404).json({ error: "Fichier introuvable." });
     }
 
-    const estProprietaire = document.convoyeur_id === demandeur.id;
+    const estProprietaire = proprietaireId === demandeur.id;
     if (!estProprietaire && demandeur.role !== "admin") {
       return res.status(404).json({ error: "Fichier introuvable." });
     }
