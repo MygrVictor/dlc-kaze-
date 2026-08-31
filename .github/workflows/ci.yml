@@ -1,4 +1,4 @@
-# Intégration continue — DLC Kaze
+# Intégration continue — Drive Line Connect
 #
 # Vérifie chaque poussée et chaque proposition de fusion : tests serveur,
 # tests client, build de production et audit des dépendances.

@@ -56,7 +56,7 @@ print(f"   Status: {missions[0]['status']}")
 # ─── 3. Login admin ──────────────────────────────────────────
 print("\n3️⃣  Login admin…")
 r = requests.post(f"{BASE}/auth/login", json={
-    "email": "admin@dlc-kaze.fr",
+    "email": "drivelineconnect@gmail.com",
     "password": "admin1234"
 })
 if r.status_code != 200:

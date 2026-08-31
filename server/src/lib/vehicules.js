@@ -1,5 +1,5 @@
 /**
- * Catalogue des types de véhicules — DLC Kaze
+ * Catalogue des types de véhicules — Drive Line Connect
  *
  * Le type ne sert pas seulement à décrire le véhicule : il conditionne
  * deux contraintes opérationnelles réelles.

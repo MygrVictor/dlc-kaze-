@@ -70,7 +70,7 @@ async function rateLimitedRequest(url) {
 
   const response = await axios.get(url, {
     headers: {
-      "User-Agent": "DLC-Kaze-ConvoyApp/1.0 (contact@dlc-kaze.fr)",
+      "User-Agent": "DriveLineConnect/1.0 (contact@drivelineconnect.com)",
       Accept: "application/json",
     },
     timeout: 10000,

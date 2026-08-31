@@ -1,5 +1,5 @@
 /**
- * Middleware de sécurité avancée — DLC Kaze
+ * Middleware de sécurité avancée — Drive Line Connect
  *
  * Regroupe : sanitization XSS, validation d'entrées,
  * protection contre les injections, audit logging.

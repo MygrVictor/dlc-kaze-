@@ -76,7 +76,7 @@ print(f"   Status: {missions[0]['status']}")
 
 # ─── 3. Login admin ──────────────────────────────────────────
 print("\n3️⃣  Login admin…")
-status, data = api("POST", "/auth/login", {"email": "admin@dlc-kaze.fr", "password": "admin1234"})
+status, data = api("POST", "/auth/login", {"email": "drivelineconnect@gmail.com", "password": "admin1234"})
 if status != 200:
     print(f"   Error: {data}")
     sys.exit(1)

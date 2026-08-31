@@ -65,8 +65,8 @@ describe("purgerEntete", () => {
   });
 
   it("laisse passer un sujet normal", () => {
-    expect(purgerEntete("Devis DLC Kaze — 120 € HT")).toBe(
-      "Devis DLC Kaze — 120 € HT",
+    expect(purgerEntete("Devis Drive Line Connect — 120 € HT")).toBe(
+      "Devis Drive Line Connect — 120 € HT",
     );
   });
 });

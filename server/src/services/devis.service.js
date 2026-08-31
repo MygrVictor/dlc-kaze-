@@ -1,5 +1,5 @@
 /**
- * Service de génération de devis PDF — DLC Kaze
+ * Service de génération de devis PDF — Drive Line Connect
  *
  * Génère un document PDF professionnel avec toutes les informations
  * de la mission et le prix proposé, prêt à être renvoyé en réponse HTTP.
@@ -79,7 +79,7 @@ function generateDevisPDF(mission, client) {
     margins: { top: 50, bottom: 50, left: 50, right: 50 },
     info: {
       Title: `Devis Mission ${mission.id.substring(0, 8).toUpperCase()}`,
-      Author: "DLC Kaze — Convoyage Automobile",
+      Author: "Drive Line Connect — Convoyage Automobile",
       Subject: "Devis de mission de convoyage",
     },
   });
@@ -523,7 +523,7 @@ function generateDevisGroupePDF(missions, client) {
     margins: { top: 50, bottom: 50, left: 50, right: 50 },
     info: {
       Title: `Devis groupé ${devisNum}`,
-      Author: "DLC Kaze — Convoyage Automobile",
+      Author: "Drive Line Connect — Convoyage Automobile",
       Subject: `Devis de convoyage — ${missions.length} véhicules`,
     },
   });

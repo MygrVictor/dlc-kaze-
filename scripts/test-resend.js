@@ -45,7 +45,7 @@ async function principal() {
   const emailService = require("../server/src/services/email.service");
 
   try {
-    await emailService.notifyAccountValidated(destinataire, "Test DLC Kaze");
+    await emailService.notifyAccountValidated(destinataire, "Test Drive Line Connect");
     console.log("✅ Email envoyé sans erreur.");
     if (process.env.RESEND_API_KEY) {
       console.log(
@@ -57,7 +57,7 @@ async function principal() {
     if (/domain is not verified|not verified/i.test(err.message)) {
       console.error(
         "\n   Le domaine de l'expéditeur n'est pas vérifié dans Resend.\n" +
-          "   Solution immédiate : EMAIL_FROM=DLC Kaze <onboarding@resend.dev>\n" +
+          "   Solution immédiate : EMAIL_FROM=Drive Line Connect <onboarding@resend.dev>\n" +
           "   (ce domaine de test n'envoie qu'à l'adresse de votre compte Resend)",
       );
     }

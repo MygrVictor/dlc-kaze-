@@ -1,4 +1,4 @@
-# DLC Kaze — Plateforme SaaS de Convoyage Automobile
+# Drive Line Connect — Plateforme SaaS de Convoyage Automobile
 
 Plateforme de gestion de convoyage automobile avec intégration API **Kaze** (kaze.app).
 
@@ -172,7 +172,7 @@ npm run db:seed
 ```
 
 Le seed exige `ADMIN_PASSWORD` dans le `.env` — il n'existe aucun mot de
-passe par défaut. Définissez aussi `ADMIN_EMAIL` (sinon `admin@dlc-kaze.fr`).
+passe par défaut. Définissez aussi `ADMIN_EMAIL` (sinon `drivelineconnect@gmail.com`).
 Le compte est créé, ou son mot de passe réinitialisé s'il existe déjà.
 
 ### 7. Démarrer le projet
@@ -327,8 +327,8 @@ dlc-kaze/
 | `SMTP_PORT`           | Non         | Port SMTP                          | `587`                            |
 | `SMTP_USER`           | Non         | Utilisateur SMTP                   | —                                |
 | `SMTP_PASS`           | Non         | Mot de passe SMTP                  | —                                |
-| `SMTP_FROM`           | Non         | Expéditeur des emails              | `DLC Kaze <noreply@dlc-kaze.fr>` |
-| `ADMIN_EMAIL`         | Non         | Email admin pour les notifications | `admin@dlc-kaze.fr`              |
+| `SMTP_FROM`           | Non         | Expéditeur des emails              | `Drive Line Connect <noreply@drivelineconnect.com>` |
+| `ADMIN_EMAIL`         | Non         | Email admin pour les notifications | `drivelineconnect@gmail.com`              |
 
 > \* Nécessaire pour l'intégration Kaze. Sans ces variables, les fonctionnalités Kaze sont désactivées avec un warning.
 

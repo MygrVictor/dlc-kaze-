@@ -625,7 +625,7 @@ router.post("/missions/:id/demarrer", async (req, res, next) => {
   try {
     return res.status(403).json({
       error:
-        "Le démarrage n'est pas autorisé dans DLC Kaze. Démarrez la mission depuis Kaze.",
+        "Le démarrage n'est pas autorisé dans Drive Line Connect. Démarrez la mission depuis Kaze.",
       hint: "Le statut EN_COURS sera synchronisé automatiquement depuis Kaze (webhook/sync).",
     });
   } catch (err) {
@@ -640,7 +640,7 @@ router.post("/missions/:id/livrer", async (req, res, next) => {
   try {
     return res.status(403).json({
       error:
-        "La clôture n'est pas autorisée dans DLC Kaze. Clôturez la mission depuis Kaze.",
+        "La clôture n'est pas autorisée dans Drive Line Connect. Clôturez la mission depuis Kaze.",
       hint: "Le statut LIVREE sera synchronisé automatiquement depuis Kaze (webhook/sync).",
     });
   } catch (err) {

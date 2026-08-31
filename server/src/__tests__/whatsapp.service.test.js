@@ -440,7 +440,7 @@ describe("verifierConfiguration", () => {
     axios.get.mockResolvedValue({
       data: {
         display_phone_number: "+33 6 11 22 33 44",
-        verified_name: "DLC Kaze",
+        verified_name: "Drive Line Connect",
         quality_rating: "GREEN",
       },
     });
@@ -448,7 +448,7 @@ describe("verifierConfiguration", () => {
     expect(await service.verifierConfiguration()).toEqual({
       actif: true,
       numero: "+33 6 11 22 33 44",
-      nom: "DLC Kaze",
+      nom: "Drive Line Connect",
       qualite: "GREEN",
     });
   });

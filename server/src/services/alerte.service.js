@@ -1,5 +1,5 @@
 /**
- * Service d'alerte — DLC Kaze
+ * Service d'alerte — Drive Line Connect
  *
  * Prévient l'exploitant sur Telegram dès qu'une erreur anormale survient,
  * pour qu'il n'apprenne plus les pannes par ses clients.

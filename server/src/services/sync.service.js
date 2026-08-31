@@ -1,5 +1,5 @@
 /**
- * Service de synchronisation automatique Kaze → DLC Kaze
+ * Service de synchronisation automatique Kaze → Drive Line Connect
  *
  * Interroge l'API Kaze à intervalle régulier pour détecter
  * les changements de statut sur les missions liées (qui ont un kaze_mission_id).

@@ -1,5 +1,5 @@
 /**
- * Service de notification Telegram — DLC Kaze
+ * Service de notification Telegram — Drive Line Connect
  *
  * Publie les missions disponibles dans un salon Telegram unique, partagé
  * par tous les convoyeurs.
@@ -74,9 +74,7 @@ function composerAnnonce(mission, lienMission) {
       : "à définir";
 
   const lignes = [
-    mission.is_urgent
-      ? "🚨 *MISSION URGENTE*"
-      : "🚗 *Nouvelle mission disponible*",
+    mission.is_urgent ? "*MISSION URGENTE*" : "*Nouvelle mission disponible*",
     "",
     `*Véhicule* : ${echapper(vehicule)}`,
     `*Départ* : ${echapper(mission.departure_address)}`,
@@ -92,7 +90,7 @@ function composerAnnonce(mission, lienMission) {
   }
 
   if (lienMission) {
-    lignes.push("", `👉 [Prendre la mission](${lienMission})`);
+    lignes.push("", `[Prendre la mission](${lienMission})`);
   }
 
   return lignes.join("\n");

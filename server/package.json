@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "DLC Kaze — API Backend",
+  "description": "Drive Line Connect — API Backend",
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",

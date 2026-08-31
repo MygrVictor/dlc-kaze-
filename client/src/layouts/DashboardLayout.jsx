@@ -142,7 +142,7 @@ export default function DashboardLayout() {
           <div className="w-full flex justify-center">
             <img
               src="/logo.png"
-              alt="DLC Kaze"
+              alt="Drive Line Connect"
               className="h-16 w-auto object-contain"
               onError={(e) => {
                 e.target.style.display = "none";

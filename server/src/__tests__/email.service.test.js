@@ -39,7 +39,7 @@ function chargerService(env = {}) {
   jest.resetModules();
   process.env = {
     ...ENV_INITIAL,
-    CLIENT_URL: "https://app.dlc-kaze.fr",
+    CLIENT_URL: "https://app.drivelineconnect.com",
     // Neutralisé par défaut : un .env local ne doit pas détourner les tests
     // vers Resend. Les suites concernées le réactivent explicitement.
     RESEND_API_KEY: undefined,
@@ -130,12 +130,12 @@ describe("Configuration du transporteur", () => {
   it("utilise l'expéditeur configuré", async () => {
     chargerService({
       SMTP_HOST: "smtp.test.fr",
-      SMTP_FROM: "Support <support@dlc-kaze.fr>",
+      SMTP_FROM: "Support <support@drivelineconnect.com>",
     });
 
     await emailService.notifyAccountValidated("c@t.fr", "Client");
 
-    expect(dernierEnvoi().from).toBe("Support <support@dlc-kaze.fr>");
+    expect(dernierEnvoi().from).toBe("Support <support@drivelineconnect.com>");
   });
 
   it("retombe sur un expéditeur par défaut", async () => {
@@ -147,19 +147,21 @@ describe("Configuration du transporteur", () => {
 
     await emailService.notifyAccountValidated("c@t.fr", "Client");
 
-    expect(dernierEnvoi().from).toBe("DLC Kaze <onboarding@resend.dev>");
+    expect(dernierEnvoi().from).toBe(
+      "Drive Line Connect <onboarding@resend.dev>",
+    );
   });
 
   it("privilégie EMAIL_FROM sur SMTP_FROM", async () => {
     chargerService({
       SMTP_HOST: "smtp.test.fr",
-      SMTP_FROM: "Ancien <ancien@dlc-kaze.fr>",
-      EMAIL_FROM: "Nouveau <bonjour@dlc-kaze.fr>",
+      SMTP_FROM: "Ancien <ancien@drivelineconnect.com>",
+      EMAIL_FROM: "Nouveau <bonjour@drivelineconnect.com>",
     });
 
     await emailService.notifyAccountValidated("c@t.fr", "Client");
 
-    expect(dernierEnvoi().from).toBe("Nouveau <bonjour@dlc-kaze.fr>");
+    expect(dernierEnvoi().from).toBe("Nouveau <bonjour@drivelineconnect.com>");
   });
 });
 
@@ -178,8 +180,8 @@ describe("Gabarit commun", () => {
     await emailService.notifyAccountValidated("c@t.fr", "Client");
 
     const { html } = dernierEnvoi();
-    expect(html).toContain("🚗 DLC Kaze");
-    expect(html).toContain(`© ${new Date().getFullYear()} DLC Kaze`);
+    expect(html).toContain("Drive Line Connect");
+    expect(html).toContain(`© ${new Date().getFullYear()} Drive Line Connect`);
   });
 });
 
@@ -228,7 +230,7 @@ describe("notifyDevisPropose", () => {
     await envoyer();
 
     expect(dernierEnvoi().html).toContain(
-      `https://app.dlc-kaze.fr/client/missions/${MISSION.id}`,
+      `https://app.drivelineconnect.com/client/missions/${MISSION.id}`,
     );
   });
 
@@ -285,7 +287,7 @@ describe("notifyMissionLivree", () => {
     expect(html).toContain("livré avec succès");
     expect(html).toContain("badge-success");
     expect(html).toContain("1 place Bellecour, Lyon");
-    expect(subject).toMatch(/✅ Véhicule livré/);
+    expect(subject).toMatch(/^Véhicule livré/);
   });
 });
 
@@ -300,12 +302,12 @@ describe("notifyNewRegistration", () => {
   it("alerte l'administrateur configuré", async () => {
     chargerService({
       SMTP_HOST: "smtp.test.fr",
-      ADMIN_EMAIL: "patron@dlc-kaze.fr",
+      ADMIN_EMAIL: "patron@drivelineconnect.com",
     });
 
     await emailService.notifyNewRegistration(UTILISATEUR);
 
-    expect(dernierEnvoi().to).toBe("patron@dlc-kaze.fr");
+    expect(dernierEnvoi().to).toBe("patron@drivelineconnect.com");
   });
 
   it("retombe sur l'adresse admin par défaut", async () => {
@@ -313,7 +315,7 @@ describe("notifyNewRegistration", () => {
 
     await emailService.notifyNewRegistration(UTILISATEUR);
 
-    expect(dernierEnvoi().to).toBe("admin@dlc-kaze.fr");
+    expect(dernierEnvoi().to).toBe("drivelineconnect@gmail.com");
   });
 
   it("résume l'identité du nouvel inscrit", async () => {
@@ -377,7 +379,7 @@ describe("notifyAccountCreated", () => {
   it("pointe vers la page de connexion", async () => {
     await envoyer();
 
-    expect(dernierEnvoi().html).toContain("https://app.dlc-kaze.fr/login");
+    expect(dernierEnvoi().html).toContain("https://app.drivelineconnect.com/login");
   });
 });
 
@@ -400,9 +402,9 @@ describe("notifyAccountValidated", () => {
     await emailService.notifyAccountValidated("client@test.com", "Jean");
 
     const { subject, html } = dernierEnvoi();
-    expect(subject).toMatch(/Compte DLC Kaze validé/);
+    expect(subject).toMatch(/Compte Drive Line Connect validé/);
     expect(html).toContain("validé par un administrateur");
-    expect(html).toContain("https://app.dlc-kaze.fr/client/nouvelle-mission");
+    expect(html).toContain("https://app.drivelineconnect.com/client/nouvelle-mission");
   });
 });
 
@@ -473,7 +475,7 @@ describe("notifyMissionDisponible", () => {
     await emailService.notifyMissionDisponible([CONVOYEURS[0]], MISSION);
 
     expect(dernierEnvoi().html).toContain(
-      "https://app.dlc-kaze.fr/convoyeur/disponibles",
+      "https://app.drivelineconnect.com/convoyeur/disponibles",
     );
   });
 
@@ -505,7 +507,7 @@ describe("Transporteur Resend", () => {
     jest.resetModules();
     process.env = {
       ...ENV_INITIAL,
-      CLIENT_URL: "https://app.dlc-kaze.fr",
+      CLIENT_URL: "https://app.drivelineconnect.com",
       RESEND_API_KEY: "re_cle_test",
       ...env,
     };
@@ -547,12 +549,12 @@ describe("Transporteur Resend", () => {
 
   it("utilise EMAIL_FROM comme expéditeur", async () => {
     const service = chargerAvecResend({
-      EMAIL_FROM: "DLC Kaze <bonjour@dlc-kaze.fr>",
+      EMAIL_FROM: "Drive Line Connect <bonjour@drivelineconnect.com>",
     });
 
     await service.notifyAccountValidated("c@t.fr", "Client");
 
-    expect(charge().from).toBe("DLC Kaze <bonjour@dlc-kaze.fr>");
+    expect(charge().from).toBe("Drive Line Connect <bonjour@drivelineconnect.com>");
   });
 
   it("retombe sur le domaine de test de Resend sans expéditeur configuré", async () => {
@@ -563,7 +565,7 @@ describe("Transporteur Resend", () => {
 
     await service.notifyAccountValidated("c@t.fr", "Client");
 
-    expect(charge().from).toBe("DLC Kaze <onboarding@resend.dev>");
+    expect(charge().from).toBe("Drive Line Connect <onboarding@resend.dev>");
   });
 
   it("transmet le sujet et le corps HTML", async () => {

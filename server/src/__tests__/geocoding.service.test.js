@@ -258,7 +258,7 @@ describe("geocode — repli Nominatim et échecs", () => {
     expect(options).toMatchObject({
       timeout: 10000,
       headers: expect.objectContaining({
-        "User-Agent": expect.stringContaining("DLC-Kaze"),
+        "User-Agent": expect.stringContaining("DriveLineConnect"),
       }),
     });
   });

@@ -1,5 +1,5 @@
 /**
- * Utilitaires de dates — DLC Kaze
+ * Utilitaires de dates — Drive Line Connect
  */
 
 /**

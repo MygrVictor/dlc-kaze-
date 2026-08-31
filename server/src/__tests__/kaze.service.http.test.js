@@ -45,7 +45,7 @@ function chargerService(env = {}) {
   jest.resetModules();
   process.env = {
     ...ENV_INITIAL,
-    KAZE_LOGIN: "compte@dlc-kaze.fr",
+    KAZE_LOGIN: "compte@drivelineconnect.com",
     KAZE_PASSWORD: "secret",
     KAZE_TARGET_ID: "target-1",
     ...env,
@@ -133,7 +133,7 @@ describe("authenticate", () => {
 
     expect(axios.post).toHaveBeenCalledWith(
       expect.stringMatching(/\/login$/),
-      { user: { login: "compte@dlc-kaze.fr", password: "secret" } },
+      { user: { login: "compte@drivelineconnect.com", password: "secret" } },
       expect.objectContaining({ timeout: 15000 }),
     );
   });

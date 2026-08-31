@@ -1,5 +1,5 @@
 /**
- * Service de notification WhatsApp — DLC Kaze
+ * Service de notification WhatsApp — Drive Line Connect
  *
  * Notifie les convoyeurs des missions disponibles via WhatsApp Business.
  *

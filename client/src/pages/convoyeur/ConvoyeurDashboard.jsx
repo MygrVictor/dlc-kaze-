@@ -79,7 +79,7 @@ export default function ConvoyeurDashboard() {
 
   // ── Actions ──────────────────────────────────────────────
   // Le démarrage et la clôture d'une mission n'existent plus ici : ils se
-  // font dans Kaze, seule source de vérité du terrain. DLC Kaze se contente
+  // font dans Kaze, seule source de vérité du terrain. Drive Line Connect se contente
   // d'afficher le statut redescendu par la synchronisation.
 
   // ── Stats rapides ────────────────────────────────────────

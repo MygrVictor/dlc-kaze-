@@ -101,7 +101,7 @@ describe("En-tête et métadonnées", () => {
 
     expect(infoDocument).toMatchObject({
       Title: "Devis Mission AAAAAAAA",
-      Author: "DLC Kaze — Convoyage Automobile",
+      Author: "Drive Line Connect — Convoyage Automobile",
       Subject: "Devis de mission de convoyage",
     });
   });

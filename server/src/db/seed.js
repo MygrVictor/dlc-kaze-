@@ -12,7 +12,7 @@ const seed = async () => {
 
   // Aucun mot de passe par défaut : le dépôt est public, une valeur en dur
   // ici serait un identifiant d'accès offert à quiconque lit le code.
-  const email = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const email = process.env.ADMIN_EMAIL || "drivelineconnect@gmail.com";
   const password = process.env.ADMIN_PASSWORD;
 
   if (!password) {

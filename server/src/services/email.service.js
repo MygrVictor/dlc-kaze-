@@ -1,5 +1,5 @@
 /**
- * Service d'envoi d'emails — DLC Kaze
+ * Service d'envoi d'emails — Drive Line Connect
  *
  * Trois transporteurs, par ordre de priorité :
  *   1. Resend    — si RESEND_API_KEY est défini (recommandé en production)
@@ -15,7 +15,7 @@ const nodemailer = require("nodemailer");
 const FROM =
   process.env.EMAIL_FROM ||
   process.env.SMTP_FROM ||
-  "DLC Kaze <onboarding@resend.dev>";
+  "Drive Line Connect <onboarding@resend.dev>";
 
 // ── Configuration du transporteur ────────────────────────────
 let transporter;
@@ -58,7 +58,7 @@ if (process.env.RESEND_API_KEY) {
       return { messageId: data?.id };
     },
   };
-  console.log(`📧 Email configuré via Resend (expéditeur : ${FROM})`);
+  console.log(`Email configuré via Resend (expéditeur : ${FROM})`);
 } else if (process.env.SMTP_HOST) {
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -69,18 +69,18 @@ if (process.env.RESEND_API_KEY) {
       pass: process.env.SMTP_PASS,
     },
   });
-  console.log(`📧 Email configuré via ${process.env.SMTP_HOST}`);
+  console.log(`Email configuré via ${process.env.SMTP_HOST}`);
 } else {
   // Mode dev : on log les emails en console
   transporter = {
     sendMail: async (options) => {
-      console.log("📧 [DEV] Email non envoyé (aucun fournisseur configuré) :");
+      console.log("[DEV] Email non envoyé (aucun fournisseur configuré) :");
       console.log(`   → À : ${options.to}`);
       console.log(`   → Sujet : ${options.subject}`);
       return { messageId: "dev-" + Date.now() };
     },
   };
-  console.log("📧 Email en mode dev (console uniquement)");
+  console.log("Email en mode dev (console uniquement)");
 }
 
 // ── Filet de sécurité anti-injection ─────────────────────────
@@ -183,13 +183,13 @@ function baseTemplate(content) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>🚗 DLC Kaze</h1>
+      <h1>Drive Line Connect</h1>
     </div>
     <div class="body">
       ${content}
     </div>
     <div class="footer">
-      © ${new Date().getFullYear()} DLC Kaze — Convoyage automobile professionnel
+      © ${new Date().getFullYear()} Drive Line Connect — Convoyage automobile professionnel
     </div>
   </div>
 </body>
@@ -226,7 +226,7 @@ async function notifyDevisPropose(clientEmail, clientName, mission, price) {
   return transporter.sendMail({
     from: FROM,
     to: clientEmail,
-    subject: `Devis DLC Kaze — ${priceHT} € HT — ${mission.vehicle_brand || "Véhicule"} ${mission.vehicle_plate || ""}`,
+    subject: `Devis Drive Line Connect — ${priceHT} € HT — ${mission.vehicle_brand || "Véhicule"} ${mission.vehicle_plate || ""}`,
     html,
   });
 }
@@ -269,7 +269,7 @@ async function notifyMissionAssignee(
 async function notifyMissionEnCours(clientEmail, clientName, mission) {
   const html = baseTemplate(`
     <h2>Bonjour ${clientName},</h2>
-    <p>Votre véhicule est en cours de convoyage ! 🚗</p>
+    <p>Votre véhicule est en cours de convoyage !</p>
     <div class="info-box">
       <div class="info-row"><span class="info-label">Véhicule</span><span class="info-value">${mission.vehicle_brand || ""} ${mission.vehicle_model || ""} — ${mission.vehicle_plate || ""}</span></div>
       <div class="info-row"><span class="info-label">Trajet</span><span class="info-value">${mission.departure_address} → ${mission.arrival_address}</span></div>
@@ -294,7 +294,7 @@ async function notifyMissionEnCours(clientEmail, clientName, mission) {
 async function notifyMissionLivree(clientEmail, clientName, mission) {
   const html = baseTemplate(`
     <h2>Bonjour ${clientName},</h2>
-    <p>Votre véhicule a été livré avec succès ! ✅</p>
+    <p>Votre véhicule a été livré avec succès !</p>
     <div class="info-box">
       <div class="info-row"><span class="info-label">Véhicule</span><span class="info-value">${mission.vehicle_brand || ""} ${mission.vehicle_model || ""} — ${mission.vehicle_plate || ""}</span></div>
       <div class="info-row"><span class="info-label">Livré à</span><span class="info-value">${mission.arrival_address}</span></div>
@@ -309,7 +309,7 @@ async function notifyMissionLivree(clientEmail, clientName, mission) {
   return transporter.sendMail({
     from: FROM,
     to: clientEmail,
-    subject: `✅ Véhicule livré — ${mission.vehicle_brand || ""} ${mission.vehicle_plate || ""}`,
+    subject: `Véhicule livré — ${mission.vehicle_brand || ""} ${mission.vehicle_plate || ""}`,
     html,
   });
 }
@@ -318,7 +318,7 @@ async function notifyMissionLivree(clientEmail, clientName, mission) {
  * Notifier l'admin d'une nouvelle inscription.
  */
 async function notifyNewRegistration(user) {
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const adminEmail = process.env.ADMIN_EMAIL || "drivelineconnect@gmail.com";
 
   const html = baseTemplate(`
     <h2>Nouvelle inscription</h2>
@@ -350,13 +350,13 @@ async function notifyAccountCreated(user, clearPassword) {
   const roleLabel = user.role === "convoyeur" ? "Convoyeur" : "Client";
 
   const html = baseTemplate(`
-    <h2>Bienvenue sur DLC Kaze, ${user.full_name} !</h2>
+    <h2>Bienvenue sur Drive Line Connect, ${user.full_name} !</h2>
     <p>Un compte <strong>${roleLabel}</strong> a été créé pour vous par l'administrateur.</p>
     <div class="info-box">
       <div class="info-row"><span class="info-label">Email</span><span class="info-value">${user.email}</span></div>
       <div class="info-row"><span class="info-label">Mot de passe</span><span class="info-value" style="font-family: monospace; letter-spacing: 1px;">${clearPassword}</span></div>
     </div>
-    <p style="color: #f59e0b; font-size: 13px;">⚠️ Nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
+    <p style="color: #f59e0b; font-size: 13px;">Nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
     <p style="text-align: center;">
       <a href="${loginUrl}" class="btn">Se connecter</a>
     </p>
@@ -365,7 +365,7 @@ async function notifyAccountCreated(user, clearPassword) {
   return transporter.sendMail({
     from: FROM,
     to: user.email,
-    subject: `🎉 Votre compte DLC Kaze a été créé — Vos identifiants`,
+    subject: `Votre compte Drive Line Connect a été créé — Vos identifiants`,
     html,
   });
 }
@@ -379,7 +379,7 @@ async function notifyAccountCreated(user, clearPassword) {
 async function notifyRegistrationReceived(clientEmail, clientName) {
   const html = baseTemplate(`
     <h2>Bonjour ${clientName},</h2>
-    <p>Votre inscription sur DLC Kaze a bien été reçue. 🎉</p>
+    <p>Votre inscription sur Drive Line Connect a bien été reçue.</p>
     <p>Votre compte est actuellement <strong>en attente de validation</strong> par un administrateur. Vous recevrez un email dès qu'il sera activé.</p>
   `);
 
@@ -397,7 +397,7 @@ async function notifyRegistrationReceived(clientEmail, clientName) {
 async function notifyAccountValidated(clientEmail, clientName) {
   const html = baseTemplate(`
     <h2>Bonjour ${clientName},</h2>
-    <p>Bonne nouvelle ! Votre compte a été validé par un administrateur. 🎉</p>
+    <p>Bonne nouvelle ! Votre compte a été validé par un administrateur.</p>
     <p>Vous pouvez maintenant créer vos missions de convoyage.</p>
     <p style="text-align: center;">
       <a href="${process.env.CLIENT_URL}/client/nouvelle-mission" class="btn">Créer ma première mission</a>
@@ -407,7 +407,8 @@ async function notifyAccountValidated(clientEmail, clientName) {
   return transporter.sendMail({
     from: FROM,
     to: clientEmail,
-    subject: "✅ Compte DLC Kaze validé — Vous pouvez créer des missions",
+    subject:
+      "Compte Drive Line Connect validé — Vous pouvez créer des missions",
     html,
   });
 }
@@ -420,7 +421,7 @@ async function notifyMissionDisponible(convoyeurs, mission) {
   if (!convoyeurs || convoyeurs.length === 0) return;
 
   const html = baseTemplate(`
-    <h2>📬 Nouvelle mission disponible !</h2>
+    <h2>Nouvelle mission disponible !</h2>
     <p>Une mission de convoyage vient d'être libérée. Vous pouvez la prendre :</p>
     <div class="info-box">
       <div class="info-row"><span class="info-label">Véhicule</span><span class="info-value">${mission.vehicle_brand || ""} ${mission.vehicle_model || ""} — ${mission.vehicle_plate || "N/A"}</span></div>
@@ -431,7 +432,7 @@ async function notifyMissionDisponible(convoyeurs, mission) {
     <p style="text-align: center;">
       <a href="${process.env.CLIENT_URL}/convoyeur/disponibles" class="btn">Voir les missions</a>
     </p>
-    <p style="font-size: 13px; color: #64748b;">Plus rapide tu seras, plus de chances tu auras de la prendre ! 🏃</p>
+    <p style="font-size: 13px; color: #64748b;">Plus rapide tu seras, plus de chances tu auras de la prendre !</p>
   `);
 
   // Envoyer l'email à CHAQUE convoyeur (pas de CC/BCC pour meilleure délivrabilité)
@@ -440,12 +441,12 @@ async function notifyMissionDisponible(convoyeurs, mission) {
       .sendMail({
         from: FROM,
         to: convoyeur.email,
-        subject: `🚗 Mission disponible — ${mission.vehicle_brand || "Véhicule"} ${mission.vehicle_plate || ""}`,
+        subject: `Mission disponible — ${mission.vehicle_brand || "Véhicule"} ${mission.vehicle_plate || ""}`,
         html,
       })
       .catch((err) => {
         console.error(
-          `⚠️ Email mission dispos non envoyé à ${convoyeur.email}:`,
+          `Email mission dispos non envoyé à ${convoyeur.email}:`,
           err.message,
         );
       }),
@@ -459,7 +460,7 @@ async function notifyMissionDisponible(convoyeurs, mission) {
  * Aucun compte n'a été créé : c'est un prospect à rappeler.
  */
 async function notifyNouvelleDemande(demande) {
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const adminEmail = process.env.ADMIN_EMAIL || "drivelineconnect@gmail.com";
   const estConvoyeur = demande.type === "convoyeur";
 
   // Les prospects clients sont traités commercialement : ils partent chez
@@ -544,13 +545,13 @@ async function notifyNouvelleDemande(demande) {
  * personne n'ouvre le tableau de bord.
  */
 async function notifyMissionACoter(mission, client) {
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const adminEmail = process.env.ADMIN_EMAIL || "drivelineconnect@gmail.com";
   const vehicule =
     [mission.vehicle_brand, mission.vehicle_model].filter(Boolean).join(" ") ||
     "Véhicule non précisé";
 
   const html = baseTemplate(`
-    <h2>${mission.is_urgent ? "⚠️ Mission URGENTE à coter" : "Nouvelle mission à coter"}</h2>
+    <h2>${mission.is_urgent ? "Mission URGENTE à coter" : "Nouvelle mission à coter"}</h2>
     <p>${client?.full_name || "Un client"} vient de déposer une demande de convoyage.</p>
     <div class="info-box">
       <div class="info-row"><span class="info-label">Client</span><span class="info-value">${client?.company || client?.full_name || "—"}</span></div>
@@ -579,7 +580,7 @@ async function notifyMissionACoter(mission, client) {
  * pour pouvoir le rappeler et ajuster la proposition.
  */
 async function notifyDevisRefuse(mission, client, motif) {
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@dlc-kaze.fr";
+  const adminEmail = process.env.ADMIN_EMAIL || "drivelineconnect@gmail.com";
   const vehicule =
     [mission.vehicle_brand, mission.vehicle_model].filter(Boolean).join(" ") ||
     "Véhicule non précisé";
