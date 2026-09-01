@@ -387,9 +387,7 @@ export default function NewMission() {
                     setRecapEmail(choisi?.email || "");
                   }}
                 >
-                  <option value="">
-                    Mission interne — sans client enregistré
-                  </option>
+                  <option value="">Autre — sans client enregistré</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.company || c.full_name}
