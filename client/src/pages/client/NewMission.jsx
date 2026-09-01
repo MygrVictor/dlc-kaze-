@@ -139,8 +139,19 @@ export default function NewMission() {
   useEffect(() => {
     if (!estAdmin) return;
     api
-      .get("/admin/users", { params: { role: "client", limit: 500 } })
-      .then(({ data }) => setClients(data.users || data || []))
+      .get("/admin/users", { params: { role: "client" } })
+      .then(({ data }) => {
+        // La liste sert à retrouver un compte, pas à consulter les
+        // dernières inscriptions : l'ordre alphabétique est le seul
+        // dans lequel on cherche un nom.
+        const liste = (data.users || []).sort((a, b) =>
+          (a.company || a.full_name || "").localeCompare(
+            b.company || b.full_name || "",
+            "fr",
+          ),
+        );
+        setClients(liste);
+      })
       .catch(() => toast.error("Liste des clients indisponible."));
   }, [estAdmin]);
 
@@ -366,21 +377,42 @@ export default function NewMission() {
                 <select
                   className="input"
                   value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setClientId(id);
+                    // Le récapitulatif de fin de mission part chez le
+                    // commanditaire : le pré-remplir évite de l'envoyer
+                    // par défaut sur le compte administrateur.
+                    const choisi = clients.find((c) => c.id === id);
+                    setRecapEmail(choisi?.email || "");
+                  }}
                 >
                   <option value="">
                     Mission interne — sans client enregistré
                   </option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.company_name || c.full_name} — {c.email}
+                      {c.company || c.full_name}
+                      {c.company && c.full_name
+                        ? ` (${c.full_name})`
+                        : ""} — {c.email}
+                      {c.is_validated ? "" : " — compte non validé"}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-dark-500 mt-1">
-                  Laissez vide pour une course prise en direct : la mission
-                  n&apos;apparaîtra dans aucun espace client.
-                </p>
+                {clients.length === 0 ? (
+                  <p className="text-xs text-dark-500 mt-1">
+                    Aucun compte client enregistré pour le moment.
+                  </p>
+                ) : (
+                  <p className="text-xs text-dark-500 mt-1">
+                    {clients.length} client
+                    {clients.length > 1 ? "s" : ""} enregistré
+                    {clients.length > 1 ? "s" : ""}. Laissez vide pour une
+                    course prise en direct : la mission n&apos;apparaîtra dans
+                    aucun espace client.
+                  </p>
+                )}
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4">
