@@ -44,15 +44,10 @@ const DOCUMENT_TYPES = [
     color: "text-purple-400",
     bg: "bg-purple-500/10 border-purple-500/20",
   },
-  {
-    key: "assurance",
-    label: "Attestation d'assurance convoyeur",
-    description:
-      "Attestation d'assurance professionnelle couvrant l'activité de convoyage.",
-    icon: ShieldCheck,
-    color: "text-green-400",
-    bg: "bg-green-500/10 border-green-500/20",
-  },
+  // L'ancienne « attestation d'assurance convoyeur » n'est plus demandée :
+  // les deux RC la remplacent et se vérifient séparément. Le type reste
+  // connu du serveur et de l'espace admin, afin que les attestations déjà
+  // déposées restent consultables.
   {
     key: "rc_circulation",
     label: "RC circulation",
