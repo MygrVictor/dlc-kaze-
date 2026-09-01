@@ -362,20 +362,24 @@ export default function NewMission() {
 
       {/* ═══════════ ÉTAPE 1 : RÉCAPITULATIF ═══════════ */}
       {step === 0 && (
-        <div className="card space-y-4">
+        <div className="space-y-4">
           {/* Saisie administrative : commanditaire et prix, deux
-              informations que le client n'a pas à choisir. */}
+              informations que le client n'a pas à choisir. Carte
+              distincte plutôt que section d'un même bloc : ce sont deux
+              sujets, et l'un ne concerne pas le client. */}
           {estAdmin && (
-            <div className="space-y-4 pb-5 mb-1 border-b border-dark-700">
+            <div className="card space-y-5">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Building2 size={20} className="text-primary-400" />
                 Commanditaire
               </h3>
 
               <div>
-                <label className="label">Client</label>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                  Client
+                </label>
                 <select
-                  className="input"
+                  className="input-field"
                   value={clientId}
                   onChange={(e) => {
                     const id = e.target.value;
@@ -398,24 +402,16 @@ export default function NewMission() {
                     </option>
                   ))}
                 </select>
-                {clients.length === 0 ? (
-                  <p className="text-xs text-dark-500 mt-1">
-                    Aucun compte client enregistré pour le moment.
-                  </p>
-                ) : (
-                  <p className="text-xs text-dark-500 mt-1">
-                    {clients.length} client
-                    {clients.length > 1 ? "s" : ""} enregistré
-                    {clients.length > 1 ? "s" : ""}. Laissez vide pour une
-                    course prise en direct : la mission n&apos;apparaîtra dans
-                    aucun espace client.
-                  </p>
-                )}
+                <p className="text-xs text-dark-500 mt-2">
+                  {clients.length === 0
+                    ? "Aucun compte client enregistré pour le moment."
+                    : "Choisissez « Autre » pour une course prise en direct : la mission n’apparaîtra dans aucun espace client."}
+                </p>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="label">
+                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
                     Rémunération convoyeur{" "}
                     <span className="text-red-400">*</span>
                   </label>
@@ -423,78 +419,82 @@ export default function NewMission() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="input"
+                    className="input-field"
                     value={priceConvoyeur}
                     onChange={(e) => setPriceConvoyeur(e.target.value)}
                     placeholder="180.00"
                   />
-                  <p className="text-xs text-dark-500 mt-1">
+                  <p className="text-xs text-dark-500 mt-2">
                     Seul montant visible par les convoyeurs.
                   </p>
                 </div>
                 <div>
-                  <label className="label">Prix client</label>
+                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                    Prix client
+                  </label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
-                    className="input"
+                    className="input-field"
                     value={priceClient}
                     onChange={(e) => setPriceClient(e.target.value)}
                     placeholder="Facultatif"
                   />
-                  <p className="text-xs text-dark-500 mt-1">
+                  <p className="text-xs text-dark-500 mt-2">
                     Pour votre suivi, jamais affiché au convoyeur.
                   </p>
                 </div>
               </div>
 
-              <p className="text-xs text-primary-300 bg-primary-600/10 border border-primary-600/20 rounded-lg px-3 py-2">
+              <p className="text-xs text-primary-300 bg-primary-600/10 border border-primary-600/20 rounded-lg px-4 py-3 leading-relaxed">
                 Cette mission ne passe pas par la cotation : elle sera publiée
                 immédiatement auprès des convoyeurs.
               </p>
             </div>
           )}
 
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Mail size={20} className="text-primary-400" />
-            Réception du récapitulatif
-          </h3>
+          <div className="card space-y-5">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Mail size={20} className="text-primary-400" />
+              Réception du récapitulatif
+            </h3>
 
-          <p className="text-sm text-dark-400">
-            À la livraison, un récapitulatif complet vous sera adressé :
-            procès-verbal, photos du véhicule et réserves éventuelles. Indiquez
-            l&apos;adresse qui doit le recevoir.
-          </p>
+            <p className="text-sm text-dark-400 leading-relaxed">
+              À la livraison, un récapitulatif complet sera adressé :
+              procès-verbal, photos du véhicule et réserves éventuelles.
+              Indiquez l&apos;adresse qui doit le recevoir.
+            </p>
 
-          <div>
-            <label className="label">
-              Adresse de réception <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="email"
-              className="input"
-              value={recapEmail}
-              onChange={(e) => setRecapEmail(e.target.value)}
-              placeholder="vous@entreprise.fr"
-            />
-            {recapEmail.trim() !== "" && !emailValide && (
-              <p className="text-xs text-red-400 mt-1">
-                Adresse email invalide.
-              </p>
-            )}
-            {user?.email && recapEmail.trim() === user.email && (
-              <p className="text-xs text-dark-500 mt-1">
-                Adresse de votre compte.
-              </p>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                Adresse de réception <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                className="input-field"
+                value={recapEmail}
+                onChange={(e) => setRecapEmail(e.target.value)}
+                placeholder="vous@entreprise.fr"
+              />
+              {recapEmail.trim() !== "" && !emailValide && (
+                <p className="text-xs text-red-400 mt-2">
+                  Adresse email invalide.
+                </p>
+              )}
+              {user?.email && recapEmail.trim() === user.email && (
+                <p className="text-xs text-dark-500 mt-2">
+                  Adresse de votre compte.
+                </p>
+              )}
+            </div>
+
+            <p className="text-xs text-dark-500 leading-relaxed">
+              Vous pourrez renseigner plus loin les contacts sur place, au
+              départ et à l&apos;arrivée. Ils servent au convoyeur pour les
+              joindre et ne reçoivent pas ce récapitulatif.
+            </p>
           </div>
-
-          <p className="text-xs text-dark-500">
-            Vous pourrez renseigner plus loin les contacts sur place, au départ
-            et à l&apos;arrivée. Ils servent au convoyeur pour les joindre et ne
-            reçoivent pas ce récapitulatif.
-          </p>
         </div>
       )}
 
