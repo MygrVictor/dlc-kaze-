@@ -120,8 +120,29 @@ const emptyVehicle = () => ({
 export default function NewMission() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const estAdmin = user?.role === "admin";
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // ── Saisie administrative ──────────────────────────────────
+  //
+  // L'administration saisit des missions déjà négociées : le prix est
+  // connu, l'accord est passé, elles rejoignent directement les missions
+  // disponibles. Le commanditaire peut être un compte existant, ou
+  // personne — une course prise en direct n'a pas toujours de client
+  // enregistré sur la plateforme.
+  const [clients, setClients] = useState([]);
+  const [clientId, setClientId] = useState("");
+  const [priceConvoyeur, setPriceConvoyeur] = useState("");
+  const [priceClient, setPriceClient] = useState("");
+
+  useEffect(() => {
+    if (!estAdmin) return;
+    api
+      .get("/admin/users", { params: { role: "client", limit: 500 } })
+      .then(({ data }) => setClients(data.users || data || []))
+      .catch(() => toast.error("Liste des clients indisponible."));
+  }, [estAdmin]);
 
   // Destinataire du récapitulatif de fin de mission (PV, photos,
   // réserves) émis par Kaze. Pré-rempli avec l'adresse du compte : le
@@ -194,6 +215,9 @@ export default function NewMission() {
   const canNext = () => {
     switch (step) {
       case 0:
+        // L'admin ne reçoit pas de devis : ce qui l'engage, c'est la
+        // rémunération annoncée aux convoyeurs.
+        if (estAdmin) return Number(priceConvoyeur) > 0;
         return emailValide;
       case 1:
         return vehicles.every((v) => v.plate || v.vin || v.model);
@@ -246,10 +270,27 @@ export default function NewMission() {
         // Souhait du client : conservé côté DLC, non transmis à Kaze.
         desiredDeliveryDate: arrival.date || null,
         isUrgent: arrival.isUrgent || false,
+        // Ignorés par l'API si l'auteur n'est pas administrateur.
+        ...(estAdmin && {
+          clientId: clientId || null,
+          priceConvoyeur: priceConvoyeur || null,
+          priceClient: priceClient || null,
+        }),
       };
 
       const { data } = await api.post("/missions", payload);
       const count = data.count || 1;
+
+      if (estAdmin) {
+        toast.success(
+          count > 1
+            ? `${count} missions publiées auprès des convoyeurs.`
+            : "Mission publiée auprès des convoyeurs.",
+        );
+        navigate("/admin/missions");
+        return;
+      }
+
       toast.success(
         count > 1
           ? `${count} missions créées ! Vous recevrez un devis comprenants toutes les missions.`
@@ -269,7 +310,9 @@ export default function NewMission() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Nouvelle mission</h1>
         <p className="text-dark-400 text-sm mt-1">
-          Remplissez les informations pour recevoir un devis personnalisé.
+          {estAdmin
+            ? "Mission déjà négociée : elle sera publiée immédiatement auprès des convoyeurs."
+            : "Remplissez les informations pour recevoir un devis personnalisé."}
         </p>
       </div>
 
@@ -309,6 +352,80 @@ export default function NewMission() {
       {/* ═══════════ ÉTAPE 1 : RÉCAPITULATIF ═══════════ */}
       {step === 0 && (
         <div className="card space-y-4">
+          {/* Saisie administrative : commanditaire et prix, deux
+              informations que le client n'a pas à choisir. */}
+          {estAdmin && (
+            <div className="space-y-4 pb-5 mb-1 border-b border-dark-700">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Building2 size={20} className="text-primary-400" />
+                Commanditaire
+              </h3>
+
+              <div>
+                <label className="label">Client</label>
+                <select
+                  className="input"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                >
+                  <option value="">
+                    Mission interne — sans client enregistré
+                  </option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.company_name || c.full_name} — {c.email}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-dark-500 mt-1">
+                  Laissez vide pour une course prise en direct : la mission
+                  n&apos;apparaîtra dans aucun espace client.
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">
+                    Rémunération convoyeur{" "}
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input"
+                    value={priceConvoyeur}
+                    onChange={(e) => setPriceConvoyeur(e.target.value)}
+                    placeholder="180.00"
+                  />
+                  <p className="text-xs text-dark-500 mt-1">
+                    Seul montant visible par les convoyeurs.
+                  </p>
+                </div>
+                <div>
+                  <label className="label">Prix client</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input"
+                    value={priceClient}
+                    onChange={(e) => setPriceClient(e.target.value)}
+                    placeholder="Facultatif"
+                  />
+                  <p className="text-xs text-dark-500 mt-1">
+                    Pour votre suivi, jamais affiché au convoyeur.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-primary-300 bg-primary-600/10 border border-primary-600/20 rounded-lg px-3 py-2">
+                Cette mission ne passe pas par la cotation : elle sera publiée
+                immédiatement auprès des convoyeurs.
+              </p>
+            </div>
+          )}
+
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Mail size={20} className="text-primary-400" />
             Réception du récapitulatif
@@ -1064,7 +1181,7 @@ export default function NewMission() {
           {step === 0 && (
             <button
               type="button"
-              onClick={() => navigate("/client")}
+              onClick={() => navigate(estAdmin ? "/admin/missions" : "/client")}
               className="btn-secondary"
             >
               Annuler
@@ -1094,8 +1211,12 @@ export default function NewMission() {
               {loading
                 ? "Envoi…"
                 : vehicles.length > 1
-                  ? `Créer ${vehicles.length} missions`
-                  : "Envoyer la demande"}
+                  ? estAdmin
+                    ? `Publier ${vehicles.length} missions`
+                    : `Créer ${vehicles.length} missions`
+                  : estAdmin
+                    ? "Publier la mission"
+                    : "Envoyer la demande"}
             </button>
           )}
         </div>

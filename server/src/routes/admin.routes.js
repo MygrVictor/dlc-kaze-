@@ -119,10 +119,10 @@ router.get("/missions", async (req, res, next) => {
              u.phone AS client_phone,
              c.full_name AS convoyeur_name
       FROM missions m
-      JOIN users u ON u.id = m.client_id
+      LEFT JOIN users u ON u.id = m.client_id
       LEFT JOIN users c ON c.id = m.convoyeur_id
     `;
-    let countQuery = `SELECT COUNT(*) FROM missions m JOIN users u ON u.id = m.client_id`;
+    let countQuery = `SELECT COUNT(*) FROM missions m LEFT JOIN users u ON u.id = m.client_id`;
     const conditions = [];
     const params = [];
     let paramIdx = 1;
@@ -184,7 +184,7 @@ router.get("/missions/search-plate", async (req, res, next) => {
       `SELECT m.*, u.full_name AS client_name, u.email AS client_email, u.company AS client_company,
               c.full_name AS convoyeur_name
        FROM missions m
-       JOIN users u ON u.id = m.client_id
+       LEFT JOIN users u ON u.id = m.client_id
        LEFT JOIN users c ON c.id = m.convoyeur_id
        WHERE REPLACE(UPPER(m.vehicle_plate), '-', '') ILIKE '%' || REPLACE(UPPER($1), '-', '') || '%'
        ORDER BY m.updated_at DESC
@@ -205,7 +205,7 @@ router.get("/missions/export-csv", async (req, res, next) => {
       SELECT m.*, u.full_name AS client_name, u.email AS client_email, u.company AS client_company,
              c.full_name AS convoyeur_name
       FROM missions m
-      JOIN users u ON u.id = m.client_id
+      LEFT JOIN users u ON u.id = m.client_id
       LEFT JOIN users c ON c.id = m.convoyeur_id
     `;
     const params = [];
@@ -615,7 +615,7 @@ router.get("/missions/map", async (req, res, next) => {
               u.full_name AS client_name, u.company AS client_company,
               c.full_name AS convoyeur_name
        FROM missions m
-       JOIN users u ON u.id = m.client_id
+       LEFT JOIN users u ON u.id = m.client_id
        LEFT JOIN users c ON c.id = m.convoyeur_id
        WHERE m.status IN (${placeholders})
        ORDER BY m.created_at DESC
@@ -1197,7 +1197,7 @@ router.post("/missions/:id/sync-kaze", async (req, res, next) => {
   try {
     const { rows } = await db.query(
       `SELECT m.*, u.full_name AS client_name, u.email AS client_email
-       FROM missions m JOIN users u ON u.id = m.client_id WHERE m.id = $1`,
+       FROM missions m LEFT JOIN users u ON u.id = m.client_id WHERE m.id = $1`,
       [req.params.id],
     );
     if (rows.length === 0)

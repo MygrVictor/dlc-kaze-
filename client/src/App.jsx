@@ -114,6 +114,9 @@ export default function App() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="missions" element={<AdminMissions />} />
+        {/* Même formulaire que le client : les champs administratifs
+            n'apparaissent que si le compte connecté est admin. */}
+        <Route path="nouvelle-mission" element={<NewMission />} />
         <Route path="carte" element={<AdminMap />} />
         <Route path="utilisateurs" element={<AdminUsers />} />
         <Route path="demandes" element={<AdminDemandes />} />

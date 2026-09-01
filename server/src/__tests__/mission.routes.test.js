@@ -258,8 +258,9 @@ describe("POST /api/missions — création", () => {
     });
 
     // 34 champs du formulaire + date souhaitée + urgence + identifiant
-    // de lot + destinataire du récapitulatif
-    expect(params).toHaveLength(38);
+    // de lot + destinataire du récapitulatif + statut initial + les deux
+    // prix et l'auteur, réservés à la saisie administrative.
+    expect(params).toHaveLength(42);
     expect(params).toEqual(
       expect.arrayContaining([
         CLIENT.id,
@@ -572,7 +573,7 @@ describe("POST /api/missions — dates et urgence", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(capture.params).toHaveLength(38);
+      expect(capture.params).toHaveLength(42);
       expect(capture.sql).toMatch(/service_handover/);
     });
   });

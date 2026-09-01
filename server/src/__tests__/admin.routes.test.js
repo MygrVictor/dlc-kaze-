@@ -1016,7 +1016,7 @@ describe("POST /api/admin/missions/:id/sync-kaze", () => {
 
   it("refuse de synchroniser une mission non éligible", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/FROM missions m JOIN users/i.test(sql))
+      if (/FROM missions m LEFT JOIN users/i.test(sql))
         return {
           rows: [{ id: MISSION_ID, status: "EN_ATTENTE_DE_COTATION" }],
         };
@@ -1030,7 +1030,7 @@ describe("POST /api/admin/missions/:id/sync-kaze", () => {
 
   it("crée le job Kaze manquant", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/FROM missions m JOIN users/i.test(sql))
+      if (/FROM missions m LEFT JOIN users/i.test(sql))
         return { rows: [{ id: MISSION_ID, status: "ACCEPTEE" }] };
     });
     kazeService.createMission.mockResolvedValue({ id: "kz-new" });
@@ -1047,7 +1047,7 @@ describe("POST /api/admin/missions/:id/sync-kaze", () => {
 
   it("ré-assigne le convoyeur d'une mission déjà synchronisée", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/FROM missions m JOIN users/i.test(sql))
+      if (/FROM missions m LEFT JOIN users/i.test(sql))
         return {
           rows: [
             {
@@ -1074,7 +1074,7 @@ describe("POST /api/admin/missions/:id/sync-kaze", () => {
 
   it("signale un convoyeur sans compte Kaze", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/FROM missions m JOIN users/i.test(sql))
+      if (/FROM missions m LEFT JOIN users/i.test(sql))
         return {
           rows: [
             {

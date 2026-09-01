@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import api from "../../lib/api";
 import { libelle, classeDePeage } from "../../lib/vehicules";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../../lib/utils";
 import {
   Euro,
+  Plus,
   Send,
   X,
   UserCheck,
@@ -367,6 +368,13 @@ export default function AdminMissions() {
             className="input-field pl-9 py-2 text-sm"
           />
         </div>
+        <Link
+          to="/admin/nouvelle-mission"
+          className="btn-primary flex items-center gap-2 text-sm py-2 px-4 whitespace-nowrap"
+        >
+          <Plus size={16} />
+          Nouvelle mission
+        </Link>
         <button
           onClick={handleExportCSV}
           disabled={exporting}
@@ -533,7 +541,16 @@ export default function AdminMissions() {
                   </td>
                   <td className="py-3 px-4" data-label="Client">
                     <div>
-                      <p className="font-medium">{m.client_name}</p>
+                      {/* Une mission prise en direct n'a pas de
+                          commanditaire enregistré : le signaler vaut
+                          mieux qu'une cellule vide. */}
+                      <p className="font-medium">
+                        {m.client_name || (
+                          <span className="text-dark-500 italic">
+                            Mission interne
+                          </span>
+                        )}
+                      </p>
                       {m.client_email && (
                         <p className="text-xs text-dark-500">
                           {m.client_email}

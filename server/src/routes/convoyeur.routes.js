@@ -271,7 +271,7 @@ router.get("/missions", async (req, res, next) => {
                     m.price_convoyeur AS price,
                     u.full_name AS client_name
                FROM missions m
-               JOIN users u ON u.id = m.client_id
+               LEFT JOIN users u ON u.id = m.client_id
               WHERE m.kaze_mission_id = ANY($1)`,
             [kazeIds],
           );
@@ -316,7 +316,7 @@ router.get("/missions", async (req, res, next) => {
               m.convoyeur_id, m.created_at, m.updated_at,
               u.full_name AS client_name
        FROM missions m
-       JOIN users u ON u.id = m.client_id
+       LEFT JOIN users u ON u.id = m.client_id
        WHERE m.convoyeur_id = $1
          AND (
            m.status IN ('ASSIGNEE', 'EN_COURS')
@@ -368,7 +368,7 @@ router.get("/historique", async (req, res, next) => {
               m.kaze_mission_id, m.created_at, m.updated_at,
               u.full_name AS client_name
          FROM missions m
-         JOIN users u ON u.id = m.client_id
+         LEFT JOIN users u ON u.id = m.client_id
         WHERE m.convoyeur_id = $1
           AND m.status = 'LIVREE'
         ORDER BY m.updated_at DESC
@@ -663,7 +663,7 @@ router.get("/missions/:id", async (req, res, next) => {
     const { rows } = await db.query(
       `SELECT m.*, u.full_name AS client_name
        FROM missions m
-       JOIN users u ON u.id = m.client_id
+       LEFT JOIN users u ON u.id = m.client_id
        WHERE m.id = $1 AND m.convoyeur_id = $2`,
       [req.params.id, req.user.id],
     );

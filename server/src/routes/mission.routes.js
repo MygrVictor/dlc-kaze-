@@ -37,15 +37,28 @@ router.param("id", (req, res, next, value) => {
 });
 
 // ═════════════════════════════════════════════════════════════
-// ÉTAPE 1 — Client : Créer une demande de mission
-// ═════════════════════════════════════════════════════════════
+// ÉTAPE 1 — Créer une demande de mission
+//
+// Le même formulaire sert au client et à l'administration, mais les
+// deux ne produisent pas la même chose :
+//
+//   • un client dépose une demande, qui attend une cotation ;
+//   • un administrateur saisit une mission déjà négociée — le prix est
+//     connu, l'accord est passé. Elle part donc directement en ACCEPTEE,
+//     statut sous lequel les convoyeurs la voient dans leurs missions
+//     disponibles.
+//
+// Une mission administrative peut n'avoir aucun commanditaire enregistré
+// (course prise en direct) : `client_id` reste alors vide.
+// ════════════════════════════════════════════════════════════
 router.post(
   "/",
-  authorize("client"),
+  authorize("client", "admin"),
   requireValidation,
   createMissionLimiter,
   async (req, res, next) => {
     try {
+      const estAdmin = req.user.role === "admin";
       const {
         // Étape 1 : Véhicules (tableau)
         vehicles,
@@ -82,6 +95,35 @@ router.post(
       // Date souhaitée par le client et marqueur d'urgence : deux notions
       // internes à DLC, jamais transmises à Kaze.
       const { desiredDeliveryDate, isUrgent } = req.body;
+
+      // Champs réservés à l'administration. Ignorés si un client les
+      // envoie : il ne choisit ni son commanditaire ni sa rémunération.
+      const clientId = estAdmin ? req.body.clientId || null : req.user.id;
+      const priceConvoyeur = estAdmin ? req.body.priceConvoyeur || null : null;
+      const priceClient = estAdmin ? req.body.priceClient || null : null;
+
+      if (estAdmin && clientId) {
+        const { rows: compte } = await db.query(
+          "SELECT id FROM users WHERE id = $1 AND role = 'client'",
+          [clientId],
+        );
+        if (compte.length === 0) {
+          return res.status(404).json({ error: "Client introuvable." });
+        }
+      }
+
+      // Une mission diffusée sans rémunération ne trouvera pas preneur :
+      // le convoyeur ne voit que ce montant pour décider.
+      if (estAdmin && (!priceConvoyeur || Number(priceConvoyeur) <= 0)) {
+        return res.status(400).json({
+          error:
+            "Rémunération convoyeur obligatoire : la mission est publiée immédiatement.",
+        });
+      }
+
+      // Une mission administrative est déjà négociée, elle rejoint
+      // directement les missions disponibles.
+      const statutInitial = estAdmin ? "ACCEPTEE" : "EN_ATTENTE_DE_COTATION";
 
       if (!departureAddress || !arrivalAddress) {
         return res
@@ -136,7 +178,7 @@ router.post(
             retribution_details,
             emergency_contact_name, emergency_phone, emergency_contact_email,
             comments, desired_delivery_date, is_urgent, batch_id, status,
-            recap_email
+            recap_email, price, price_convoyeur, created_by
           ) VALUES (
             $1,
             $2, $3, $4, $5, $6,
@@ -150,11 +192,11 @@ router.post(
             $27, $28, $29,
             $30,
             $31, $32, $33,
-            $34, $35, $36, $37, 'EN_ATTENTE_DE_COTATION',
-            $38
+            $34, $35, $36, $37, $39,
+            $38, $40, $41, $42
           ) RETURNING *`,
           [
-            req.user.id,
+            clientId,
             v.plate || null,
             v.vin || null,
             v.brand || null,
@@ -195,30 +237,56 @@ router.post(
             batchId,
             // Vide = le service Kaze retombera sur l'email du compte.
             recapEmail || null,
+            statutInitial,
+            priceClient || null,
+            priceConvoyeur || null,
+            estAdmin ? req.user.id : null,
           ],
         );
         createdMissions.push(rows[0]);
       }
 
-      // Alerter l'admin : une mission non cotée n'avance pas tant que
-      // personne ne l'a vue. L'échec d'envoi ne doit pas annuler la
-      // création, la mission est déjà en base.
-      try {
+      // Une mission saisie par l'administration est déjà publiée : ce
+      // sont les convoyeurs qu'il faut prévenir, pas l'admin lui-même.
+      // Le client, lui, attend une cotation.
+      if (estAdmin) {
+        const lienMission = process.env.CLIENT_URL
+          ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+          : undefined;
+
         for (const mission of createdMissions) {
-          await emailService.notifyMissionACoter(mission, req.user);
+          if (telegramService.actif) {
+            telegramService
+              .annoncerMissionDisponible(mission, lienMission)
+              .catch((err) =>
+                console.error("⚠️ Annonce Telegram échouée :", err.message),
+              );
+          }
         }
-      } catch (emailErr) {
-        console.error(
-          "⚠️ Email admin (mission à coter) non envoyé :",
-          emailErr.message,
-        );
+      } else {
+        // Alerter l'admin : une mission non cotée n'avance pas tant que
+        // personne ne l'a vue. L'échec d'envoi ne doit pas annuler la
+        // création, la mission est déjà en base.
+        try {
+          for (const mission of createdMissions) {
+            await emailService.notifyMissionACoter(mission, req.user);
+          }
+        } catch (emailErr) {
+          console.error(
+            "⚠️ Email admin (mission à coter) non envoyé :",
+            emailErr.message,
+          );
+        }
       }
 
       res.status(201).json({
         missions: createdMissions,
         count: createdMissions.length,
-        message:
-          createdMissions.length > 1
+        message: estAdmin
+          ? createdMissions.length > 1
+            ? `${createdMissions.length} missions publiées auprès des convoyeurs.`
+            : "Mission publiée auprès des convoyeurs."
+          : createdMissions.length > 1
             ? `${createdMissions.length} missions créées avec succès.`
             : "Mission créée avec succès.",
       });

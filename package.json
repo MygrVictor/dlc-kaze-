@@ -22,6 +22,7 @@
     "db:migrate:vitrine": "npm run migrate:vitrine --workspace=server",
     "db:migrate:factures": "npm run migrate:factures --workspace=server",
     "db:migrate:docs-rc": "npm run migrate:docs-rc --workspace=server",
+    "db:migrate:missions-internes": "npm run migrate:missions-internes --workspace=server",
     "db:seed": "npm run seed --workspace=server",
     "test": "npm run test --workspace=server && npm run test --workspace=client",
     "test:server": "npm run test --workspace=server",
