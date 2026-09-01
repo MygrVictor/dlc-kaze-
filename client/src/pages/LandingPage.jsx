@@ -128,12 +128,12 @@ export default function LandingPage() {
               marginBottom: 26,
             }}
           >
-            Votre véhicule.
+            Votre mobilité.
             <br />
-            <span style={{ color: "var(--amber)" }}>Notre route.</span>
+            <span style={{ color: "var(--amber)" }}>Notre priorité.</span>
           </h1>
           <p className="hero-sub reveal">
-            Drive Line Connect livre vos véhicules partout en France et en
+            Drive Line Connect transfert vos véhicules partout en France et en
             Europe. Un interlocuteur unique, des conducteurs formés à nos
             procédures, une assurance et des délais garantis.
           </p>
@@ -234,113 +234,103 @@ export default function LandingPage() {
                 marginTop: 14,
               }}
             >
-              Trois façons de faire voyager un véhicule, du premier kilomètre à
-              la remise des clés — et un interlocuteur unique pour en parler.
+              Déplacer un véhicule du premier kilomètre à la remise des clés
+              avec un interlocuteur unique.
             </p>
           </div>
-          <div className="card-grid">
-            <div className="service-card reveal">
-              <div className="icon-roundel">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--asphalt)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ width: 26, height: 26 }}
-                >
-                  <path d="M3 12l2-6h11l3 6M3 12v6h2M20 12v6h-2M5 18a2 2 0 104 0 2 2 0 00-4 0zM15 18a2 2 0 104 0 2 2 0 00-4 0zM9 18h6" />
-                </svg>
-              </div>
-              <h3>Livraison de véhicules</h3>
-              <p>
-                Une livraison complète, du premier kilomètre à la remise finale,
-                en moins de 24 heures partout en France.
-              </p>
-            </div>
-            <div
-              className="service-card reveal"
-              style={{ background: "var(--navy)", borderColor: "var(--navy)" }}
-            >
-              <div className="icon-roundel">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--asphalt)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ width: 26, height: 26 }}
-                >
-                  <path d="M17 3l4 4-4 4M21 7H7M7 21l-4-4 4-4M3 17h14" />
-                </svg>
-              </div>
-              <h3 style={{ color: "white" }}>Transfert de véhicules</h3>
-              <p style={{ color: "rgba(255,255,255,0.75)" }}>
-                Voitures, vans et camions transférés à travers toute l'Europe en
-                seulement 48 heures.
-              </p>
-            </div>
-            <div className="service-card reveal">
-              <div className="icon-roundel">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--asphalt)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ width: 26, height: 26 }}
-                >
-                  <rect x="3" y="7" width="18" height="13" rx="2" />
-                  <path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />
-                </svg>
-              </div>
-              <h3>Prestations sur mesure</h3>
-              <p>
-                Nettoyage complet, mise en main et état des lieux photographique
-                : une solution clé en main.
-              </p>
-            </div>
-          </div>
-
-          {/* Enchaîner directement sur l'invitation : un visiteur qui vient
-              de lire ce que nous savons faire est au moment précis où il se
-              demande à qui s'adresser. Le renvoyer plus bas dans la page
-              faisait perdre cet élan. */}
+          {/* Ce que nous savons faire à gauche, à qui s'adresser à droite :
+              un visiteur qui parcourt les trois prestations a l'invitation
+              sous les yeux au moment précis où il se demande qui appeler.
+              La reléguer sous la grille faisait perdre cet élan. */}
           <span id="entreprises" className="anchor-offset" aria-hidden="true" />
-          <div className="services-appel reveal">
-            <div>
-              <h3 className="services-appel__titre">
-                Concessions, loueurs, gestionnaires de flotte
-              </h3>
-              <p className="services-appel__texte">
-                Confiez vos livraisons clients, transferts inter-sites et
-                retours de location à Drive Line Connect. Nous assurons vos
-                véhicules pendant tout le trajet et vous suivez chaque mission
-                en direct.
-              </p>
-              <div className="chip-row" style={{ marginBottom: 0 }}>
-                <div className="chip">VÉHICULES ASSURÉS</div>
-                <div className="chip">SUIVI EN TEMPS RÉEL</div>
-                <div className="chip">FACTURATION CENTRALISÉE</div>
+          <div className="services-layout">
+            <div className="card-grid">
+              <div className="service-card reveal">
+                <div className="icon-roundel">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--asphalt)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ width: 26, height: 26 }}
+                  >
+                    <path d="M3 12l2-6h11l3 6M3 12v6h2M20 12v6h-2M5 18a2 2 0 104 0 2 2 0 00-4 0zM15 18a2 2 0 104 0 2 2 0 00-4 0zM9 18h6" />
+                  </svg>
+                </div>
+                <div>
+                  <h3>Livraison de véhicules</h3>
+                  <p>
+                    Une livraison complète, du premier kilomètre à la remise
+                    finale, en moins de 24 heures partout en France.
+                  </p>
+                </div>
+              </div>
+              <div
+                className="service-card reveal"
+                style={{
+                  background: "var(--navy)",
+                  borderColor: "var(--navy)",
+                }}
+              >
+                <div className="icon-roundel">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--asphalt)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ width: 26, height: 26 }}
+                  >
+                    <path d="M17 3l4 4-4 4M21 7H7M7 21l-4-4 4-4M3 17h14" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 style={{ color: "white" }}>Transfert de véhicules</h3>
+                  <p style={{ color: "rgba(255,255,255,0.75)" }}>
+                    Voitures, vans et camions transférés à travers toute
+                    l'Europe.
+                  </p>
+                </div>
+              </div>
+              <div className="service-card reveal">
+                <div className="icon-roundel">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--asphalt)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ width: 26, height: 26 }}
+                  >
+                    <path d="M3 16V7a1 1 0 011-1h9v10H3zM13 10h4l4 4v2h-8v-6z" />
+                    <circle cx="7" cy="18" r="2" />
+                    <circle cx="17" cy="18" r="2" />
+                  </svg>
+                </div>
+                <div>
+                  <h3>Transport de véhicule</h3>
+                  <p>transport de véhicules par camion</p>
+                </div>
               </div>
             </div>
 
-            <div className="services-appel__action">
-              <p className="services-appel__action-titre">
-                Un projet de convoyage ?
-              </p>
-              <p className="services-appel__note">
-                Quinze minutes au téléphone suffisent à cadrer vos volumes, vos
-                trajets récurrents et vos délais.
-              </p>
-              <Link
-                to="/etre-rappele"
-                className="btn-primary"
-                style={{ display: "inline-flex" }}
-              >
+            <aside className="services-appel reveal">
+              <div className="services-appel__eyebrow">
+                CONCESSIONS · LOUEURS · FLOTTES
+              </div>
+              <h3 className="services-appel__titre">Parlons de vos volumes</h3>
+              <ul className="services-appel__liste">
+                <li>Véhicules assurés porte à porte</li>
+                <li>Suivi de chaque mission en direct</li>
+                <li>Facturation centralisée</li>
+                <li>Interlocuteur unique dédié</li>
+                <li>Solutions sur mesure</li>
+              </ul>
+              <Link to="/etre-rappele" className="services-appel__cta">
                 Faites-vous rappeler
                 <svg
                   width="16"
@@ -354,9 +344,10 @@ export default function LandingPage() {
                 </svg>
               </Link>
               <p className="services-appel__note">
-                Réponse sous 48 h ouvrées. Sans engagement.
+                Quinze minutes au téléphone. Réponse sous 48 h ouvrées, sans
+                engagement.
               </p>
-            </div>
+            </aside>
           </div>
         </div>
       </section>
@@ -606,7 +597,7 @@ export default function LandingPage() {
           </p>
           <div className="chip-row reveal">
             <div className="chip">MISSIONS CHAQUE SEMAINE</div>
-            <div className="chip">PAIEMENT SOUS 7 JOURS</div>
+            <div className="chip">PAIEMENT SOUS 15 JOURS</div>
             <div className="chip">COUVERTURE EUROPE</div>
           </div>
           <Link

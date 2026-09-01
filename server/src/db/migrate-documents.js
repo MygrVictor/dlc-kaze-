@@ -6,6 +6,8 @@
  *    - permis          : Permis de conduire
  *    - carte_identite  : Carte d'identité
  *    - assurance       : Attestation d'assurance convoyeur
+ *    - rc_circulation  : RC circulation (véhicule confié)
+ *    - rc_pro          : RC professionnelle (dommages aux tiers)
  *    - domicile        : Justificatif de domicile
  *
  *  Statuts :
@@ -29,6 +31,8 @@ const migrate = async () => {
         'permis',
         'carte_identite',
         'assurance',
+        'rc_circulation',
+        'rc_pro',
         'domicile'
       );
     EXCEPTION WHEN duplicate_object THEN NULL;

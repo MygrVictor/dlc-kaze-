@@ -683,28 +683,44 @@
   border-top-color: rgb(255 255 255 / 0.12);
 }
 
+/* Chaque prestation tient sur une ligne : icône, puis titre et texte.
+   La colonne de gauche reste dense, l'ensemble se parcourt d'un regard
+   au lieu de contraindre au défilement. */
 .service-card {
   background: white;
   border: 1px solid rgba(11, 29, 58, 0.08);
   border-radius: 14px;
-  padding: 34px 28px;
+  padding: 22px 24px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  align-items: start;
   transition:
     transform 0.25s,
     box-shadow 0.25s;
 }
 .service-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 20px 40px -16px rgba(11, 29, 58, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px -18px rgba(11, 29, 58, 0.24);
 }
 .service-card h3 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--navy);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 .service-card p {
   color: var(--graphite-soft);
   font-size: 14.5px;
+  line-height: 1.55;
+  margin: 0;
+}
+/* L'icône ne doit ni s'étirer sur la hauteur de la ligne ni pousser le
+   texte : elle garde sa taille et se cale en haut. */
+.service-card .icon-roundel {
+  margin-bottom: 0;
+  width: 46px;
+  height: 46px;
 }
 
 .badge {
@@ -848,66 +864,147 @@
    fond légèrement contrasté, pas de nouveau titre de niveau 2, afin que
    l'ensemble se lise comme un seul mouvement — voici ce que nous
    faisons, voici comment nous joindre. */
+/* ── Appel client, en colonne à droite des prestations ────────────
+   Les prestations restent sur fond clair ; l'invitation bascule sur un
+   fond sombre. Le contraste fait le travail que faisaient auparavant un
+   titre, un paragraphe et un encadré teinté : l'œil identifie la colonne
+   comme l'action de la section, sans avoir à la lire pour le comprendre. */
 .services-appel {
-  margin-top: 56px;
-  padding: 38px 40px;
+  padding: 34px 30px;
   border-radius: 18px;
-  background: white;
-  border: 1px solid rgba(11, 29, 58, 0.09);
-  display: grid;
-  /* Deux moitiés strictes : l'argumentaire et l'invitation se répondent
-     à poids égal, plutôt qu'un bloc de texte flanqué d'un bouton. */
-  grid-template-columns: 1fr 1fr;
-  gap: 48px;
-  align-items: center;
-}
-.services-appel__titre {
-  font-size: 21px;
-  font-weight: 700;
-  color: var(--navy);
-  margin-bottom: 10px;
-}
-.services-appel__texte {
-  font-size: 15.5px;
-  line-height: 1.6;
-  color: var(--graphite-soft);
-  margin-bottom: 20px;
-  max-width: 62ch;
-}
-.services-appel__action {
+  background: var(--navy);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  /* Un fond légèrement teinté et un filet séparent les deux moitiés sans
-     recourir à une bordure verticale, qui trancherait trop. */
-  background: var(--cream);
-  border-radius: 14px;
-  padding: 26px 28px;
+  gap: 18px;
   height: 100%;
-  justify-content: center;
+  color: white;
 }
-.services-appel__action-titre {
-  font-size: 17px;
+.services-appel__eyebrow {
+  font-size: 11.5px;
   font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.services-appel__titre {
+  font-size: 23px;
+  font-weight: 700;
+  color: white;
+  line-height: 1.25;
+}
+/* Trois arguments, une ligne chacun : la coche remplace la phrase de
+   liaison, de sorte que la colonne se balaie du regard au lieu de se
+   lire. Le trait de séparation tient lieu de respiration entre les
+   arguments et l'action. */
+.services-appel__liste {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin: 2px 0 4px;
+  padding: 0 0 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+.services-appel__liste li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.86);
+}
+.services-appel__liste li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 13px;
+  height: 7px;
+  border-left: 2px solid var(--amber);
+  border-bottom: 2px solid var(--amber);
+  transform: rotate(-45deg);
+}
+/* Le bouton occupe toute la largeur de la colonne : sur fond sombre,
+   c'est la seule zone claire, donc la seule cible possible. */
+.services-appel__cta {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 22px;
+  border-radius: 11px;
+  background: var(--amber);
   color: var(--navy);
+  font-size: 15.5px;
+  font-weight: 700;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.services-appel__cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
 }
 .services-appel__note {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
-  color: var(--graphite-soft);
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
 }
 .services-appel__note a {
-  color: var(--teal);
+  color: var(--amber);
   font-weight: 700;
 }
-/* Sous 900 px, la colonne d'action passe dessous plutôt que de comprimer
-   le texte à une largeur illisible. */
+/* Sous 980 px, la colonne repasse pleine largeur sous les prestations :
+   arguments à gauche, action à droite, plutôt qu'une hauteur inutile. */
+@media (max-width: 980px) {
+  .services-appel {
+    height: auto;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-areas:
+      "eyebrow cta"
+      "titre   cta"
+      "liste   note";
+    column-gap: 40px;
+    row-gap: 14px;
+    align-items: center;
+    padding: 34px 36px;
+  }
+  .services-appel__eyebrow {
+    grid-area: eyebrow;
+    align-self: end;
+  }
+  .services-appel__titre {
+    grid-area: titre;
+    align-self: start;
+  }
+  .services-appel__liste {
+    grid-area: liste;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .services-appel__cta {
+    grid-area: cta;
+    margin-top: 0;
+    align-self: end;
+  }
+  .services-appel__note {
+    grid-area: note;
+    align-self: start;
+    text-align: left;
+  }
+}
 @media (max-width: 900px) {
   .services-appel {
-    grid-template-columns: 1fr;
-    gap: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
     padding: 30px 26px;
+  }
+  .services-appel__liste {
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   }
 }
 
@@ -1168,16 +1265,32 @@
   background: var(--amber);
   margin: 18px auto 0;
 }
+/* ── Services : prestations à gauche, invitation à droite ─────────
+   Les trois prestations et l'appel à nous joindre se lisent d'un seul
+   regard. Le rapport 1,55 / 1 laisse aux cartes la place d'énoncer une
+   offre sans écraser la colonne d'invitation, qui reste un aparté. */
+.services-layout {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 28px;
+  max-width: 1180px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* Dans une colonne rétrécie, des cartes verticales deviendraient hautes
+   et creuses. Empilées, elles se lisent mieux en lignes : l'icône ancre
+   le regard à gauche, le titre et la description suivent. L'œil descend
+   une liste plutôt que de parcourir trois blocs. */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  max-width: 1080px;
-  margin: 0 auto;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
-@media (max-width: 860px) {
-  .card-grid {
+@media (max-width: 980px) {
+  .services-layout {
     grid-template-columns: 1fr;
+    gap: 32px;
   }
 }
 

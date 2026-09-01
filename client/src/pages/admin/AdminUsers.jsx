@@ -838,6 +838,14 @@ export default function AdminUsers() {
                       label: "Attestation d'assurance",
                       icon: ShieldCheck,
                     },
+                    rc_circulation: {
+                      label: "RC circulation",
+                      icon: ShieldCheck,
+                    },
+                    rc_pro: {
+                      label: "RC professionnelle",
+                      icon: ShieldCheck,
+                    },
                     domicile: { label: "Justificatif de domicile", icon: Home },
                   };
                   const cfg = DOC_LABELS[doc.type] || {

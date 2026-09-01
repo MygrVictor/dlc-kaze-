@@ -20,7 +20,14 @@ const {
 const UPLOAD_DIR = path.join(__dirname, "../../../uploads/documents");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const ALLOWED_TYPES = ["permis", "carte_identite", "assurance", "domicile"];
+const ALLOWED_TYPES = [
+  "permis",
+  "carte_identite",
+  "assurance",
+  "rc_circulation",
+  "rc_pro",
+  "domicile",
+];
 
 // Le type MIME est déclaré par le client : il ne prouve rien. C'est
 // l'extension du fichier stocké qui décidera du Content-Type au moment

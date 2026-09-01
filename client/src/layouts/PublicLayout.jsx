@@ -221,7 +221,7 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      {/* ── Footer ───────────────────────────────────── */}
+      {/* ──  ───────────────────────────────────── */}
       <footer
         style={{
           background: "var(--asphalt)",
@@ -251,7 +251,7 @@ export default function PublicLayout() {
               marginBottom: 20,
             }}
           >
-            02 41 18 85 53 · contact@drivelineconnect.com
+            06 69 58 34 30 
           </div>
           <div
             style={{

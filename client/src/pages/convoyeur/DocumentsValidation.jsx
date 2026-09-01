@@ -54,6 +54,24 @@ const DOCUMENT_TYPES = [
     bg: "bg-green-500/10 border-green-500/20",
   },
   {
+    key: "rc_circulation",
+    label: "RC circulation",
+    description:
+      "Attestation couvrant le véhicule qui vous est confié pendant le convoyage.",
+    icon: ShieldCheck,
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/10 border-emerald-500/20",
+  },
+  {
+    key: "rc_pro",
+    label: "RC professionnelle",
+    description:
+      "Attestation couvrant les dommages causés à des tiers dans le cadre de votre activité.",
+    icon: ShieldCheck,
+    color: "text-teal-400",
+    bg: "bg-teal-500/10 border-teal-500/20",
+  },
+  {
     key: "domicile",
     label: "Justificatif de domicile",
     description:
