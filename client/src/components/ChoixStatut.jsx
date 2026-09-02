@@ -1,14 +1,16 @@
 /**
- * Groupe de boutons radio stylés en cartes.
+ * Question à réponses fermées, présentée en menu déroulant.
  *
- * Un `select` masque les options derrière un clic, et une case à cocher ne
- * sait exprimer que « oui / non ». Or la question de l'assurance appelle
- * une troisième réponse — « en cours d'obtention » — qui doit être visible
- * d'emblée : c'est elle qui retient les candidats sérieux dont le dossier
- * n'est pas encore complet.
+ * Les options s'affichaient auparavant en cartes radio côte à côte. Sur le
+ * questionnaire convoyeur — SIRET, RC Circulation, RC Pro, W garage — cela
+ * empilait quatre rangées de boutons et le formulaire dépassait largement
+ * la hauteur de l'écran : le candidat ne voyait jamais le bouton d'envoi.
+ * Un `select` ramène chaque question à une seule ligne, ce qui permet en
+ * outre d'aligner deux questions par rangée.
  *
- * Les options restent affichées côte à côte, et l'ensemble est balisé en
- * `fieldset`/`legend` pour rester annonçable par un lecteur d'écran.
+ * L'option vide sert de consigne : sans elle, le navigateur présélectionne
+ * la première réponse et une question laissée de côté passerait pour
+ * répondue.
  */
 export default function ChoixStatut({
   legende,
@@ -18,36 +20,29 @@ export default function ChoixStatut({
   valeur,
   onChange,
   accent,
+  placeholder = "Sélectionnez…",
 }) {
   return (
-    <fieldset className="choix-statut">
-      <legend>{legende}</legend>
+    <div className="choix-statut">
+      <label className="choix-legende" htmlFor={name}>
+        {legende}
+      </label>
+      <select
+        id={name}
+        name={name}
+        value={valeur || ""}
+        onChange={onChange}
+        className="input-field choix-select"
+        style={valeur ? { borderColor: accent } : undefined}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.valeur} value={option.valeur}>
+            {option.label}
+          </option>
+        ))}
+      </select>
       {aide && <p className="choix-aide">{aide}</p>}
-      <div className="choix-options">
-        {options.map((option) => {
-          const actif = valeur === option.valeur;
-          return (
-            <label
-              key={option.valeur}
-              className={`choix-option${actif ? " actif" : ""}`}
-              style={
-                actif
-                  ? { borderColor: accent, boxShadow: `0 0 0 1px ${accent}` }
-                  : undefined
-              }
-            >
-              <input
-                type="radio"
-                name={name}
-                value={option.valeur}
-                checked={actif}
-                onChange={onChange}
-              />
-              <span>{option.label}</span>
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
+    </div>
   );
 }

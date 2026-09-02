@@ -80,6 +80,7 @@ export function Requis({ couleur }) {
  * @param {Function} [props.preparer]            (form) => corps de requête
  * @param {object}   [props.champsInitiaux]       champs propres à la page
  * @param {JSX}      [props.argumentaire]        colonne de gauche facultative
+ * @param {Function} [props.bloque]              (form) => bool, désactive l'envoi
  */
 export default function PageDemande({
   type,
@@ -92,6 +93,7 @@ export default function PageDemande({
   preparer,
   champsInitiaux,
   argumentaire,
+  bloque,
   children,
 }) {
   // Le socle ne connaît que les champs communs ; chaque page complète l'état
@@ -102,6 +104,11 @@ export default function PageDemande({
   const [envoye, setEnvoye] = useState(false);
   const [erreur, setErreur] = useState(null);
 
+  // Certaines réponses rendent la demande sans objet — une assurance
+  // obligatoire déclarée absente, par exemple. On désactive alors l'envoi
+  // plutôt que de le laisser échouer, l'explication étant déjà affichée au
+  // niveau du champ concerné.
+  const inaccessible = bloque ? bloque(form) : false;
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     // Une erreur maintenue après correction du champ fautif induit en
@@ -222,8 +229,12 @@ export default function PageDemande({
         className={argumentaire ? "demande-grille" : undefined}
       >
         {argumentaire}
-        <div className="card" style={{ padding: "40px 36px" }}>
-          <div style={{ marginBottom: 24 }}>
+        {/* La carte est bornée à la hauteur de la fenêtre : c'est son corps qui
+            défile, pas la page. Le titre et le bouton d'envoi restent ainsi
+            visibles en permanence, ce qui n'était plus le cas dès que le
+            questionnaire convoyeur dépassait l'écran. */}
+        <div className="card demande-carte" style={{ padding: "32px 36px" }}>
+          <div style={{ marginBottom: 20 }}>
             <h1
               style={{
                 fontSize: 26,
@@ -249,9 +260,11 @@ export default function PageDemande({
           <form
             onSubmit={handleSubmit}
             noValidate
-            style={{ display: "flex", flexDirection: "column", gap: 16 }}
+            className="demande-formulaire"
           >
-            {children({ form, handleChange, setForm, accent })}
+            <div className="demande-corps">
+              {children({ form, handleChange, setForm, accent })}
+            </div>
 
             {/* L'erreur est ancrée au-dessus du bouton plutôt que confiée à
                 un toast fugace : elle reste lisible pendant la correction. */}
@@ -269,6 +282,7 @@ export default function PageDemande({
                   border: "1px solid rgba(185,28,28,0.2)",
                   borderRadius: 8,
                   padding: "10px 12px",
+                  marginTop: 14,
                 }}
               >
                 <AlertCircle
@@ -281,13 +295,14 @@ export default function PageDemande({
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || inaccessible}
               className="btn-primary"
               style={{
                 width: "100%",
                 justifyContent: "center",
-                marginTop: 8,
-                opacity: loading ? 0.7 : 1,
+                marginTop: 14,
+                opacity: loading || inaccessible ? 0.55 : 1,
+                cursor: inaccessible ? "not-allowed" : undefined,
               }}
             >
               {loading ? "Envoi en cours…" : "Envoyer ma demande"}
@@ -302,7 +317,7 @@ export default function PageDemande({
               flexWrap: "wrap",
               fontSize: 13.5,
               color: "var(--graphite-soft)",
-              marginTop: 24,
+              marginTop: 18,
             }}
           >
             <span>
