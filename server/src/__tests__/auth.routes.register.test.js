@@ -632,6 +632,8 @@ describe("Routes publiques — cas résiduels", () => {
       phone: "0612345678",
       siret: "73282932000074",
       rcCirculation: "oui",
+      rcPro: "oui",
+      wGarage: false,
     });
     expect(res.status).toBe(201);
   });
@@ -708,6 +710,55 @@ describe("Routes publiques — cas résiduels", () => {
     expect(res.body.error).toMatch(/rc circulation/i);
   });
 
+  it("refuse une demande sans réponse sur la RC Professionnelle (400)", async () => {
+    // Une réponse vide ne vaut plus acceptation tacite : les deux
+    // assurances sont exigées avant tout rappel.
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "73282932000074",
+      rcCirculation: "oui",
+      wGarage: false,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/rc professionnelle/i);
+  });
+
+  it("refuse un convoyeur sans RC Professionnelle ni démarche engagée (400)", async () => {
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "73282932000074",
+      rcCirculation: "oui",
+      rcPro: "non",
+      wGarage: false,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/indispensable pour exercer/i);
+  });
+
+  it("accepte une candidature sans réponse sur le W garage", async () => {
+    // La certification n'est demandée que par certains donneurs d'ordre :
+    // l'exiger écarterait des convoyeurs parfaitement éligibles.
+    const res = await demander({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "driver@test.com",
+      phone: "0612345678",
+      siret: "73282932000074",
+      rcCirculation: "oui",
+      rcPro: "oui",
+    });
+    expect(res.status).toBe(201);
+  });
+
   // Un candidat ayant engagé ses démarches reste un bon profil : il sera
   // simplement rappelé plus tard, pas écarté.
   it("accepte un convoyeur dont la RC Circulation est en cours", async () => {
@@ -719,6 +770,8 @@ describe("Routes publiques — cas résiduels", () => {
       phone: "0612345678",
       siret: "73282932000074",
       rcCirculation: "en_cours",
+      rcPro: "en_cours",
+      wGarage: false,
     });
     expect(res.status).toBe(201);
   });
@@ -732,6 +785,7 @@ describe("Routes publiques — cas résiduels", () => {
       phone: "0612345678",
       siret: "732 829 320 00074",
       rcCirculation: "oui",
+      rcPro: "oui",
       wGarage: true,
     });
     expect(res.status).toBe(201);

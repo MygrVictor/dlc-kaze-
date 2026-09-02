@@ -158,8 +158,13 @@ describe("DevenirConvoyeurPage", () => {
         screen.getByPlaceholderText("123 456 789 00012"),
         SIRET_VALIDE,
       );
-      await userEvent.click(
-        screen.getAllByRole("radio", { name: /je la détiens/i })[0],
+      await userEvent.selectOptions(
+        screen.getByLabelText(/RC Circulation/i),
+        "oui",
+      );
+      await userEvent.selectOptions(
+        screen.getByLabelText(/RC Professionnelle/i),
+        "oui",
       );
     }
   };
@@ -217,7 +222,9 @@ describe("DevenirConvoyeurPage", () => {
         // relecture, elle ne doit pas atteindre la base.
         siret: "73282932000074",
         rcCirculation: "oui",
-        rcPro: undefined,
+        rcPro: "oui",
+        // Non renseigné : la certification n'est pas exigée, et on ne prête
+        // pas au candidat une réponse qu'il n'a pas donnée.
         wGarage: undefined,
       });
     });
@@ -246,14 +253,92 @@ describe("DevenirConvoyeurPage", () => {
       screen.getByPlaceholderText("123 456 789 00012"),
       SIRET_VALIDE,
     );
-    await userEvent.click(
-      screen.getAllByRole("radio", { name: /non, pas encore/i })[0],
+    await userEvent.selectOptions(
+      screen.getByLabelText(/RC Circulation/i),
+      "non",
+    );
+
+    // L'obstacle est signalé sur-le-champ, sans attendre l'envoi, et
+    // l'envoi lui-même devient impossible.
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /RC Circulation est obligatoire/i,
+    );
+    expect(bouton()).toBeDisabled();
+
+    fireEvent.click(bouton());
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("bloque aussi une RC Professionnelle déclarée absente", async () => {
+    // Un « non » vaut inéligibilité : le convoyeur ne peut pas facturer une
+    // prestation qu'il n'assure pas.
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678" });
+    await userEvent.selectOptions(
+      screen.getByLabelText(/RC Professionnelle/i),
+      "non",
+    );
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /RC Professionnelle est obligatoire/i,
+    );
+    expect(bouton()).toBeDisabled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("laisse passer une assurance en cours d'obtention", async () => {
+    // Un candidat dont les démarches sont engagées reste un bon profil :
+    // le refuser reviendrait à écarter des convoyeurs sérieux.
+    api.post.mockResolvedValueOnce({ data: {} });
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678", qualifier: false });
+    await userEvent.type(
+      screen.getByPlaceholderText("123 456 789 00012"),
+      SIRET_VALIDE,
+    );
+    await userEvent.selectOptions(
+      screen.getByLabelText(/RC Circulation/i),
+      "en_cours",
+    );
+    await userEvent.selectOptions(
+      screen.getByLabelText(/RC Professionnelle/i),
+      "en_cours",
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
+    fireEvent.click(bouton());
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith(
+        "/auth/demande",
+        expect.objectContaining({ rcCirculation: "en_cours" }),
+      );
+    });
+  });
+
+  it("exige une réponse sur les deux assurances", async () => {
+    // Laisser une question vide ne vaut pas acceptation tacite : les deux
+    // couvertures conditionnent l'attribution des missions. Le W garage,
+    // lui, reste facultatif.
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678", qualifier: false });
+    await userEvent.type(
+      screen.getByPlaceholderText("123 456 789 00012"),
+      SIRET_VALIDE,
+    );
+
+    fireEvent.click(bouton());
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(/RC Circulation/i);
+    });
+
+    await userEvent.selectOptions(
+      screen.getByLabelText(/RC Circulation/i),
+      "oui",
     );
     fireEvent.click(bouton());
-
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
-        /RC Circulation est indispensable/i,
+        /RC Professionnelle/i,
       );
     });
     expect(api.post).not.toHaveBeenCalled();

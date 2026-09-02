@@ -294,12 +294,26 @@ router.post("/demande", authLimiter, async (req, res, next) => {
       if (rcCirculation === "non") {
         return res.status(400).json({
           error:
-            "La RC Circulation est indispensable pour convoyer. Recontactez-nous dès vos démarches engagées.",
+            "La RC Circulation est indispensable pour convoyer. Souscrivez-la, puis revenez déposer votre candidature.",
         });
       }
-      if (rcPro !== undefined && rcPro !== null && !STATUTS.includes(rcPro)) {
-        return res.status(400).json({ error: "Statut RC Pro invalide." });
+      // La RC Professionnelle couvre la prestation elle-même : elle est
+      // exigée au même titre que la RC Circulation, une réponse vide ne
+      // valant plus acceptation tacite.
+      if (!STATUTS.includes(rcPro)) {
+        return res.status(400).json({
+          error: "Précisez votre situation vis-à-vis de la RC Professionnelle.",
+        });
       }
+      if (rcPro === "non") {
+        return res.status(400).json({
+          error:
+            "La RC Professionnelle est indispensable pour exercer comme prestataire. Souscrivez-la, puis revenez déposer votre candidature.",
+        });
+      }
+      // Le W garage ne conditionne pas l'éligibilité : la réponse affine
+      // seulement les missions proposables, l'absence de réponse reste donc
+      // admise. Seule une valeur mal typée est rejetée.
       if (
         wGarage !== undefined &&
         wGarage !== null &&

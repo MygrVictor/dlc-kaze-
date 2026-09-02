@@ -190,6 +190,8 @@ describe("POST /api/auth/demande", () => {
       phone: "0612345678",
       siret: "73282932000074",
       rcCirculation: "oui",
+      rcPro: "oui",
+      wGarage: false,
     });
     expect(res.status).toBe(201);
   });

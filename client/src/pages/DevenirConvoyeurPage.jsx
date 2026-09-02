@@ -6,6 +6,7 @@ import PageDemande, {
   Requis,
 } from "./PageDemande";
 import { siretValide, normaliserSiret, formaterSiret } from "../lib/siret";
+import { ShieldAlert } from "lucide-react";
 import ChoixStatut from "../components/ChoixStatut";
 import AvantagesConvoyeur from "../components/AvantagesConvoyeur";
 
@@ -42,6 +43,34 @@ const OPTIONS_OUI_NON = [
   { valeur: "non", label: "Non" },
 ];
 
+/**
+ * Avertit dès la sélection, sans attendre l'envoi.
+ *
+ * Laisser le candidat remplir le reste du formulaire pour ne lui opposer un
+ * refus qu'au moment de valider serait une perte de temps doublée d'une
+ * mauvaise impression. Le message dit aussi comment redevenir éligible :
+ * l'objectif reste de le récupérer, pas de l'écarter.
+ */
+function AlerteAssurance({ manquantes }) {
+  if (!manquantes.length) return null;
+  return (
+    <div className="demande-blocage" role="status">
+      <ShieldAlert size={17} />
+      <p>
+        <strong>
+          {manquantes.length > 1
+            ? `Ces assurances sont obligatoires : ${manquantes.join(" et ")}.`
+            : `La ${manquantes[0]} est obligatoire.`}
+        </strong>{" "}
+        Souscrivez-la auprès de votre assureur, puis revenez déposer votre
+        candidature. Dès vos démarches engagées, sélectionnez « En cours
+        d'obtention » : nous étudierons votre dossier sans attendre
+        l'attestation définitive.
+      </p>
+    </div>
+  );
+}
+
 export default function DevenirConvoyeurPage() {
   const valider = (form) => {
     if (!form.firstName.trim() || !form.lastName.trim()) {
@@ -65,8 +94,19 @@ export default function DevenirConvoyeurPage() {
     if (!form.rcCirculation) {
       return "Indiquez votre situation vis-à-vis de la RC Circulation.";
     }
+    if (!form.rcPro) {
+      return "Indiquez votre situation vis-à-vis de la RC Professionnelle.";
+    }
+    // Une assurance déclarée absente arrête la candidature : la RC
+    // Circulation couvre le véhicule confié, la RC Professionnelle couvre
+    // la prestation. Sans l'une des deux, aucune mission ne peut être
+    // attribuée et le rappel serait sans objet. « En cours d'obtention »
+    // reste accepté : le dossier sera repris à la souscription.
     if (form.rcCirculation === "non") {
-      return "La RC Circulation est indispensable pour convoyer un véhicule. Recontactez-nous dès vos démarches engagées.";
+      return "La RC Circulation est indispensable pour convoyer un véhicule. Souscrivez-la, puis revenez déposer votre candidature : indiquez « En cours d'obtention » dès vos démarches engagées.";
+    }
+    if (form.rcPro === "non") {
+      return "La RC Professionnelle est indispensable pour exercer comme prestataire. Souscrivez-la, puis revenez déposer votre candidature : indiquez « En cours d'obtention » dès vos démarches engagées.";
     }
     return null;
   };
@@ -79,9 +119,10 @@ export default function DevenirConvoyeurPage() {
     message: form.message.trim() || undefined,
     siret: normaliserSiret(form.siret),
     rcCirculation: form.rcCirculation,
-    rcPro: form.rcPro || undefined,
-    // Le serveur attend un booléen ; l'absence de réponse reste possible,
-    // la certification ne concernant que certains donneurs d'ordre.
+    rcPro: form.rcPro,
+    // Le serveur attend un booléen ; sans réponse on n'envoie rien plutôt
+    // que « non », qui prêterait au candidat une déclaration qu'il n'a pas
+    // faite.
     wGarage: form.wGarage ? form.wGarage === "oui" : undefined,
   });
 
@@ -94,18 +135,13 @@ export default function DevenirConvoyeurPage() {
       confirmation="Merci ! Nous vérifions votre dossier et vous recontactons pour un pré-rendez-vous de validation des documents. Une fois votre accès ouvert, les missions disponibles vous seront annoncées par WhatsApp."
       valider={valider}
       preparer={preparer}
+      bloque={(form) => form.rcCirculation === "non" || form.rcPro === "non"}
       champsInitiaux={CHAMPS_CONVOYEUR}
       argumentaire={<AvantagesConvoyeur />}
     >
       {({ form, handleChange, setForm, accent }) => (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 12,
-            }}
-          >
+          <div className="demande-duo">
             <div>
               <label style={labelStyle} htmlFor="firstName">
                 Prénom <Requis couleur={accent} />
@@ -138,40 +174,37 @@ export default function DevenirConvoyeurPage() {
             </div>
           </div>
 
-          <div>
-            <label style={labelStyle} htmlFor="email">
-              Email <Requis couleur={accent} />
-            </label>
-            <input
-              id="email"
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="input-field"
-              placeholder="votre@email.fr"
-              autoComplete="email"
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle} htmlFor="phone">
-              Mobile <Requis couleur={accent} />
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className="input-field"
-              placeholder="+33 6 12 34 56 78"
-              autoComplete="tel"
-            />
-            <p style={aideStyle}>
-              Indispensable : les missions disponibles vous sont annoncées par
-              WhatsApp.
-            </p>
+          <div className="demande-duo">
+            <div>
+              <label style={labelStyle} htmlFor="email">
+                Email <Requis couleur={accent} />
+              </label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="votre@email.fr"
+                autoComplete="email"
+              />
+            </div>
+            <div>
+              <label style={labelStyle} htmlFor="phone">
+                Mobile <Requis couleur={accent} />
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="+33 6 12 34 56 78"
+                autoComplete="tel"
+              />
+            </div>
           </div>
 
           <hr className="demande-separateur" />
@@ -204,28 +237,44 @@ export default function DevenirConvoyeurPage() {
             </p>
           </div>
 
-          <ChoixStatut
-            legende={
-              <>
-                Assurance RC Circulation <Requis couleur={accent} />
-              </>
-            }
-            aide="Elle couvre le véhicule que vous convoyez. Sans elle, aucune mission ne peut vous être confiée."
-            name="rcCirculation"
-            options={OPTIONS_ASSURANCE}
-            valeur={form.rcCirculation}
-            onChange={handleChange}
-            accent={accent}
-          />
+          {/* Les trois questions d'éligibilité tiennent en deux rangées de
+              menus déroulants : leur affichage précédent en cartes radio
+              occupait à lui seul plus d'un écran. */}
+          <div className="demande-duo">
+            <ChoixStatut
+              legende={
+                <>
+                  RC Circulation <Requis couleur={accent} />
+                </>
+              }
+              aide="Elle couvre le véhicule que vous convoyez. Sans elle, aucune mission ne peut vous être confiée."
+              name="rcCirculation"
+              options={OPTIONS_ASSURANCE}
+              valeur={form.rcCirculation}
+              onChange={handleChange}
+              accent={accent}
+            />
 
-          <ChoixStatut
-            legende="Assurance RC Professionnelle"
-            aide="Elle couvre votre responsabilité en tant que prestataire."
-            name="rcPro"
-            options={OPTIONS_ASSURANCE}
-            valeur={form.rcPro}
-            onChange={handleChange}
-            accent={accent}
+            <ChoixStatut
+              legende={
+                <>
+                  RC Professionnelle <Requis couleur={accent} />
+                </>
+              }
+              aide="Elle couvre votre responsabilité de prestataire."
+              name="rcPro"
+              options={OPTIONS_ASSURANCE}
+              valeur={form.rcPro}
+              onChange={handleChange}
+              accent={accent}
+            />
+          </div>
+
+          <AlerteAssurance
+            manquantes={[
+              form.rcCirculation === "non" && "RC Circulation",
+              form.rcPro === "non" && "RC Professionnelle",
+            ].filter(Boolean)}
           />
 
           <ChoixStatut
@@ -253,12 +302,6 @@ export default function DevenirConvoyeurPage() {
               style={{ resize: "vertical" }}
             />
           </div>
-
-          <p style={aideStyle}>
-            Après votre demande, nous organisons un pré-rendez-vous pour valider
-            vos documents (assurances, pièce d'identité, permis, justificatif de
-            domicile).
-          </p>
         </>
       )}
     </PageDemande>
