@@ -63,10 +63,13 @@ function echapper(valeur) {
  * @returns {string} Message au format MarkdownV2.
  */
 function composerAnnonce(mission, lienMission) {
+  // La plaque n'entre pas dans l'annonce : associée aux adresses et à la
+  // date, elle désigne un véhicule identifiable à un endroit connu, à une
+  // heure connue. Le convoyeur n'en a pas besoin pour décider s'il prend
+  // la mission ; elle lui est communiquée une fois celle-ci attribuée.
   const vehicule =
-    [mission.vehicle_brand, mission.vehicle_model, mission.vehicle_plate]
-      .filter(Boolean)
-      .join(" ") || "Véhicule non précisé";
+    [mission.vehicle_brand, mission.vehicle_model].filter(Boolean).join(" ") ||
+    "Véhicule non précisé";
 
   const remuneration =
     mission.price_convoyeur || mission.price

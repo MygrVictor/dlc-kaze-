@@ -62,6 +62,17 @@ describe("composerAnnonce", () => {
     expect(texte).toContain("180 €");
   });
 
+  // Le salon rassemble des convoyeurs que nous n'avons pas tous validés.
+  // Associée aux adresses et à la date, la plaque désignerait un véhicule
+  // identifiable à un endroit et une heure connus : elle n'est
+  // communiquée qu'une fois la mission attribuée.
+  test("ne diffuse pas la plaque d'immatriculation", () => {
+    const texte = telegram.composerAnnonce(MISSION);
+
+    expect(texte).not.toContain("AS-494-DG");
+    expect(texte).not.toContain("AS\\-494\\-DG");
+  });
+
   test("distingue visuellement une mission urgente", () => {
     const normale = telegram.composerAnnonce(MISSION);
     const urgente = telegram.composerAnnonce({ ...MISSION, is_urgent: true });
