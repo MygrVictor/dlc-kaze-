@@ -3,6 +3,16 @@ dist/
 build/
 coverage/
 
+# Exception : le build du front est versionné.
+#
+# Le serveur Express sert `client/dist` en statique, mais l'hébergement
+# mutualisé n'installe que les dépendances de production : Vite y est
+# absent, et l'y installer tirerait toute la chaîne de test pour rien.
+# Le build est donc fabriqué en local puis poussé tel quel, le
+# déploiement se réduisant à un `git pull`.
+!client/dist/
+!client/dist/**
+
 # Variables d'environnement — jamais versionnées
 .env
 .env.*
