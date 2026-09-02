@@ -31,8 +31,7 @@ const AVANTAGES = [
   {
     Icone: Map,
     titre: "Un volume régulier",
-    texte:
-      "Des missions chaque semaine partout en France et en Europe, avec des trajets récurrents pour les convoyeurs fidèles.",
+    texte: "Des missions chaque semaine partout en France et en Europe.",
   },
 ];
 
@@ -44,8 +43,7 @@ export default function AvantagesConvoyeur() {
       </span>
       <h2>Convoyer avec Drive Line Connect</h2>
       <p className="argumentaire-intro">
-        Plus de 40 convoyeurs professionnels indépendants travaillent déjà avec
-        nous. Voici ce que vous y trouverez.
+        Plus de 40 convoyeurs professionnels travaillent déjà avec nous.
       </p>
 
       <ul className="avantages-liste">

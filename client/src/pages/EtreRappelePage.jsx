@@ -53,7 +53,7 @@ export default function EtreRappelePage() {
               marginBottom: 20,
             }}
           >
-            Parlons de vos convoyages
+            Parlons de vos besoins
           </h1>
           <div className="rule" />
 
@@ -75,10 +75,7 @@ export default function EtreRappelePage() {
               <span className="rappel-puce">2</span>
               <div>
                 <strong>Un expert vous rappelle sous 48 h</strong>
-                <p>
-                  Un interlocuteur unique, qui connaît votre dossier de bout en
-                  bout.
-                </p>
+                <p>Un interlocuteur unique, des solutions adaptées.</p>
               </div>
             </li>
             <li>
@@ -86,7 +83,8 @@ export default function EtreRappelePage() {
               <div>
                 <strong>Vous recevez une proposition chiffrée</strong>
                 <p>
-                  Tout compris : carburant, péages et manutention du véhicule.
+                  un tarif tout compris, détaillé, sans surprises, une solution
+                  clef en main.
                 </p>
               </div>
             </li>

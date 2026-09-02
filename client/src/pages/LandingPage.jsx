@@ -242,6 +242,53 @@ export default function LandingPage() {
               un visiteur qui parcourt les trois prestations a l'invitation
               sous les yeux au moment précis où il se demande qui appeler.
               La reléguer sous la grille faisait perdre cet élan. */}
+          {/* Quatre repères avant le détail des prestations : ce sont les
+              objections que soulève un donneur d'ordre avant même de
+              regarder ce que nous faisons. */}
+          <div className="services-reperes reveal">
+            {[
+              {
+                titre: "Sécurité",
+                texte: "Vos véhicules entre de bonnes mains",
+                path: "M12 3l7 3v6c0 4.2-2.9 7.9-7 9-4.1-1.1-7-4.8-7-9V6l7-3z",
+              },
+              {
+                titre: "Réactivité",
+                texte: "Disponibles 7j/7 et partout en France",
+                path: "M12 7v5l3 2M12 3a9 9 0 100 18 9 9 0 000-18z",
+              },
+              {
+                titre: "Couverture",
+                texte: "France entière et Europe",
+                path: "M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11zM12 12a2.5 2.5 0 100-5 2.5 2.5 0 000 5z",
+              },
+              {
+                titre: "Experts",
+                texte: "Une équipe et un réseau de convoyeurs qualifiés",
+                path: "M9 11a3 3 0 100-6 3 3 0 000 6zM3 20a6 6 0 0112 0M17 11a3 3 0 100-6M15 20a6 6 0 016-6",
+              },
+            ].map((r) => (
+              <div key={r.titre} className="services-repere">
+                <span className="services-repere__icone">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--asphalt)"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d={r.path} />
+                  </svg>
+                </span>
+                <div>
+                  <div className="services-repere__titre">{r.titre}</div>
+                  <p className="services-repere__texte">{r.texte}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <span id="entreprises" className="anchor-offset" aria-hidden="true" />
           <div className="services-layout">
             <div className="card-grid">
@@ -265,6 +312,10 @@ export default function LandingPage() {
                     Une livraison complète, du premier kilomètre à la remise
                     finale, en moins de 24 heures partout en France.
                   </p>
+                  <ul className="service-card__puces">
+                    <li>Suivi en temps réel</li>
+                    <li>Remise des clés sécurisée</li>
+                  </ul>
                 </div>
               </div>
               <div
@@ -293,6 +344,10 @@ export default function LandingPage() {
                     Voitures, vans et camions transférés à travers toute
                     l'Europe.
                   </p>
+                  <ul className="service-card__puces service-card__puces--sombre">
+                    <li>Réseau européen</li>
+                    <li>Transport sécurisé</li>
+                  </ul>
                 </div>
               </div>
               <div className="service-card reveal">
@@ -312,8 +367,15 @@ export default function LandingPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3>Transport de véhicule</h3>
-                  <p>transport de véhicules par camion</p>
+                  <h3>Transport de véhicules</h3>
+                  <p>
+                    Véhicules roulants ou non roulants, transportés par camion
+                    en lot ou à l'unité.
+                  </p>
+                  <ul className="service-card__puces">
+                    <li>Solutions adaptées</li>
+                    <li>Matériel récent et sécurisé</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -432,7 +494,7 @@ export default function LandingPage() {
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
             </div>
-            <span className="tag">KM 180 · QUI SOMMES-NOUS</span>
+            <span className="tag">KM 250 · QUI SOMMES-NOUS</span>
           </div>
           <div className="about-grid">
             <div className="about-left reveal">
@@ -454,9 +516,8 @@ export default function LandingPage() {
                   marginBottom: 22,
                 }}
               >
-                Drive Line Connect est née de la conviction que l'innovation
-                dans les services de mobilité est la clé pour transformer
-                l'usage et la gestion des véhicules.
+                Drive Line Connect est un acteur spécialisé dans le convoyage et
+                le transport de véhicules en France et en Europe.
               </p>
               <p
                 style={{
@@ -465,9 +526,22 @@ export default function LandingPage() {
                   marginBottom: 22,
                 }}
               >
-                Nous prenons en charge vos véhicules de bout en bout, avec nos
-                propres procédures et nos conducteurs professionnels : un seul
-                interlocuteur, une seule responsabilité, la nôtre.
+                Nous accompagnons au quotidien les professionnels de
+                l&apos;automobile, les gestionnaires de flottes et les
+                entreprises dans leurs besoins de mobilité, du transfert
+                ponctuel au déploiement de volumes importants.
+              </p>
+              <p
+                style={{
+                  color: "var(--graphite-soft)",
+                  fontSize: 15.5,
+                  marginBottom: 22,
+                }}
+              >
+                Notre force repose sur un réseau de convoyeurs professionnels,
+                une organisation réactive et un suivi rigoureux de chaque
+                mission, de la prise en charge du véhicule jusqu&apos;à la
+                remise des clés.
               </p>
               <Link to="/etre-rappele" className="link-arrow">
                 En savoir plus
@@ -494,7 +568,7 @@ export default function LandingPage() {
                     strokeLinejoin="round"
                     style={{ width: 22, height: 22 }}
                   >
-                    <path d="M12 2l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" />
+                    <path d="M9 11a3 3 0 100-6 3 3 0 000 6zM3 20a6 6 0 0112 0M17 11a3 3 0 100-6M15 20a6 6 0 016-6" />
                   </svg>
                 </div>
                 <div>
@@ -506,12 +580,12 @@ export default function LandingPage() {
                       fontWeight: 700,
                     }}
                   >
-                    Prise en charge sécurisée
+                    Une organisation pensée pour les professionnels
                   </h4>
                   <p style={{ fontSize: 14, color: "var(--graphite-soft)" }}>
-                    Des conducteurs professionnels formés à nos procédures et
-                    des délais que nous garantissons — livraison en 24 h en
-                    France, transfert sécurisé à travers l'Europe.
+                    Un interlocuteur unique, un suivi centralisé et des
+                    procédures maîtrisées pour assurer chaque mission avec
+                    efficacité et traçabilité.
                   </p>
                 </div>
               </div>
@@ -527,7 +601,7 @@ export default function LandingPage() {
                     style={{ width: 22, height: 22 }}
                   >
                     <circle cx="12" cy="12" r="9" />
-                    <path d="M12 7v5l3 3" />
+                    <path d="M3 12h18M12 3a14 14 0 010 18 14 14 0 010-18z" />
                   </svg>
                 </div>
                 <div>
@@ -539,15 +613,25 @@ export default function LandingPage() {
                       fontWeight: 700,
                     }}
                   >
-                    Flexibilité et autonomie
+                    Une couverture nationale et européenne
                   </h4>
                   <p style={{ fontSize: 14, color: "var(--graphite-soft)" }}>
-                    Nos convoyeurs choisissent librement leurs missions,
-                    horaires et distances — trajets courts intra-urbains ou
-                    longs déplacements internationaux.
+                    Grâce à notre réseau de convoyeurs, nous répondons aussi
+                    bien aux besoins ponctuels qu&apos;aux opérations
+                    multi-sites et aux volumes récurrents, en France comme en
+                    Europe.
                   </p>
                 </div>
               </div>
+
+              {/* La formule ferme la section : après avoir exposé le
+                  fonctionnement, elle énonce la position. Sans elle, la
+                  colonne s'arrête sur un dernier argument plutôt que sur
+                  une intention. */}
+              <p className="about-signature">
+                Plus qu&apos;un prestataire, Drive Line Connect devient le
+                partenaire mobilité de ses clients.
+              </p>
             </div>
           </div>
         </div>
@@ -596,9 +680,9 @@ export default function LandingPage() {
             vous conviennent.
           </p>
           <div className="chip-row reveal">
-            <div className="chip">MISSIONS CHAQUE SEMAINE</div>
+            <div className="chip">MISSIONS RÉGULIÈRES</div>
             <div className="chip">PAIEMENT SOUS 15 JOURS</div>
-            <div className="chip">COUVERTURE EUROPE</div>
+            <div className="chip">FRANCE & EUROPE</div>
           </div>
           <Link
             to="/devenir-convoyeur"

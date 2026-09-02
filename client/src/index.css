@@ -10,9 +10,18 @@
   --cream-2: #efeae0;
   --amber: #ffd11a;
   --amber-deep: #e6b800;
-  --teal: #0e7490;
+  /* Le bleu-vert sert de couleur de lien et d'accent sur fond crème.
+     La nuance précédente (#0e7490) plafonnait à 4,8:1 : suffisant pour
+     un titre, juste pour un lien de quatorze pixels. */
+  --teal: #0b5c73;
   --graphite: #2b2e36;
-  --graphite-soft: #6b6f7a;
+  /* Texte secondaire : descriptions de cartes, mentions sous les champs,
+     notes de bas de section. La nuance précédente (#6b6f7a) mesurait
+     4,5:1 sur le crème — le minimum réglementaire, atteint de justesse,
+     alors qu'elle porte presque toujours du petit corps. Celle-ci monte
+     à 6,9:1 et reste nettement plus claire que le texte principal, donc
+     la hiérarchie est préservée. */
+  --graphite-soft: #4f535d;
   --line-light: rgba(255, 209, 26, 0.35);
   /* Hauteur de la barre de navigation publique. Centralisée ici pour que
      les pages qui calculent `100vh - navbar` restent synchronisées. */
@@ -432,7 +441,10 @@
 @layer components {
   .input-field {
     width: 100%;
-    border: 1.5px solid rgba(11, 29, 58, 0.15);
+    /* Un champ de saisie doit se voir avant qu'on clique dedans : à 15 %
+       d'opacité le contour disparaîssait sur le crème, et le formulaire
+       se lisait comme une suite d'étiquettes sans zone de saisie. */
+    border: 1.5px solid rgba(11, 29, 58, 0.32);
     border-radius: 9px;
     padding: 14px 16px;
     font-family: "Inter", sans-serif;
@@ -474,10 +486,12 @@
 @layer components {
   .card {
     background: white;
-    border: 1px solid rgba(11, 29, 58, 0.06);
+    /* À 6 % le liseré était invisible : le blanc de la carte se confondait
+       avec le crème de la page, et seule l'ombre séparait les deux. */
+    border: 1px solid rgba(11, 29, 58, 0.14);
     border-radius: 14px;
     padding: 20px 24px;
-    box-shadow: 0 4px 20px -8px rgba(11, 29, 58, 0.12);
+    box-shadow: 0 4px 20px -8px rgba(11, 29, 58, 0.16);
   }
 }
 
@@ -688,7 +702,7 @@
    au lieu de contraindre au défilement. */
 .service-card {
   background: white;
-  border: 1px solid rgba(11, 29, 58, 0.08);
+  border: 1px solid rgba(11, 29, 58, 0.14);
   border-radius: 14px;
   padding: 22px 24px;
   display: grid;
@@ -721,6 +735,107 @@
   margin-bottom: 0;
   width: 46px;
   height: 46px;
+}
+
+/* Les puces répondent à la question que pose la description : « et
+   concrètement ? ». Un filet les sépare du texte plutôt qu'une marge,
+   pour qu'elles se lisent comme une précision et non comme une suite. */
+.service-card__puces {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 14px 0 0;
+  padding: 13px 0 0;
+  border-top: 1px solid rgba(11, 29, 58, 0.12);
+}
+.service-card__puces li {
+  position: relative;
+  padding-left: 24px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.service-card__puces li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 12px;
+  height: 6px;
+  border-left: 2px solid var(--amber-deep);
+  border-bottom: 2px solid var(--amber-deep);
+  transform: rotate(-45deg);
+}
+/* Sur la carte marine, le filet et le texte s'inversent ; la coche garde
+   l'ambre, qui ressort davantage sur fond sombre que sur blanc. */
+.service-card__puces--sombre {
+  border-top-color: rgba(255, 255, 255, 0.18);
+}
+.service-card__puces--sombre li {
+  color: rgba(255, 255, 255, 0.92);
+}
+.service-card__puces--sombre li::before {
+  border-color: var(--amber);
+}
+
+/* ── Repères, au-dessus des prestations ───────────────────────────
+   Quatre objections traitées avant le détail de l'offre : le visiteur
+   sait à quoi s'en tenir avant de lire ce que nous savons faire. */
+.services-reperes {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 26px;
+  max-width: 1180px;
+  margin: 0 auto 34px;
+  padding: 0 4px;
+}
+.services-repere {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.services-repere__icone {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.services-repere__icone svg {
+  width: 21px;
+  height: 21px;
+}
+.services-repere__titre {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--navy);
+  margin-bottom: 3px;
+}
+.services-repere__texte {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--graphite-soft);
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .services-reperes {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px;
+    margin-bottom: 30px;
+  }
+}
+@media (max-width: 520px) {
+  .services-reperes {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 .badge {
@@ -830,7 +945,7 @@
 .bandeau-assureurs {
   margin-top: 30px;
   padding-top: 26px;
-  border-top: 1px solid rgba(11, 29, 58, 0.07);
+  border-top: 1px solid rgba(11, 29, 58, 0.14);
   text-align: center;
 }
 .bandeau-assureurs__titre {
@@ -845,18 +960,36 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 18px;
+  /* Trois logos seulement : ils gagnent à respirer plutôt qu'à former un
+     bloc compact, qu'on lirait comme une seule image. L'écart suit la
+     largeur disponible pour occuper la rangée sans jamais la rompre. */
+  gap: clamp(40px, 8vw, 110px);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .bandeau-assureurs .logo-card {
-  width: 168px;
-  height: 84px;
-  flex: 0 0 168px;
+  width: 200px;
+  height: 100px;
+  flex: 0 0 200px;
 }
 .bandeau-assureurs .logo-image {
-  max-height: 60px;
+  max-height: 74px;
+}
+/* Sous 700px, trois cartes de 200px ne tiennent plus sur une rangée : on
+   les rétrécit avant que l'écart ne les disperse sur trois lignes. */
+@media (max-width: 700px) {
+  .bandeau-assureurs__liste {
+    gap: 24px;
+  }
+  .bandeau-assureurs .logo-card {
+    width: 156px;
+    height: 82px;
+    flex: 0 0 156px;
+  }
+  .bandeau-assureurs .logo-image {
+    max-height: 58px;
+  }
 }
 
 /* ── Appel client au pied des services ────────────────────────────
@@ -1328,6 +1461,19 @@
 .feature-item:last-child {
   margin-bottom: 0;
 }
+/* Formule de clôture : elle n'argumente plus, elle affirme. D'où le
+   corps plus grand, l'italique et le filet ambre qui la détache des
+   arguments qui précèdent sans en faire un encadré de plus. */
+.about-signature {
+  margin: 34px 0 0;
+  padding-left: 20px;
+  border-left: 3px solid var(--amber);
+  font-size: 16.5px;
+  line-height: 1.55;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--navy);
+}
 .feature-icon {
   width: 44px;
   height: 44px;
@@ -1416,8 +1562,8 @@
    position de départ de la première au moment où la boucle reprend. */
 .bandeau-clients {
   background: white;
-  border-top: 1px solid rgba(11, 29, 58, 0.07);
-  border-bottom: 1px solid rgba(11, 29, 58, 0.07);
+  border-top: 1px solid rgba(11, 29, 58, 0.14);
+  border-bottom: 1px solid rgba(11, 29, 58, 0.14);
   padding: 34px 0 38px;
   overflow: hidden;
 }
@@ -1621,7 +1767,7 @@
   border-radius: 18px;
   padding: 34px 32px;
   box-shadow: 0 30px 60px -30px rgba(11, 29, 58, 0.3);
-  border: 1px solid rgba(11, 29, 58, 0.06);
+  border: 1px solid rgba(11, 29, 58, 0.14);
 }
 @media (max-width: 560px) {
   .rappel-card {
@@ -2007,7 +2153,7 @@
   border-radius: 18px;
   padding: 52px 48px;
   box-shadow: 0 30px 60px -30px rgba(11, 29, 58, 0.25);
-  border: 1px solid rgba(11, 29, 58, 0.06);
+  border: 1px solid rgba(11, 29, 58, 0.14);
 }
 .contact-card .sub {
   text-align: center;
@@ -2050,58 +2196,130 @@
   margin: 0;
 }
 
-/* ── Choix de statut (boutons radio en cartes) ──── */
-.choix-statut {
-  border: none;
-  padding: 0;
-  margin: 0;
+/* La carte ne dépasse jamais la fenêtre : elle se borne à la hauteur
+   disponible sous la barre de navigation, moins les marges du cadre. Le
+   corps du formulaire absorbe le débordement, de sorte que le titre et le
+   bouton d'envoi restent toujours à l'écran. */
+.demande-carte {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - var(--nav-h) - 96px);
+  position: sticky;
+  top: calc(var(--nav-h) + 48px);
 }
-.choix-statut legend {
+.demande-formulaire {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.demande-corps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  /* Laisse respirer les champs contre l'ascenseur et évite de rogner
+     l'anneau de focus du dernier champ. */
+  padding: 2px 12px 4px 2px;
+  margin-right: -8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(11, 29, 58, 0.28) transparent;
+  /* L'ascenseur interne ne doit pas relayer son élan à la page. */
+  overscroll-behavior: contain;
+}
+.demande-corps::-webkit-scrollbar {
+  width: 8px;
+}
+.demande-corps::-webkit-scrollbar-thumb {
+  background: rgba(11, 29, 58, 0.22);
+  border-radius: 4px;
+}
+.demande-corps::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 29, 58, 0.36);
+}
+
+/* Sur mobile la carte occupe déjà toute la largeur et l'argumentaire est
+   passé au-dessus : un défilement interne y ferait doublon avec celui du
+   téléphone, et piégerait le doigt dans une zone étroite. */
+@media (max-width: 960px) {
+  .demande-carte {
+    max-height: none;
+    position: static;
+  }
+  .demande-corps {
+    overflow-y: visible;
+    max-height: none;
+    padding-right: 0;
+    margin-right: 0;
+  }
+}
+
+/* Blocage d'éligibilité : le candidat vient de déclarer une assurance
+   absente. Ni rouge d'erreur — il n'a rien fait de faux — ni gris neutre,
+   qui passerait inaperçu : l'ambre signale un obstacle levable. */
+.demande-blocage {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(180, 83, 9, 0.28);
+  border-radius: 9px;
+  background: rgba(245, 158, 11, 0.08);
+  color: #8a4b06;
+}
+.demande-blocage svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.demande-blocage p {
+  margin: 0;
+  font-size: 12.8px;
+  line-height: 1.55;
+}
+.demande-blocage strong {
+  font-weight: 700;
+}
+
+/* Deux champs par rangée : le questionnaire convoyeur compte huit
+   questions, les empiler faisait glisser le bouton d'envoi hors de
+   l'écran. Sous 560px la colonne redevient unique, deux champs côte à
+   côte n'y étant plus lisibles. */
+.demande-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+@media (max-width: 560px) {
+  .demande-duo {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Choix de statut (menus déroulants) ─────────── */
+.choix-statut {
+  display: flex;
+  flex-direction: column;
+}
+.choix-legende {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--graphite);
-  padding: 0;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+}
+.choix-select {
+  cursor: pointer;
+}
+/* Tant qu'aucune réponse n'est donnée, la consigne reste en gris : elle se
+   distingue ainsi d'un choix réellement effectué. */
+.choix-select:invalid,
+.choix-select option[value=""] {
+  color: var(--graphite-soft);
 }
 .choix-aide {
   font-size: 12.5px;
   line-height: 1.5;
   color: var(--graphite-soft);
-  margin: 0 0 10px;
-}
-.choix-options {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.choix-option {
-  flex: 1 1 auto;
-  min-width: 110px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 13px;
-  border: 1.5px solid rgba(11, 29, 58, 0.15);
-  border-radius: 9px;
-  background: white;
-  font-size: 13.5px;
-  color: var(--graphite);
-  cursor: pointer;
-  transition:
-    border-color 0.18s,
-    background 0.18s;
-}
-.choix-option:hover {
-  border-color: rgba(11, 29, 58, 0.32);
-}
-.choix-option.actif {
-  background: rgba(14, 116, 144, 0.06);
-  font-weight: 600;
-}
-.choix-option input {
-  accent-color: var(--teal);
-  margin: 0;
-  flex-shrink: 0;
+  margin: 6px 0 0;
 }
 
 /* ── Argumentaire des pages de demande ──────────── */
@@ -2189,7 +2407,7 @@
 .field input,
 .field textarea {
   width: 100%;
-  border: 1.5px solid rgba(11, 29, 58, 0.15);
+  border: 1.5px solid rgba(11, 29, 58, 0.32);
   border-radius: 9px;
   padding: 15px 16px;
   font-family: "Inter", sans-serif;
@@ -2369,23 +2587,32 @@ body:has(.theme-light) {
 .theme-light [class*="text-gray-300"] {
   color: #334155;
 }
-/* Les textes secondaires restent gris moyen : les inverser mécaniquement
-   donnerait un gris trop pâle, illisible sur fond clair. */
+/* Les gris secondaires ne peuvent pas être inversés mécaniquement : sur
+   fond blanc, l'image miroir d'un gris clair est un gris pâle qu'on ne lit
+   plus. Chaque nuance est donc choisie pour son contraste réel, en
+   conservant l'ordre de la hiérarchie d'origine.
+
+   `text-dark-400` et `text-dark-500` portent à eux seuls la moitié des
+   textes du tableau de bord — libellés de champs, valeurs secondaires,
+   dates. Ils sont calés au-dessus de 7:1, car il s'agit presque toujours
+   de petit corps. Les nuances suivantes servent à des mentions
+   décoratives et descendent progressivement, sans jamais passer sous le
+   seuil de 4,5:1. */
 .theme-light [class*="text-dark-400"],
 .theme-light [class*="text-slate-400"],
 .theme-light [class*="text-gray-400"] {
-  color: #64748b;
+  color: #475569;
 }
 .theme-light [class*="text-dark-500"],
 .theme-light [class*="text-slate-500"],
 .theme-light [class*="text-gray-500"] {
-  color: #78849a;
+  color: #526074;
 }
 .theme-light [class*="text-dark-600"] {
-  color: #94a3b8;
+  color: #5d6b80;
 }
 .theme-light [class*="text-dark-700"] {
-  color: #cbd5e1;
+  color: #64748b;
 }
 /* `text-white` n'est volontairement pas remappé : il habille des fonds
    colorés (boutons bleus, pastilles de statut) qui, eux, ne changent pas. */
@@ -2541,4 +2768,165 @@ body:has(.theme-light) {
 }
 .theme-light [class*="border-accent-500/20"] {
   border-color: rgb(34 197 94 / 0.35);
+}
+
+/* ── Nuances 300 : la strate la plus pâle ───────── */
+/* Calibrées pour scintiller sur fond sombre, elles deviennent quasi
+   blanches sur fond blanc. Elles servent surtout de texte secondaire à
+   l'intérieur des pastilles teintées — un fond très clair lui aussi — où
+   le rapport tombait sous 2:1. On les aligne sur la nuance 700, qui
+   conserve la teinte tout en redevenant lisible. */
+.theme-light [class*="text-accent-300"],
+.theme-light [class*="text-green-300"],
+.theme-light [class*="text-emerald-300"] {
+  color: #15803d;
+}
+.theme-light [class*="text-yellow-300"],
+.theme-light [class*="text-amber-300"] {
+  color: #a16207;
+}
+.theme-light [class*="text-orange-300"] {
+  color: #9a3412;
+}
+.theme-light [class*="text-red-300"] {
+  color: #b91c1c;
+}
+.theme-light [class*="text-primary-300"],
+.theme-light [class*="text-blue-300"],
+.theme-light [class*="text-cyan-300"] {
+  color: #1e40af;
+}
+.theme-light [class*="text-purple-300"] {
+  color: #6b21a8;
+}
+.theme-light [class*="text-slate-300"] {
+  color: #475569;
+}
+/* Les nuances 500 pleines, employées comme texte, restent trop vives sur
+   blanc pour du petit corps. */
+.theme-light [class*="text-yellow-500"],
+.theme-light [class*="text-amber-500"] {
+  color: #a16207;
+}
+.theme-light [class*="text-green-500"],
+.theme-light [class*="text-emerald-500"],
+.theme-light [class*="text-accent-500"] {
+  color: #15803d;
+}
+
+/* ── Pastilles teintées ─────────────────────────── */
+/* Un fond à 10 % d'opacité posé sur du blanc n'a plus de matière : la
+   pastille se confond avec la carte et le statut n'est plus repérable au
+   coup d'œil. On densifie le fond et, surtout, la bordure — c'est elle
+   qui délimite la forme. */
+.theme-light [class*="bg-red-500/10"],
+.theme-light [class*="bg-red-500/5"] {
+  background-color: rgb(239 68 68 / 0.12);
+}
+.theme-light [class*="bg-orange-500/10"],
+.theme-light [class*="bg-orange-500/5"] {
+  background-color: rgb(249 115 22 / 0.13);
+}
+.theme-light [class*="bg-yellow-500/10"],
+.theme-light [class*="bg-amber-500/10"] {
+  background-color: rgb(234 179 8 / 0.18);
+}
+.theme-light [class*="bg-green-500/10"] {
+  background-color: rgb(34 197 94 / 0.12);
+}
+.theme-light [class*="bg-primary-500/10"],
+.theme-light [class*="bg-primary-600/10"],
+.theme-light [class*="bg-blue-500/10"],
+.theme-light [class*="bg-cyan-500/10"] {
+  background-color: rgb(37 99 235 / 0.1);
+}
+.theme-light [class*="bg-purple-500/10"] {
+  background-color: rgb(168 85 247 / 0.12);
+}
+.theme-light [class*="bg-slate-500/10"] {
+  background-color: rgb(100 116 139 / 0.12);
+}
+
+.theme-light [class*="border-red-500/20"],
+.theme-light [class*="border-red-500/10"] {
+  border-color: rgb(220 38 38 / 0.4);
+}
+.theme-light [class*="border-orange-500/20"],
+.theme-light [class*="border-orange-500/10"] {
+  border-color: rgb(234 88 12 / 0.4);
+}
+.theme-light [class*="border-yellow-500/20"],
+.theme-light [class*="border-amber-500/20"] {
+  border-color: rgb(202 138 4 / 0.45);
+}
+.theme-light [class*="border-green-500/20"],
+.theme-light [class*="border-emerald-500/20"] {
+  border-color: rgb(22 163 74 / 0.4);
+}
+.theme-light [class*="border-primary-500/20"],
+.theme-light [class*="border-primary-600/20"],
+.theme-light [class*="border-blue-500/20"],
+.theme-light [class*="border-teal-500/20"] {
+  border-color: rgb(37 99 235 / 0.35);
+}
+.theme-light [class*="border-purple-500/20"] {
+  border-color: rgb(147 51 234 / 0.35);
+}
+.theme-light [class*="border-slate-500/20"],
+.theme-light [class*="border-slate-500/30"] {
+  border-color: rgb(100 116 139 / 0.4);
+}
+
+/* ── Séparateurs de listes ──────────────────────── */
+/* `divide-*` pose la couleur sur les enfants et non sur le conteneur :
+   la règle `border-dark-700` ne l'atteint pas, les lignes des tableaux
+   restaient donc en gris foncé sur blanc. */
+.theme-light [class*="divide-dark-700"] > * + *,
+.theme-light [class*="divide-slate-700"] > * + *,
+.theme-light [class*="divide-dark-800"] > * + * {
+  border-color: #e2e8f0;
+}
+
+/* ── Dégradés ───────────────────────────────────── */
+/* Les cartes en dégradé sombre laissaient une plaque presque noire au
+   milieu de l'interface claire. On ne redéfinit que les variables de
+   couleur : la direction et les positions d'arrêt restent celles des
+   utilitaires Tailwind. */
+.theme-light [class*="from-dark-800"],
+.theme-light [class*="from-dark-900"],
+.theme-light [class*="from-slate-800"] {
+  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position);
+}
+.theme-light [class*="to-dark-800"],
+.theme-light [class*="to-dark-900"],
+.theme-light [class*="to-slate-800"] {
+  --tw-gradient-to: #f1f5f9 var(--tw-gradient-to-position);
+}
+.theme-light [class*="from-primary-900"] {
+  --tw-gradient-from: rgb(37 99 235 / 0.1) var(--tw-gradient-from-position);
+}
+.theme-light [class*="from-accent-900"] {
+  --tw-gradient-from: rgb(34 197 94 / 0.1) var(--tw-gradient-from-position);
+}
+.theme-light [class*="from-orange-900"] {
+  --tw-gradient-from: rgb(249 115 22 / 0.1) var(--tw-gradient-from-position);
+}
+.theme-light [class*="from-emerald-900"] {
+  --tw-gradient-from: rgb(16 185 129 / 0.1) var(--tw-gradient-from-position);
+}
+
+/* ── Voiles blancs ──────────────────────────────── */
+/* `bg-white/20` et `border-white/10` créent un relief sur fond sombre ;
+   sur fond clair ils s'évanouissent. On les remplace par leur équivalent
+   sombre, à la même intensité. Les descendants d'un fond coloré plein
+   (boutons, en-têtes teintés) sont exclus : le voile blanc y garde tout
+   son sens. */
+.theme-light
+  [class*="bg-white/"]:not([class*="bg-primary"]):not([class*="bg-accent"]):not(
+    [class*="bg-orange"]
+  ):not([class*="bg-red"]) {
+  background-color: rgb(15 23 42 / 0.06);
+}
+.theme-light [class*="border-white/"]:not([class*="bg-"]) {
+  border-color: rgb(15 23 42 / 0.12);
 }

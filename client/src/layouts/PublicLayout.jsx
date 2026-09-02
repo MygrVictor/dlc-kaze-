@@ -247,18 +247,18 @@ export default function PublicLayout() {
             style={{
               color: "white",
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 13.5,
+              fontSize: 12,
               marginBottom: 20,
             }}
           >
-            06 69 58 34 30 
+              Contact . 06 69 58 34 30
           </div>
           <div
             style={{
               display: "flex",
               justifyContent: "center",
               gap: 26,
-              fontSize: 13,
+              fontSize: 12,
               marginBottom: 28,
               flexWrap: "wrap",
             }}

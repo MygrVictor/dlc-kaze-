@@ -105,7 +105,7 @@ export default function SectionChiffres() {
             </svg>
           </div>
           <span className="tag" style={{ color: "var(--amber)" }}>
-            KM 250 · NOS CHIFFRES
+            KM 180 · NOS CHIFFRES
           </span>
         </div>
 
