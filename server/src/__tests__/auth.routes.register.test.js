@@ -529,6 +529,45 @@ describe("Routes publiques — cas résiduels", () => {
     created_at: new Date(),
   };
 
+  // Le dossier exigé de tout candidat convoyeur. L'énumérer ici plutôt que
+  // de l'importer de la route garantit qu'une pièce retirée du serveur
+  // fasse échouer le test, au lieu de disparaître des deux côtés à la fois.
+  const DOCUMENTS_REQUIS = [
+    "carte_identite",
+    "carte_identite_verso",
+    "permis",
+    "permis_verso",
+    "kbis",
+    "rc_circulation",
+    "rc_pro",
+    "domicile",
+  ];
+
+  /**
+   * Candidature convoyeur en multipart : identité et pièces partent
+   * ensemble, puisque le serveur n'enregistre pas l'une sans les autres.
+   */
+  const candidater = ({ pieces = DOCUMENTS_REQUIS, ...champs } = {}) => {
+    const requete = request(app)
+      .post("/api/auth/demande")
+      .field("type", "convoyeur")
+      .field("firstName", champs.firstName || "Marc")
+      .field("lastName", champs.lastName || "Driver")
+      .field("email", champs.email || "driver@test.com")
+      .field("phone", champs.phone || "0612345678")
+      .field(
+        "typeIdentite",
+        "typeIdentite" in champs ? champs.typeIdentite : "cni",
+      );
+    for (const piece of pieces) {
+      requete.attach(piece, Buffer.from("%PDF-1.4"), {
+        filename: `${piece}.pdf`,
+        contentType: "application/pdf",
+      });
+    }
+    return requete;
+  };
+
   beforeEach(() => {
     emailService.notifyNouvelleDemande.mockResolvedValue(undefined);
     emailService.notifyDemandeRecue.mockResolvedValue(undefined);
@@ -537,6 +576,12 @@ describe("Routes publiques — cas résiduels", () => {
         return { rows: [LIGNE_DEMANDE] };
       return { rows: [] };
     });
+    // La candidature et ses pièces s'écrivent dans une même transaction.
+    // Le client transactionnel délègue à db.query pour que les
+    // assertions portant sur le SQL émis restent valables.
+    db.transaction.mockImplementation((callback) =>
+      callback({ query: (...args) => db.query(...args) }),
+    );
   });
 
   it("refuse un nom de structure de plus de 150 caractères (400)", async () => {
@@ -624,176 +669,124 @@ describe("Routes publiques — cas résiduels", () => {
   });
 
   it("accepte une demande de convoyeur avec un mobile", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-      rcCirculation: "oui",
-      rcPro: "oui",
-      wGarage: false,
-    });
+    const res = await candidater();
     expect(res.status).toBe(201);
   });
 
   // ── Qualification des candidatures convoyeur ──
-  // Le formulaire filtre en amont les profils qui ne pourraient pas
-  // convoyer, pour éviter des rappels sans issue.
+  // Les questions déclaratives — SIRET, assurances — ont cédé la place aux
+  // pièces qui les prouvent. Ce n'est plus une case cochée qui qualifie un
+  // candidat, mais l'attestation elle-même : sans dossier complet, la
+  // candidature n'est pas enregistrée.
 
-  it("refuse une demande de convoyeur sans SIRET (400)", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      rcCirculation: "oui",
-    });
+  it("refuse une candidature sans aucun justificatif (400)", async () => {
+    const res = await candidater({ pieces: [] });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/siret/i);
+    expect(res.body.error).toMatch(/justificatifs manquants/i);
   });
 
-  it("refuse un SIRET dont la clé de contrôle est fausse (400)", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "12345678901234",
-      rcCirculation: "oui",
-    });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/siret invalide/i);
-  });
-
-  it("refuse un SIREN à 9 chiffres saisi à la place du SIRET (400)", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "732829320",
-      rcCirculation: "oui",
-    });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/siret invalide/i);
-  });
-
-  it("refuse une demande sans réponse sur la RC Circulation (400)", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-    });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/rc circulation/i);
-  });
-
-  it("refuse un convoyeur sans RC Circulation ni démarche engagée (400)", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-      rcCirculation: "non",
-    });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/rc circulation/i);
-  });
-
-  it("refuse une demande sans réponse sur la RC Professionnelle (400)", async () => {
-    // Une réponse vide ne vaut plus acceptation tacite : les deux
-    // assurances sont exigées avant tout rappel.
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-      rcCirculation: "oui",
-      wGarage: false,
+  it("refuse une candidature sans attestation RC Professionnelle (400)", async () => {
+    const res = await candidater({
+      pieces: DOCUMENTS_REQUIS.filter((d) => d !== "rc_pro"),
     });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/rc professionnelle/i);
   });
 
-  it("refuse un convoyeur sans RC Professionnelle ni démarche engagée (400)", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-      rcCirculation: "oui",
-      rcPro: "non",
-      wGarage: false,
+  it("refuse une candidature sans verso du permis (400)", async () => {
+    // Le recto seul ne dit rien de la validité du titre.
+    const res = await candidater({
+      pieces: DOCUMENTS_REQUIS.filter((d) => d !== "permis_verso"),
     });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/indispensable pour exercer/i);
+    expect(res.body.error).toMatch(/verso/i);
   });
 
-  it("accepte une candidature sans réponse sur le W garage", async () => {
-    // La certification n'est demandée que par certains donneurs d'ordre :
-    // l'exiger écarterait des convoyeurs parfaitement éligibles.
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-      rcCirculation: "oui",
-      rcPro: "oui",
+  it("refuse une candidature sans extrait Kbis (400)", async () => {
+    const res = await candidater({
+      pieces: DOCUMENTS_REQUIS.filter((d) => d !== "kbis"),
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/kbis/i);
+  });
+
+  it("n'enregistre rien quand le dossier est incomplet", async () => {
+    // Une candidature en base sans ses pièces serait un dossier fantôme :
+    // impossible à instruire, et invisible comme incomplet.
+    await candidater({ pieces: [] });
+    const appels = db.query.mock.calls.map(([sql]) => sql);
+    expect(
+      appels.some((sql) => /INSERT INTO contact_requests/i.test(sql)),
+    ).toBe(false);
+  });
+
+  it("accepte une candidature sans certification W garage", async () => {
+    // La certification n'est détenue que par une minorité de convoyeurs :
+    // l'exiger écarterait des candidats parfaitement en règle.
+    const res = await candidater();
+    expect(res.status).toBe(201);
+    const types = db.query.mock.calls
+      .filter(([sql]) => /INSERT INTO demande_documents/i.test(sql))
+      .map(([, params]) => params[1]);
+    expect(types.sort()).toEqual([...DOCUMENTS_REQUIS].sort());
+  });
+
+  it("enregistre la certification W garage lorsqu'elle est jointe", async () => {
+    const res = await candidater({
+      pieces: [...DOCUMENTS_REQUIS, "w_garage"],
+    });
+    expect(res.status).toBe(201);
+    const types = db.query.mock.calls
+      .filter(([sql]) => /INSERT INTO demande_documents/i.test(sql))
+      .map(([, params]) => params[1]);
+    expect(types).toContain("w_garage");
+  });
+
+  it("accepte un passeport sans verso de carte d'identité", async () => {
+    // Un passeport s'identifie sur une page unique : en réclamer le verso
+    // bloquerait un dossier parfaitement valable.
+    const res = await candidater({
+      typeIdentite: "passeport",
+      pieces: DOCUMENTS_REQUIS.filter((d) => d !== "carte_identite_verso"),
     });
     expect(res.status).toBe(201);
   });
 
-  // Un candidat ayant engagé ses démarches reste un bon profil : il sera
-  // simplement rappelé plus tard, pas écarté.
-  it("accepte un convoyeur dont la RC Circulation est en cours", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-      rcCirculation: "en_cours",
-      rcPro: "en_cours",
-      wGarage: false,
+  it("exige le verso quand le candidat déclare une carte nationale (400)", async () => {
+    const res = await candidater({
+      typeIdentite: "cni",
+      pieces: DOCUMENTS_REQUIS.filter((d) => d !== "carte_identite_verso"),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/verso/i);
   });
 
-  it("accepte un SIRET saisi avec des espaces", async () => {
-    const res = await demander({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "732 829 320 00074",
-      rcCirculation: "oui",
-      rcPro: "oui",
-      wGarage: true,
-    });
-    expect(res.status).toBe(201);
+  it("refuse une candidature sans type de pièce d'identité (400)", async () => {
+    // Le type ne se déduit pas d'un fichier : sans réponse, on ignore
+    // s'il manque un verso ou s'il n'en existe pas.
+    const res = await candidater({ typeIdentite: "" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/carte nationale ou un passeport/i);
   });
 
-  // Le SIRET n'a de sens que pour une candidature convoyeur : une demande
-  // de rappel côté client ne doit pas se voir imposer ces contraintes.
-  it("n'exige ni SIRET ni assurance pour une demande client", async () => {
+  it("rejette un fichier dont le format n'est pas accepté (400)", async () => {
+    const res = await request(app)
+      .post("/api/auth/demande")
+      .field("type", "convoyeur")
+      .field("firstName", "Marc")
+      .field("lastName", "Driver")
+      .field("email", "driver@test.com")
+      .field("phone", "0612345678")
+      .attach("carte_identite", Buffer.from("MZ"), {
+        filename: "virus.exe",
+        contentType: "application/x-msdownload",
+      });
+    expect(res.status).toBe(400);
+  });
+  // Les pièces n'ont de sens que pour une candidature convoyeur : une
+  // demande de rappel côté client ne doit pas se voir imposer ces
+  // contraintes.
+  it("n'exige aucun justificatif pour une demande client", async () => {
     const res = await demander({
       type: "client",
       company: "ACME",

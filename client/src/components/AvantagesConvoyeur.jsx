@@ -59,15 +59,6 @@ export default function AvantagesConvoyeur() {
           </li>
         ))}
       </ul>
-
-      <div className="avantage-note">
-        <strong>Prérequis</strong>
-        <p>
-          Une structure déclarée (SIRET) et une assurance RC Circulation en
-          cours ou en cours d'obtention. Nous validons vos documents lors d'un
-          pré-rendez-vous.
-        </p>
-      </div>
     </div>
   );
 }

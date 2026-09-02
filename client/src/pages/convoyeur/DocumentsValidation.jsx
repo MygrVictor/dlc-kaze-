@@ -13,6 +13,8 @@ import {
   CreditCard,
   ShieldCheck,
   Home,
+  Building2,
+  Wrench,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -28,18 +30,37 @@ const getFileUrl = (filePath) => {
 const DOCUMENT_TYPES = [
   {
     key: "permis",
-    label: "Permis de conduire",
+    label: "Permis de conduire — recto",
+    description: "La face portant votre photographie et vos catégories.",
+    icon: Car,
+    color: "text-blue-400",
+    bg: "bg-blue-500/10 border-blue-500/20",
+  },
+  {
+    key: "permis_verso",
+    label: "Permis de conduire — verso",
     description:
-      "Recto et verso de votre permis de conduire en cours de validité.",
+      "La face portant les dates de validité et les éventuelles restrictions.",
     icon: Car,
     color: "text-blue-400",
     bg: "bg-blue-500/10 border-blue-500/20",
   },
   {
     key: "carte_identite",
-    label: "Carte d'identité",
+    label: "Pièce d'identité",
     description:
-      "Recto et verso de votre carte nationale d'identité ou passeport.",
+      "Recto de votre carte nationale, ou page d'identification de votre passeport.",
+    icon: CreditCard,
+    color: "text-purple-400",
+    bg: "bg-purple-500/10 border-purple-500/20",
+  },
+  // Facultatif, parce qu'un passeport n'a pas de verso à fournir : le
+  // rendre obligatoire bloquerait les convoyeurs qui en présentent un.
+  {
+    key: "carte_identite_verso",
+    label: "Carte d'identité — verso (si CNI)",
+    description:
+      "La face portant votre adresse et la date d'expiration. Inutile avec un passeport.",
     icon: CreditCard,
     color: "text-purple-400",
     bg: "bg-purple-500/10 border-purple-500/20",
@@ -48,6 +69,15 @@ const DOCUMENT_TYPES = [
   // les deux RC la remplacent et se vérifient séparément. Le type reste
   // connu du serveur et de l'espace admin, afin que les attestations déjà
   // déposées restent consultables.
+  {
+    key: "kbis",
+    label: "Extrait Kbis",
+    description:
+      "Extrait de moins de 3 mois attestant l'immatriculation de votre structure.",
+    icon: Building2,
+    color: "text-indigo-400",
+    bg: "bg-indigo-500/10 border-indigo-500/20",
+  },
   {
     key: "rc_circulation",
     label: "RC circulation",
@@ -75,7 +105,27 @@ const DOCUMENT_TYPES = [
     color: "text-orange-400",
     bg: "bg-orange-500/10 border-orange-500/20",
   },
+  // Facultative : elle n'entre pas dans DOCUMENTS_REQUIS côté serveur et
+  // ne bloque donc jamais l'activation du compte. Elle ouvre simplement
+  // l'accès aux missions qui l'exigent.
+  {
+    key: "w_garage",
+    label: "Certification W garage (facultatif)",
+    description:
+      "Votre certificat W garage, si vous en disposez : il débloque des missions supplémentaires.",
+    icon: Wrench,
+    color: "text-amber-400",
+    bg: "bg-amber-500/10 border-amber-500/20",
+  },
 ];
+
+// La progression ne doit compter que les pièces qui conditionnent
+// l'activation du compte : inclure le W garage laisserait un dossier
+// pourtant complet afficher éternellement une barre inachevée.
+const CLES_FACULTATIVES = ["w_garage", "carte_identite_verso"];
+const TYPES_REQUIS = DOCUMENT_TYPES.filter(
+  (d) => !CLES_FACULTATIVES.includes(d.key),
+);
 
 const STATUS_CONFIG = {
   en_attente: {
@@ -155,8 +205,8 @@ export default function DocumentsValidation() {
   };
 
   // Calcul de la progression globale
-  const validated = Object.values(documents).filter(
-    (d) => d.status === "valide",
+  const validated = TYPES_REQUIS.filter(
+    (t) => documents[t.key]?.status === "valide",
   ).length;
   const uploaded = Object.keys(documents).length;
 
@@ -178,21 +228,21 @@ export default function DocumentsValidation() {
             Validation de compte
           </h2>
           <span className="text-sm text-dark-400">
-            {validated}/{DOCUMENT_TYPES.length} validés
+            {validated}/{TYPES_REQUIS.length} validés
           </span>
         </div>
         <div className="w-full bg-dark-700 rounded-full h-2 mb-3">
           <div
             className="bg-accent-500 h-2 rounded-full transition-all duration-500"
             style={{
-              width: `${(validated / DOCUMENT_TYPES.length) * 100}%`,
+              width: `${(validated / TYPES_REQUIS.length) * 100}%`,
             }}
           />
         </div>
         <p className="text-sm text-dark-400">
           {uploaded === 0
             ? "Déposez vos documents pour valider votre compte convoyeur."
-            : validated === DOCUMENT_TYPES.length
+            : validated === TYPES_REQUIS.length
               ? "🎉 Tous vos documents ont été validés !"
               : `${uploaded} document${uploaded > 1 ? "s" : ""} déposé${
                   uploaded > 1 ? "s" : ""

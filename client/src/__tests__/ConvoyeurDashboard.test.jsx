@@ -99,7 +99,10 @@ describe("ConvoyeurDashboard", () => {
   });
 
   it("affiche un message si aucune mission assignée", async () => {
-    api.get.mockResolvedValueOnce({ data: { missions: [] } });
+    // Le tableau de bord enchaîne plusieurs appels — missions, compteur,
+    // état du dossier. `mockResolvedValueOnce` ne couvrirait que le
+    // premier, et la liste retomberait sur la valeur par défaut.
+    api.get.mockResolvedValue({ data: { missions: [] } });
     renderConvoyeurDashboard();
     await waitFor(() =>
       expect(screen.getByText("Aucune mission attribuée")).toBeInTheDocument(),

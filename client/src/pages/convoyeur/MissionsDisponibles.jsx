@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { libelle, classeDePeage } from "../../lib/vehicules";
+import BandeauDossier from "../../components/BandeauDossier";
 import {
   MapPin,
   Car,
@@ -21,6 +22,17 @@ export default function MissionsDisponibles() {
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [taking, setTaking] = useState(null);
+  // Le serveur refuse la prise tant que les pièces obligatoires ne sont pas
+  // déposées ; on récupère son verdict plutôt que de recalculer la règle.
+  const [dossier, setDossier] = useState(null);
+  const dossierBloque = dossier ? !dossier.complet : false;
+
+  useEffect(() => {
+    api
+      .get("/convoyeur/documents")
+      .then((res) => setDossier(res.data.dossier))
+      .catch(() => {});
+  }, []);
 
   const fetchMissions = useCallback(async () => {
     try {
@@ -88,6 +100,8 @@ export default function MissionsDisponibles() {
 
   return (
     <div className="space-y-6">
+      <BandeauDossier dossier={dossier} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -223,13 +237,23 @@ export default function MissionsDisponibles() {
               {/* Bouton prendre */}
               <button
                 onClick={() => handlePrendre(mission)}
-                disabled={taking === mission.id}
+                disabled={taking === mission.id || dossierBloque}
+                title={
+                  dossierBloque
+                    ? "Déposez vos documents obligatoires pour prendre une mission."
+                    : undefined
+                }
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
               >
                 {taking === mission.id ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     En cours...
+                  </>
+                ) : dossierBloque ? (
+                  <>
+                    <AlertCircle className="w-4 h-4" />
+                    Dossier à compléter
                   </>
                 ) : (
                   <>

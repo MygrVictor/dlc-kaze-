@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -26,7 +27,14 @@ export default function ConvoyeurProfil() {
   const [kazePhone, setKazePhone] = useState("");
   const [linking, setLinking] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
-  const [activeTab, setActiveTab] = useState("profil");
+  // Les documents forment un onglet et non une page : sans ancrage dans
+  // l'URL, aucun lien extérieur ne pourrait y conduire — en particulier
+  // celui du bandeau de dossier incomplet.
+  const [params, setParams] = useSearchParams();
+  const activeTab =
+    params.get("onglet") === "documents" ? "documents" : "profil";
+  const setActiveTab = (onglet) =>
+    setParams(onglet === "documents" ? { onglet } : {}, { replace: true });
 
   const fetchProfil = () => {
     setLoading(true);

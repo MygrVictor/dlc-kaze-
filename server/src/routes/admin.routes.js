@@ -6,6 +6,12 @@ const syncService = require("../services/sync.service");
 const emailService = require("../services/email.service");
 const geocodingService = require("../services/geocoding.service");
 const { auditLog } = require("../middleware/security.middleware");
+const fs = require("fs");
+const path = require("path");
+
+// Racine des fichiers déposés. Sert à effacer du disque les pièces d'une
+// candidature écartée : la cascade SQL n'emporte que les lignes.
+const UPLOADS_DIR = path.join(__dirname, "../../../uploads");
 
 const router = express.Router();
 
@@ -287,12 +293,27 @@ router.get("/demandes", async (req, res, next) => {
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const { rows } = await db.query(
-      `SELECT id, type, first_name, last_name, company, job_title, email, phone, message,
-              siret, rc_circulation, rc_pro, w_garage,
-              status, admin_note, converted_user_id, handled_at, created_at
-         FROM contact_requests
+      `SELECT cr.id, cr.type, cr.first_name, cr.last_name, cr.company, cr.job_title,
+              cr.email, cr.phone, cr.message,
+              cr.siret, cr.rc_circulation, cr.rc_pro, cr.w_garage,
+              cr.status, cr.admin_note, cr.converted_user_id, cr.handled_at, cr.created_at,
+              -- Pièces déposées avec la candidature. L'agrégat renvoie un
+              -- tableau vide plutôt que NULL, pour que le front puisse
+              -- boucler dessus sans garde.
+              COALESCE(
+                (SELECT json_agg(json_build_object(
+                          'id', dd.id, 'type', dd.type,
+                          'originalName', dd.original_name,
+                          'filePath', dd.file_path,
+                          'createdAt', dd.created_at)
+                        ORDER BY dd.created_at)
+                   FROM demande_documents dd
+                  WHERE dd.demande_id = cr.id),
+                '[]'::json
+              ) AS documents
+         FROM contact_requests cr
          ${where}
-         ORDER BY created_at DESC`,
+         ORDER BY cr.created_at DESC`,
       params,
     );
 
@@ -337,6 +358,15 @@ router.patch("/demandes/:id", async (req, res, next) => {
 
 router.delete("/demandes/:id", async (req, res, next) => {
   try {
+    // Seconde issue d'une candidature : elle est écartée, et les pièces
+    // transmises n'ont plus aucune raison d'exister. Les chemins sont
+    // relevés avant la suppression — la cascade emporterait les lignes,
+    // laissant les fichiers orphelins sur le disque.
+    const { rows: pieces } = await db.query(
+      "SELECT file_path FROM demande_documents WHERE demande_id = $1",
+      [req.params.id],
+    );
+
     const { rows } = await db.query(
       "DELETE FROM contact_requests WHERE id = $1 RETURNING id",
       [req.params.id],
@@ -346,7 +376,42 @@ router.delete("/demandes/:id", async (req, res, next) => {
       return res.status(404).json({ error: "Demande introuvable." });
     }
 
-    res.json({ message: "Demande supprimée." });
+    // `demande_documents` est parti en cascade. Reste le disque : chaque
+    // échec est consigné sans interrompre la boucle, la demande étant
+    // déjà supprimée en base.
+    let effaces = 0;
+    for (const { file_path: chemin } of pieces) {
+      const cible = path.resolve(
+        path.join(UPLOADS_DIR, "documents", path.basename(chemin)),
+      );
+      // Garde-fou contre un chemin remonté : `basename` suffit en théorie,
+      // mais rien ne justifie de s'en remettre à une seule barrière quand
+      // l'opération est une suppression.
+      if (!cible.startsWith(path.resolve(UPLOADS_DIR) + path.sep)) continue;
+      try {
+        if (fs.existsSync(cible)) {
+          fs.unlinkSync(cible);
+          effaces++;
+        }
+      } catch (err) {
+        console.error(`⚠️ Fichier ${chemin} non effacé : ${err.message}`);
+      }
+    }
+
+    if (pieces.length > 0) {
+      auditLog("CANDIDATURE_DOCUMENTS_SUPPRIMES", req.user.id, {
+        demandeId: req.params.id,
+        pieces: pieces.length,
+        effaces,
+      });
+    }
+
+    res.json({
+      message:
+        pieces.length > 0
+          ? `Demande supprimée, ${effaces} document(s) effacé(s).`
+          : "Demande supprimée.",
+    });
   } catch (err) {
     next(err);
   }

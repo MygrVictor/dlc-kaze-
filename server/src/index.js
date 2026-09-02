@@ -268,15 +268,33 @@ app.get("/uploads/*", async (req, res) => {
       if (factures[0]) proprietaireId = factures[0].destinataire_id;
     }
 
-    // Un fichier inconnu de la base n'a aucune raison d'être servi :
-    // on répond 404 plutôt que 403 pour ne rien révéler de son existence.
+    // Troisième famille : les pièces déposées par un candidat convoyeur,
+    // qui n'a pas encore de compte. Elles n'ont donc pas de propriétaire
+    // au sens de `users` — seul un administrateur peut les consulter.
+    let reserveAdmin = false;
     if (!proprietaireId) {
-      return res.status(404).json({ error: "Fichier introuvable." });
+      const { rows: candidatures } = await db.query(
+        "SELECT id FROM demande_documents WHERE file_path = $1",
+        [cheminRelatif],
+      );
+      if (candidatures[0]) reserveAdmin = true;
     }
 
-    const estProprietaire = proprietaireId === demandeur.id;
-    if (!estProprietaire && demandeur.role !== "admin") {
-      return res.status(404).json({ error: "Fichier introuvable." });
+    if (reserveAdmin) {
+      if (demandeur.role !== "admin") {
+        return res.status(404).json({ error: "Fichier introuvable." });
+      }
+    } else {
+      // Un fichier inconnu de la base n'a aucune raison d'être servi :
+      // on répond 404 plutôt que 403 pour ne rien révéler de son existence.
+      if (!proprietaireId) {
+        return res.status(404).json({ error: "Fichier introuvable." });
+      }
+
+      const estProprietaire = proprietaireId === demandeur.id;
+      if (!estProprietaire && demandeur.role !== "admin") {
+        return res.status(404).json({ error: "Fichier introuvable." });
+      }
     }
 
     const resolvedPath = path.resolve(path.join(uploadsDir, req.params[0]));

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   MessageSquare,
   Copy,
+  FileText,
 } from "lucide-react";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
@@ -40,6 +41,27 @@ const ASSURANCE = {
   en_cours: "en cours",
   non: "non",
 };
+
+/** Libellés des pièces transmises avec une candidature convoyeur. */
+const PIECES = {
+  carte_identite: "Identité",
+  carte_identite_verso: "Identité verso",
+  permis: "Permis recto",
+  permis_verso: "Permis verso",
+  kbis: "Kbis",
+  rc_circulation: "RC Circulation",
+  rc_pro: "RC Pro",
+  domicile: "Domicile",
+  w_garage: "W garage",
+  assurance: "Assurance",
+};
+
+const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
+
+// Les pièces d'identité ne sont servies qu'à un compte authentifié. Une
+// balise <a> ne peut pas porter d'en-tête, le jeton passe donc en query.
+const lienDocument = (chemin) =>
+  `${API_BASE}${chemin}?token=${localStorage.getItem("dlc_token")}`;
 
 export default function AdminDemandes() {
   const [demandes, setDemandes] = useState([]);
@@ -85,8 +107,10 @@ export default function AdminDemandes() {
     if (!aSupprimer) return;
     setSuppression(true);
     try {
-      await api.delete(`/admin/demandes/${aSupprimer.id}`);
-      toast.success("Demande supprimée.");
+      const { data } = await api.delete(`/admin/demandes/${aSupprimer.id}`);
+      // Le serveur rend compte des fichiers réellement effacés : c'est la
+      // seule confirmation que les pièces ont bien quitté le disque.
+      toast.success(data?.message || "Demande supprimée.");
       setASupprimer(null);
       charger();
     } catch (err) {
@@ -119,6 +143,10 @@ export default function AdminDemandes() {
         phone: formCompte.phone || undefined,
         company: formCompte.company || undefined,
         role: formCompte.role,
+        // Rattache le compte à la candidature : c'est ce qui déclenche le
+        // transfert des justificatifs déjà transmis. On ne s'appuie pas sur
+        // l'email, que l'admin peut corriger dans ce formulaire même.
+        demandeId: conversion.id,
       };
       if (formCompte.password.trim()) payload.password = formCompte.password;
 
@@ -134,7 +162,11 @@ export default function AdminDemandes() {
         user: data.user,
         generatedPassword: data.generatedPassword,
       });
-      toast.success("Compte créé et demande convertie.");
+      toast.success(
+        data.documentsRepris
+          ? `Compte créé. ${data.documentsRepris} document(s) transféré(s).`
+          : "Compte créé et demande convertie.",
+      );
       charger();
     } catch (err) {
       toast.error(err.response?.data?.error || "Erreur lors de la création.");
@@ -311,6 +343,32 @@ export default function AdminDemandes() {
                       )}
                     </div>
                   )}
+
+                {/* Pièces transmises à la candidature. Elles seront
+                    rattachées automatiquement au compte lors de la
+                    conversion : inutile de les redemander. */}
+                {d.type === "convoyeur" && d.documents?.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-dark-400">
+                      {d.documents.length}/{Object.keys(PIECES).length - 1}{" "}
+                      pièce
+                      {d.documents.length > 1 ? "s" : ""} :
+                    </span>
+                    {d.documents.map((doc) => (
+                      <a
+                        key={doc.id}
+                        href={lienDocument(doc.filePath)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={doc.originalName}
+                        className="badge text-xs inline-flex items-center gap-1 bg-dark-900 border border-dark-700 text-dark-200 hover:border-primary-500 hover:text-primary-400 transition-colors"
+                      >
+                        <FileText size={11} />
+                        {PIECES[doc.type] || doc.type}
+                      </a>
+                    ))}
+                  </div>
+                )}
 
                 {d.message && (
                   <p className="text-xs text-dark-300 bg-dark-900/60 border border-dark-700 rounded-lg px-3 py-2 whitespace-pre-wrap flex gap-2">
@@ -523,10 +581,26 @@ export default function AdminDemandes() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-2">Supprimer la demande</h3>
-            <p className="text-sm text-dark-400 mb-6">
+            <p className="text-sm text-dark-400 mb-2">
               Cette action est irréversible. Les coordonnées du prospect seront
               définitivement perdues.
             </p>
+            {/* Le nombre de pièces emportées doit être annoncé : effacer des
+                justificatifs d'identité n'est pas rattrapable, et rien à
+                l'écran ne le laisse deviner. */}
+            {aSupprimer.documents?.length > 0 && (
+              <p className="text-sm text-red-400 mb-6 flex items-start gap-2">
+                <FileText size={14} className="flex-shrink-0 mt-0.5" />
+                <span>
+                  {aSupprimer.documents.length} justificatif
+                  {aSupprimer.documents.length > 1 ? "s" : ""} transmis par le
+                  candidat {aSupprimer.documents.length > 1 ? "seront" : "sera"}{" "}
+                  également effacé
+                  {aSupprimer.documents.length > 1 ? "s" : ""} de nos serveurs.
+                </span>
+              </p>
+            )}
+            {!aSupprimer.documents?.length && <div className="mb-6" />}
             <div className="flex gap-3">
               <button
                 onClick={() => setASupprimer(null)}

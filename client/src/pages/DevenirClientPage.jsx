@@ -80,7 +80,7 @@ function Argumentaire() {
           marginBottom: 14,
         }}
       >
-        CONCESSIONS · LOUEURS · GARAGES · FLOTTES
+        CONCESSIONS · LOUEURS · GARAGES · GESTIONNAIRE DE FLOTTES
       </span>
 
       <h2

@@ -834,13 +834,22 @@ export default function AdminUsers() {
                       label: "Carte d'identité",
                       icon: CreditCard,
                     },
+                    carte_identite_verso: {
+                      label: "Carte d'identité — verso",
+                      icon: CreditCard,
+                    },
                     assurance: {
                       label: "Attestation d'assurance",
                       icon: ShieldCheck,
                     },
+                    kbis: { label: "Extrait Kbis", icon: FileText },
                     rc_circulation: {
                       label: "RC circulation",
                       icon: ShieldCheck,
+                    },
+                    w_garage: {
+                      label: "Certification W garage",
+                      icon: FileText,
                     },
                     rc_pro: {
                       label: "RC professionnelle",

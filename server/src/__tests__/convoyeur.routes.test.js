@@ -73,10 +73,33 @@ const tokenFor = (user) =>
 const isUserLookup = (sql) =>
   /FROM users WHERE id = \$1/i.test(sql) && /is_validated/i.test(sql);
 
-function mockDb(user, handler = () => ({ rows: [] })) {
+// Les cinq pièces exigées avant toute prise de mission.
+const DOCUMENTS_REQUIS = [
+  "permis",
+  "carte_identite",
+  "rc_circulation",
+  "rc_pro",
+  "domicile",
+];
+
+const isEtatDossier = (sql) =>
+  /FROM convoyeur_documents/i.test(sql) && /type = ANY/i.test(sql);
+
+/** Dossier complet : le cas nominal de la plupart des tests. */
+const dossierComplet = () => ({
+  rows: DOCUMENTS_REQUIS.map((type) => ({ type, status: "valide" })),
+});
+
+function mockDb(user, handler = () => undefined) {
   db.query.mockImplementation(async (sql, params) => {
     if (isUserLookup(sql)) return { rows: user ? [user] : [] };
-    return handler(sql, params) || { rows: [] };
+    // Sans dossier complet, la prise de mission renverrait 403 avant même
+    // d'atteindre la règle testée. Les tests qui s'intéressent au dossier
+    // lui-même surchargent cette réponse par leur propre `handler`.
+    const propre = handler(sql, params);
+    if (propre) return propre;
+    if (isEtatDossier(sql)) return dossierComplet();
+    return { rows: [] };
   });
 }
 
@@ -653,6 +676,7 @@ describe("POST /api/convoyeur/missions/:id/prendre", () => {
   it("attribue la mission sans toucher à Kaze si le compte n'est pas lié", async () => {
     db.query.mockImplementation(async (sql) => {
       if (isUserLookup(sql)) return { rows: [CONVOYEUR_SANS_KAZE] };
+      if (isEtatDossier(sql)) return dossierComplet();
       if (/SELECT \* FROM missions WHERE id/i.test(sql))
         return { rows: [disponible] };
       if (/UPDATE missions SET convoyeur_id/i.test(sql))
@@ -763,7 +787,10 @@ describe("Documents du convoyeur", () => {
   it("liste les documents du convoyeur uniquement", async () => {
     let params;
     mockDb(CONVOYEUR, (sql, p) => {
-      if (/convoyeur_documents/i.test(sql)) {
+      // `etatDossier` interroge la même table : on ne retient que la
+      // requête de listage, sans quoi les paramètres capturés seraient
+      // ceux du contrôle d'éligibilité.
+      if (/convoyeur_documents/i.test(sql) && !/type = ANY/i.test(sql)) {
         params = p;
         return { rows: [{ id: "d1", type: "permis", status: "en_attente" }] };
       }

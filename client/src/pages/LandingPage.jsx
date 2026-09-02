@@ -195,7 +195,7 @@ export default function LandingPage() {
       <span id="solutions" className="anchor-offset" aria-hidden="true" />
       <section
         id="services"
-        style={{ background: "var(--cream)", padding: "96px 32px" }}
+        style={{ background: "var(--cream)", padding: "60px 32px 96px" }}
       >
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           <div className="waypoint-label reveal">
@@ -224,19 +224,9 @@ export default function LandingPage() {
                 color: "var(--navy)",
               }}
             >
-              Nos services
+              Nos solutions clients
             </h2>
             <div className="rule" />
-            <p
-              style={{
-                color: "var(--graphite-soft)",
-                fontSize: 16,
-                marginTop: 14,
-              }}
-            >
-              Déplacer un véhicule du premier kilomètre à la remise des clés
-              avec un interlocuteur unique.
-            </p>
           </div>
           {/* Ce que nous savons faire à gauche, à qui s'adresser à droite :
               un visiteur qui parcourt les trois prestations a l'invitation
@@ -382,7 +372,7 @@ export default function LandingPage() {
 
             <aside className="services-appel reveal">
               <div className="services-appel__eyebrow">
-                CONCESSIONS · LOUEURS · FLOTTES
+                CONCESSIONS · LOUEURS · GESTIONNAIRE DE FLOTTES · ENTREPRISES
               </div>
               <h3 className="services-appel__titre">Parlons de vos volumes</h3>
               <ul className="services-appel__liste">
@@ -477,7 +467,7 @@ export default function LandingPage() {
       {/* ── ABOUT ──────────────────────────────────── */}
       <section
         id="about"
-        style={{ background: "var(--cream-2)", padding: "96px 32px" }}
+        style={{ background: "var(--cream-2)", padding: "60px 32px 96px" }}
       >
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           <div className="waypoint-label reveal">
@@ -638,7 +628,11 @@ export default function LandingPage() {
       </section>
 
       {/* ── CONVOYEUR (dark) ───────────────────────── */}
-      <section id="convoy" className="convoy" style={{ padding: "96px 32px" }}>
+      <section
+        id="convoy"
+        className="convoy"
+        style={{ padding: "60px 32px 96px" }}
+      >
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           <div className="waypoint-label reveal">
             <div

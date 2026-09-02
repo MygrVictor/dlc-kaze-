@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const LIENS = [
   { label: "Accueil", href: "/" },
-  { label: "Nos solutions clients", href: "#solutions" },
+  { label: "Devenir client", href: "#solutions" },
   { label: "Nos chiffres", href: "#chiffres" },
   { label: "Qui sommes-nous", href: "#about" },
   { label: "Devenez convoyeur", href: "#convoy" },
@@ -251,7 +251,7 @@ export default function PublicLayout() {
               marginBottom: 20,
             }}
           >
-              Contact . 06 69 58 34 30
+            Contact . 06 69 58 34 30
           </div>
           <div
             style={{

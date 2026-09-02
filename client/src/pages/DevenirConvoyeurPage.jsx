@@ -2,74 +2,135 @@ import PageDemande, {
   EMAIL_VALIDE,
   mobileValide,
   labelStyle,
-  aideStyle,
   Requis,
 } from "./PageDemande";
-import { siretValide, normaliserSiret, formaterSiret } from "../lib/siret";
-import { ShieldAlert } from "lucide-react";
-import ChoixStatut from "../components/ChoixStatut";
+import toast from "react-hot-toast";
 import AvantagesConvoyeur from "../components/AvantagesConvoyeur";
+import ChampDocument from "../components/ChampDocument";
 
 /**
  * Demande d'inscription convoyeur.
  *
- * Le formulaire précédent — nom, email, mobile — laissait passer toutes les
- * candidatures, y compris celles qui ne pouvaient aboutir : pas de structure
- * déclarée, pas d'assurance en circulation. L'équipe rappelait alors pour
- * rien. On demande donc en amont ce qui conditionne réellement l'accès aux
- * missions, de sorte qu'une candidature reçue soit une candidature
- * exploitable.
+ * Le formulaire initial — nom, email, mobile — laissait passer toutes les
+ * candidatures, y compris celles qui ne pouvaient aboutir : pas de
+ * structure déclarée, pas d'assurance en circulation. L'équipe rappelait
+ * alors pour rien.
  *
- * La RC Circulation admet trois réponses et non deux : un convoyeur ayant
- * engagé ses démarches reste un bon profil, il sera simplement rappelé plus
- * tard. Le refuser reviendrait à écarter des candidats sérieux.
+ * Ces conditions ont d'abord été posées sous forme déclarative : un SIRET
+ * à saisir, trois listes déroulantes. Elles ont disparu au profit des
+ * pièces elles-mêmes. L'extrait Kbis porte le SIRET, les attestations
+ * établissent les couvertures : demander les deux revenait à faire saisir
+ * ce que le document prouve, et à se fier à une case cochée là où seule la
+ * pièce fait foi.
+ *
+ * Le filtrage n'a pas disparu pour autant, il s'est durci : sans
+ * attestation, la candidature ne part pas.
  */
 
 const CHAMPS_CONVOYEUR = {
-  siret: "",
-  rcCirculation: "",
-  rcPro: "",
-  wGarage: "",
+  // Le type de pièce ne se déduit pas d'un fichier : il faut le demander,
+  // sans quoi on ne saurait pas si un verso manque ou s'il n'existe pas.
+  typeIdentite: "cni",
+  // Les pièces sont retenues dans l'état du formulaire et partent avec
+  // lui : le serveur n'enregistre pas une candidature incomplète, les
+  // deux ne peuvent donc pas être dissociés.
+  carte_identite: null,
+  carte_identite_verso: null,
+  permis: null,
+  permis_verso: null,
+  kbis: null,
+  rc_circulation: null,
+  rc_pro: null,
+  domicile: null,
+  w_garage: null,
 };
 
-const OPTIONS_ASSURANCE = [
-  { valeur: "oui", label: "Oui, je la détiens" },
-  { valeur: "en_cours", label: "En cours d'obtention" },
-  { valeur: "non", label: "Non, pas encore" },
-];
-
-const OPTIONS_OUI_NON = [
-  { valeur: "oui", label: "Oui" },
-  { valeur: "non", label: "Non" },
+/**
+ * Les justificatifs exigés.
+ *
+ * L'ordre suit la logique du candidat : d'abord ce qu'il a sur lui
+ * (identité, permis), ensuite ce qu'il doit aller chercher (Kbis,
+ * attestations, facture). Commencer par le plus difficile ferait
+ * abandonner.
+ *
+ * Le permis compte pour deux dépôts : validité et catégories figurent au
+ * recto, restrictions et date de délivrance au verso. Demander « les deux
+ * faces dans un même fichier » revenait à exiger un montage que peu de
+ * candidats savent faire depuis un téléphone — et à recevoir, en
+ * pratique, le seul recto.
+ */
+const DOCUMENTS = [
+  {
+    nom: "carte_identite",
+    libelle: "Pièce d'identité",
+    aide: "Le recto de votre carte nationale, ou la page d'identification de votre passeport.",
+  },
+  {
+    nom: "permis",
+    libelle: "Permis de conduire — recto",
+    aide: "La face portant votre photographie et vos catégories.",
+  },
+  {
+    nom: "permis_verso",
+    libelle: "Permis de conduire — verso",
+    aide: "La face portant les dates de validité et les éventuelles restrictions.",
+  },
+  {
+    nom: "kbis",
+    libelle: "Extrait Kbis",
+    aide: "De moins de trois mois. Auto-entrepreneur : votre avis de situation INSEE convient.",
+  },
+  {
+    nom: "rc_circulation",
+    libelle: "Attestation RC Circulation",
+    aide: "Délivrée par votre assureur. Elle couvre le véhicule que vous convoyez.",
+  },
+  {
+    nom: "rc_pro",
+    libelle: "Attestation RC Professionnelle",
+    aide: "Elle couvre votre responsabilité de prestataire.",
+  },
+  {
+    nom: "domicile",
+    libelle: "Justificatif de domicile",
+    aide: "Moins de trois mois : facture d'énergie, quittance de loyer ou avis d'imposition.",
+  },
 ];
 
 /**
- * Avertit dès la sélection, sans attendre l'envoi.
+ * Pièces qui élargissent le champ des missions sans conditionner l'accès.
  *
- * Laisser le candidat remplir le reste du formulaire pour ne lui opposer un
- * refus qu'au moment de valider serait une perte de temps doublée d'une
- * mauvaise impression. Le message dit aussi comment redevenir éligible :
- * l'objectif reste de le récupérer, pas de l'écarter.
+ * Le W garage n'est détenu que par une minorité de convoyeurs. L'exiger
+ * écarterait des candidats parfaitement en règle ; l'ignorer priverait
+ * l'équipe d'une information utile au moment d'attribuer les missions qui
+ * le réclament.
  */
-function AlerteAssurance({ manquantes }) {
-  if (!manquantes.length) return null;
-  return (
-    <div className="demande-blocage" role="status">
-      <ShieldAlert size={17} />
-      <p>
-        <strong>
-          {manquantes.length > 1
-            ? `Ces assurances sont obligatoires : ${manquantes.join(" et ")}.`
-            : `La ${manquantes[0]} est obligatoire.`}
-        </strong>{" "}
-        Souscrivez-la auprès de votre assureur, puis revenez déposer votre
-        candidature. Dès vos démarches engagées, sélectionnez « En cours
-        d'obtention » : nous étudierons votre dossier sans attendre
-        l'attestation définitive.
-      </p>
-    </div>
-  );
-}
+const DOCUMENTS_FACULTATIFS = [
+  {
+    nom: "w_garage",
+    libelle: "Certification W garage",
+    aide: "Certains donneurs d'ordre l'exigent. Ne pas l'avoir n'est pas éliminatoire.",
+  },
+];
+
+/**
+ * Le verso de la pièce d'identité, exigé des seules cartes nationales.
+ *
+ * Un passeport s'identifie sur une page unique : en réclamer le verso
+ * bloquerait un dossier parfaitement valable. La question est posée
+ * plutôt que devinée, faute de pouvoir lire le type dans le fichier.
+ */
+const VERSO_IDENTITE = {
+  nom: "carte_identite_verso",
+  libelle: "Carte d'identité — verso",
+  aide: "La face portant votre adresse et la date d'expiration.",
+};
+
+/** Les pièces attendues, selon le type de pièce d'identité déclaré. */
+const documentsAttendus = (form) =>
+  form.typeIdentite === "passeport"
+    ? DOCUMENTS
+    : [DOCUMENTS[0], VERSO_IDENTITE, ...DOCUMENTS.slice(1)];
 
 export default function DevenirConvoyeurPage() {
   const valider = (form) => {
@@ -85,28 +146,21 @@ export default function DevenirConvoyeurPage() {
     if (!mobileValide(form.phone)) {
       return "Numéro de mobile invalide. Format attendu : 06 12 34 56 78.";
     }
-    if (!form.siret.trim()) {
-      return "Le SIRET de votre structure est obligatoire.";
-    }
-    if (!siretValide(form.siret)) {
-      return "SIRET invalide : vérifiez les 14 chiffres figurant sur votre extrait Kbis.";
-    }
-    if (!form.rcCirculation) {
-      return "Indiquez votre situation vis-à-vis de la RC Circulation.";
-    }
-    if (!form.rcPro) {
-      return "Indiquez votre situation vis-à-vis de la RC Professionnelle.";
-    }
-    // Une assurance déclarée absente arrête la candidature : la RC
-    // Circulation couvre le véhicule confié, la RC Professionnelle couvre
-    // la prestation. Sans l'une des deux, aucune mission ne peut être
-    // attribuée et le rappel serait sans objet. « En cours d'obtention »
-    // reste accepté : le dossier sera repris à la souscription.
-    if (form.rcCirculation === "non") {
-      return "La RC Circulation est indispensable pour convoyer un véhicule. Souscrivez-la, puis revenez déposer votre candidature : indiquez « En cours d'obtention » dès vos démarches engagées.";
-    }
-    if (form.rcPro === "non") {
-      return "La RC Professionnelle est indispensable pour exercer comme prestataire. Souscrivez-la, puis revenez déposer votre candidature : indiquez « En cours d'obtention » dès vos démarches engagées.";
+    // Le dossier complet conditionne l'envoi : une candidature sans
+    // justificatifs n'est pas instruisible, et les réclamer ensuite par
+    // courriel n'aboutit presque jamais.
+    //
+    // C'est aussi ce contrôle qui filtre l'éligibilité : sans attestation
+    // d'assurance, pas de candidature. Inutile de demander au candidat
+    // s'il est couvert — on lui demande de le prouver.
+    const attendus = documentsAttendus(form);
+    const manquants = attendus.filter((d) => !form[d.nom]);
+    if (manquants.length > 0) {
+      return manquants.length === attendus.length
+        ? `Vos ${attendus.length} justificatifs sont nécessaires pour étudier votre candidature.`
+        : `Justificatif${manquants.length > 1 ? "s" : ""} manquant${
+            manquants.length > 1 ? "s" : ""
+          } : ${manquants.map((d) => d.libelle.toLowerCase()).join(", ")}.`;
     }
     return null;
   };
@@ -116,26 +170,42 @@ export default function DevenirConvoyeurPage() {
     lastName: form.lastName.trim(),
     email: form.email.trim(),
     phone: form.phone.trim(),
+    typeIdentite: form.typeIdentite,
     message: form.message.trim() || undefined,
-    siret: normaliserSiret(form.siret),
-    rcCirculation: form.rcCirculation,
-    rcPro: form.rcPro,
-    // Le serveur attend un booléen ; sans réponse on n'envoie rien plutôt
-    // que « non », qui prêterait au candidat une déclaration qu'il n'a pas
-    // faite.
-    wGarage: form.wGarage ? form.wGarage === "oui" : undefined,
   });
+
+  // Les pièces sont extraites de l'état du formulaire pour rejoindre le
+  // corps multipart, sous le nom de champ que le serveur attend. Un verso
+  // saisi puis abandonné au profit d'un passeport ne part pas : il ne
+  // correspondrait à rien dans le dossier.
+  const fichiers = (form) => {
+    const attendus = documentsAttendus(form).map((d) => d.nom);
+    return Object.fromEntries(
+      [...attendus, ...DOCUMENTS_FACULTATIFS.map((d) => d.nom)]
+        .filter((nom) => form[nom])
+        .map((nom) => [nom, form[nom]]),
+    );
+  };
+
+  /** Retient la pièce choisie, ou signale ce qui cloche avec elle. */
+  const deposer = (setForm, doc) => (fichier, probleme) => {
+    if (probleme) {
+      toast.error(`${doc.libelle} — ${probleme}`);
+      return;
+    }
+    setForm((prev) => ({ ...prev, [doc.nom]: fichier }));
+  };
 
   return (
     <PageDemande
       type="convoyeur"
       accent="var(--teal)"
       titre="Devenez convoyeur partenaire"
-      sousTitre="Accédez chaque semaine à des missions à travers l'Europe et choisissez celles qui vous conviennent. Quelques informations nous permettent de vérifier votre éligibilité avant de vous rappeler."
-      confirmation="Merci ! Nous vérifions votre dossier et vous recontactons pour un pré-rendez-vous de validation des documents. Une fois votre accès ouvert, les missions disponibles vous seront annoncées par WhatsApp."
+      sousTitre="Accédez chaque semaine à des missions à travers l'Europe et choisissez celles qui vous conviennent. Vos justificatifs nous permettent d'ouvrir votre accès sans attendre."
+      confirmation="Merci ! Nous avons bien reçu votre candidature et vos justificatifs. Notre équipe examine votre dossier et vous recontacte pour un pré-rendez-vous de validation. Une fois votre accès ouvert, les missions disponibles vous seront annoncées par WhatsApp."
       valider={valider}
       preparer={preparer}
-      bloque={(form) => form.rcCirculation === "non" || form.rcPro === "non"}
+      fichiers={fichiers}
       champsInitiaux={CHAMPS_CONVOYEUR}
       argumentaire={<AvantagesConvoyeur />}
     >
@@ -208,84 +278,85 @@ export default function DevenirConvoyeurPage() {
           </div>
 
           <hr className="demande-separateur" />
-          <p className="demande-sous-titre">Votre activité professionnelle</p>
+          <p className="demande-sous-titre">Vos justificatifs</p>
 
-          <div>
-            <label style={labelStyle} htmlFor="siret">
-              SIRET de votre structure <Requis couleur={accent} />
-            </label>
-            <input
-              id="siret"
-              type="text"
-              name="siret"
-              inputMode="numeric"
-              value={form.siret}
-              // Le SIRET figure espacé sur le Kbis : on met en forme pendant
-              // la frappe pour que le candidat puisse relire sa saisie.
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  siret: formaterSiret(e.target.value),
-                }))
-              }
-              className="input-field"
-              placeholder="123 456 789 00012"
-            />
-            <p style={aideStyle}>
-              14 chiffres, tels qu'ils figurent sur votre extrait Kbis ou votre
-              avis de situation INSEE.
+          {/* Le dossier part avec la candidature : ces pièces ne sont pas
+              un complément mais la condition de l'envoi. D'où leur place
+              avant le champ libre. */}
+          <div className="depot-section">
+            <div className="depot-entete">
+              <span className="depot-titre">
+                Pièces obligatoires <Requis couleur={accent} />
+              </span>
+              <span className="depot-compteur" style={{ color: accent }}>
+                {documentsAttendus(form).filter((d) => form[d.nom]).length}/
+                {documentsAttendus(form).length}
+              </span>
+            </div>
+            <p className="depot-consigne">
+              Ces pièces établissent votre identité, votre droit de conduire,
+              votre activité et vos couvertures. JPG, PNG, WEBP ou PDF, 8 Mo
+              maximum par fichier.
             </p>
+
+            {/* Le nombre de faces à fournir dépend du titre présenté : deux
+                pour une carte nationale, une seule pour un passeport. La
+                question précède donc les dépôts. */}
+            <div className="depot-choix">
+              <label style={labelStyle} htmlFor="typeIdentite">
+                Votre pièce d'identité <Requis couleur={accent} />
+              </label>
+              <select
+                id="typeIdentite"
+                name="typeIdentite"
+                value={form.typeIdentite}
+                onChange={handleChange}
+                className="input-field"
+              >
+                <option value="cni">Carte nationale d'identité</option>
+                <option value="passeport">Passeport</option>
+              </select>
+            </div>
+
+            <div className="depot-liste">
+              {documentsAttendus(form).map((doc) => (
+                <ChampDocument
+                  key={doc.nom}
+                  nom={doc.nom}
+                  libelle={doc.libelle}
+                  aide={doc.aide}
+                  fichier={form[doc.nom]}
+                  accent={accent}
+                  onChange={deposer(setForm, doc)}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Les trois questions d'éligibilité tiennent en deux rangées de
-              menus déroulants : leur affichage précédent en cartes radio
-              occupait à lui seul plus d'un écran. */}
-          <div className="demande-duo">
-            <ChoixStatut
-              legende={
-                <>
-                  RC Circulation <Requis couleur={accent} />
-                </>
-              }
-              aide="Elle couvre le véhicule que vous convoyez. Sans elle, aucune mission ne peut vous être confiée."
-              name="rcCirculation"
-              options={OPTIONS_ASSURANCE}
-              valeur={form.rcCirculation}
-              onChange={handleChange}
-              accent={accent}
-            />
+          <div className="depot-section">
+            <div className="depot-entete">
+              <span className="depot-titre">Pièce facultative</span>
+            </div>
+            <p className="depot-consigne">
+              Elle ne conditionne pas votre candidature, mais nous permet de
+              vous proposer davantage de missions.
+            </p>
 
-            <ChoixStatut
-              legende={
-                <>
-                  RC Professionnelle <Requis couleur={accent} />
-                </>
-              }
-              aide="Elle couvre votre responsabilité de prestataire."
-              name="rcPro"
-              options={OPTIONS_ASSURANCE}
-              valeur={form.rcPro}
-              onChange={handleChange}
-              accent={accent}
-            />
+            <div className="depot-liste">
+              {DOCUMENTS_FACULTATIFS.map((doc) => (
+                <ChampDocument
+                  key={doc.nom}
+                  nom={doc.nom}
+                  libelle={doc.libelle}
+                  aide={doc.aide}
+                  fichier={form[doc.nom]}
+                  accent={accent}
+                  requis={false}
+                  onChange={deposer(setForm, doc)}
+                />
+              ))}
+            </div>
           </div>
-
-          <AlerteAssurance
-            manquantes={[
-              form.rcCirculation === "non" && "RC Circulation",
-              form.rcPro === "non" && "RC Professionnelle",
-            ].filter(Boolean)}
-          />
-
-          <ChoixStatut
-            legende="Certification W garage"
-            aide="Certains donneurs d'ordre l'exigent. Ne pas l'avoir n'est pas éliminatoire."
-            name="wGarage"
-            options={OPTIONS_OUI_NON}
-            valeur={form.wGarage}
-            onChange={handleChange}
-            accent={accent}
-          />
 
           <div>
             <label style={labelStyle} htmlFor="message">

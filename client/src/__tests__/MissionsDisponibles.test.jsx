@@ -104,7 +104,16 @@ describe("MissionsDisponibles", () => {
   });
 
   it("affiche un message si aucune mission disponible", async () => {
-    api.get.mockResolvedValueOnce({ data: { missions: [] } });
+    // La page interroge aussi /convoyeur/documents pour le bandeau de
+    // dossier : un `mockResolvedValueOnce` serait consommé par cet appel.
+    // On distingue donc les réponses par URL.
+    api.get.mockImplementation((url) =>
+      Promise.resolve(
+        url === "/convoyeur/missions-disponibles"
+          ? { data: { missions: [] } }
+          : { data: {} },
+      ),
+    );
     renderMissionsDisponibles();
     await waitFor(() =>
       expect(

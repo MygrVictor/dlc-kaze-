@@ -138,11 +138,35 @@ describe("DevenirClientPage", () => {
 });
 
 describe("DevenirConvoyeurPage", () => {
-  // SIRET réel (INSEE) : la clé de Luhn est vérifiée côté client, une suite
-  // arbitraire de 14 chiffres serait rejetée avant l'envoi.
-  const SIRET_VALIDE = "732 829 320 00074";
+  // Les pièces attendues, énumérées ici plutôt que relues depuis la page :
+  // un champ retiré du formulaire doit faire échouer le test, pas
+  // disparaître silencieusement des deux côtés à la fois.
+  const REQUIS = [
+    "carte_identite",
+    "carte_identite_verso",
+    "permis",
+    "permis_verso",
+    "kbis",
+    "rc_circulation",
+    "rc_pro",
+    "domicile",
+  ];
 
-  const remplir = async ({ phone, qualifier = true }) => {
+  const piece = (nom) =>
+    new File(["contenu"], `${nom}.pdf`, { type: "application/pdf" });
+
+  const champFichier = (nom) => document.querySelector(`input[name="${nom}"]`);
+
+  const joindre = async (noms) => {
+    for (const nom of noms) {
+      await userEvent.upload(
+        document.querySelector(`input[name="${nom}"]`),
+        piece(nom),
+      );
+    }
+  };
+
+  const remplir = async ({ phone, pieces = REQUIS }) => {
     await userEvent.type(screen.getByPlaceholderText("Jean"), "Marc");
     await userEvent.type(screen.getByPlaceholderText("Dupont"), "Driver");
     await userEvent.type(
@@ -153,20 +177,16 @@ describe("DevenirConvoyeurPage", () => {
       screen.getByPlaceholderText("+33 6 12 34 56 78"),
       phone,
     );
-    if (qualifier) {
-      await userEvent.type(
-        screen.getByPlaceholderText("123 456 789 00012"),
-        SIRET_VALIDE,
-      );
-      await userEvent.selectOptions(
-        screen.getByLabelText(/RC Circulation/i),
-        "oui",
-      );
-      await userEvent.selectOptions(
-        screen.getByLabelText(/RC Professionnelle/i),
-        "oui",
-      );
+    await joindre(pieces);
+  };
+
+  /** Les entrées d'un FormData, sous une forme comparable. */
+  const contenu = (fd) => {
+    const vu = {};
+    for (const [cle, valeur] of fd.entries()) {
+      vu[cle] = valeur instanceof File ? valeur.name : valeur;
     }
+    return vu;
   };
 
   it("ne demande jamais de structure : ce champ ne concerne que les clients", () => {
@@ -178,7 +198,7 @@ describe("DevenirConvoyeurPage", () => {
 
   it("refuse un numéro fixe", async () => {
     afficher(DevenirConvoyeurPage);
-    await remplir({ phone: "0145678901", qualifier: false });
+    await remplir({ phone: "0145678901", pieces: [] });
     fireEvent.click(bouton());
 
     await waitFor(() => {
@@ -204,144 +224,153 @@ describe("DevenirConvoyeurPage", () => {
     });
   });
 
-  it("envoie une demande complète sans champ company parasite", async () => {
+  it("envoie la candidature et ses pièces en une seule requête", async () => {
     api.post.mockResolvedValueOnce({ data: {} });
     afficher(DevenirConvoyeurPage);
     await remplir({ phone: "0612345678" });
     fireEvent.click(bouton());
 
-    await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith("/auth/demande", {
-        type: "convoyeur",
-        firstName: "Marc",
-        lastName: "Driver",
-        email: "marc@test.com",
-        phone: "0612345678",
-        message: undefined,
-        // Le SIRET part normalisé : la mise en forme n'est qu'une aide à la
-        // relecture, elle ne doit pas atteindre la base.
-        siret: "73282932000074",
-        rcCirculation: "oui",
-        rcPro: "oui",
-        // Non renseigné : la certification n'est pas exigée, et on ne prête
-        // pas au candidat une réponse qu'il n'a pas donnée.
-        wGarage: undefined,
-      });
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const [url, corps, options] = api.post.mock.calls[0];
+    expect(url).toBe("/auth/demande");
+    expect(corps).toBeInstanceOf(FormData);
+    expect(options.headers["Content-Type"]).toBe("multipart/form-data");
+    expect(contenu(corps)).toEqual({
+      type: "convoyeur",
+      firstName: "Marc",
+      lastName: "Driver",
+      email: "marc@test.com",
+      phone: "0612345678",
+      // Le type de pièce ne se déduit pas d'un fichier : il est déclaré,
+      // et c'est lui qui dit si un verso est attendu.
+      typeIdentite: "cni",
+      // Les justificatifs voyagent avec le formulaire : le serveur
+      // n'enregistre pas une candidature qu'il faudrait compléter ensuite.
+      ...Object.fromEntries(REQUIS.map((nom) => [nom, `${nom}.pdf`])),
     });
     expect(await screen.findByText("Demande envoyée")).toBeInTheDocument();
   });
 
-  it("refuse un SIRET dont la clé de contrôle est fausse", async () => {
+  it("n'envoie rien tant qu'il manque un justificatif", async () => {
     afficher(DevenirConvoyeurPage);
-    await remplir({ phone: "0612345678", qualifier: false });
-    await userEvent.type(
-      screen.getByPlaceholderText("123 456 789 00012"),
-      "12345678901234",
-    );
-    fireEvent.click(bouton());
-
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent(/SIRET invalide/i);
+    await remplir({
+      phone: "0612345678",
+      pieces: REQUIS.filter((nom) => nom !== "rc_pro"),
     });
-    expect(api.post).not.toHaveBeenCalled();
-  });
-
-  it("écarte un candidat sans RC Circulation ni démarche engagée", async () => {
-    afficher(DevenirConvoyeurPage);
-    await remplir({ phone: "0612345678", qualifier: false });
-    await userEvent.type(
-      screen.getByPlaceholderText("123 456 789 00012"),
-      SIRET_VALIDE,
-    );
-    await userEvent.selectOptions(
-      screen.getByLabelText(/RC Circulation/i),
-      "non",
-    );
-
-    // L'obstacle est signalé sur-le-champ, sans attendre l'envoi, et
-    // l'envoi lui-même devient impossible.
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      /RC Circulation est obligatoire/i,
-    );
-    expect(bouton()).toBeDisabled();
-
     fireEvent.click(bouton());
-    expect(api.post).not.toHaveBeenCalled();
-  });
 
-  it("bloque aussi une RC Professionnelle déclarée absente", async () => {
-    // Un « non » vaut inéligibilité : le convoyeur ne peut pas facturer une
-    // prestation qu'il n'assure pas.
-    afficher(DevenirConvoyeurPage);
-    await remplir({ phone: "0612345678" });
-    await userEvent.selectOptions(
-      screen.getByLabelText(/RC Professionnelle/i),
-      "non",
-    );
-
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      /RC Professionnelle est obligatoire/i,
-    );
-    expect(bouton()).toBeDisabled();
-    expect(api.post).not.toHaveBeenCalled();
-  });
-
-  it("laisse passer une assurance en cours d'obtention", async () => {
-    // Un candidat dont les démarches sont engagées reste un bon profil :
-    // le refuser reviendrait à écarter des convoyeurs sérieux.
-    api.post.mockResolvedValueOnce({ data: {} });
-    afficher(DevenirConvoyeurPage);
-    await remplir({ phone: "0612345678", qualifier: false });
-    await userEvent.type(
-      screen.getByPlaceholderText("123 456 789 00012"),
-      SIRET_VALIDE,
-    );
-    await userEvent.selectOptions(
-      screen.getByLabelText(/RC Circulation/i),
-      "en_cours",
-    );
-    await userEvent.selectOptions(
-      screen.getByLabelText(/RC Professionnelle/i),
-      "en_cours",
-    );
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-
-    fireEvent.click(bouton());
-    await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith(
-        "/auth/demande",
-        expect.objectContaining({ rcCirculation: "en_cours" }),
-      );
-    });
-  });
-
-  it("exige une réponse sur les deux assurances", async () => {
-    // Laisser une question vide ne vaut pas acceptation tacite : les deux
-    // couvertures conditionnent l'attribution des missions. Le W garage,
-    // lui, reste facultatif.
-    afficher(DevenirConvoyeurPage);
-    await remplir({ phone: "0612345678", qualifier: false });
-    await userEvent.type(
-      screen.getByPlaceholderText("123 456 789 00012"),
-      SIRET_VALIDE,
-    );
-
-    fireEvent.click(bouton());
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent(/RC Circulation/i);
-    });
-
-    await userEvent.selectOptions(
-      screen.getByLabelText(/RC Circulation/i),
-      "oui",
-    );
-    fireEvent.click(bouton());
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
-        /RC Professionnelle/i,
+        /justificatif manquant : attestation rc professionnelle/i,
       );
     });
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("réclame le dossier entier quand rien n'est joint", async () => {
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678", pieces: [] });
+    fireEvent.click(bouton());
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        `Vos ${REQUIS.length} justificatifs sont nécessaires pour étudier votre candidature.`,
+      );
+    });
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("exige les deux faces du permis, pas seulement le recto", async () => {
+    // Le verso porte la date de délivrance et les restrictions : le recto
+    // seul ne permet pas de vérifier que le permis est encore valable.
+    afficher(DevenirConvoyeurPage);
+    await remplir({
+      phone: "0612345678",
+      pieces: REQUIS.filter((nom) => nom !== "permis_verso"),
+    });
+    fireEvent.click(bouton());
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(/verso/i);
+    });
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("n'attend pas de verso lorsqu'un passeport est déclaré", async () => {
+    // Un passeport s'identifie sur une page unique : en réclamer le verso
+    // bloquerait un dossier parfaitement valable.
+    api.post.mockResolvedValueOnce({ data: {} });
+    afficher(DevenirConvoyeurPage);
+    await userEvent.selectOptions(
+      screen.getByLabelText(/votre pièce d'identité/i),
+      "passeport",
+    );
+    await remplir({
+      phone: "0612345678",
+      pieces: REQUIS.filter((nom) => nom !== "carte_identite_verso"),
+    });
+    fireEvent.click(bouton());
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const envoye = contenu(api.post.mock.calls[0][1]);
+    expect(envoye.typeIdentite).toBe("passeport");
+    expect(envoye).not.toHaveProperty("carte_identite_verso");
+  });
+
+  it("exige le verso quand une carte nationale est déclarée", async () => {
+    afficher(DevenirConvoyeurPage);
+    await remplir({
+      phone: "0612345678",
+      pieces: REQUIS.filter((nom) => nom !== "carte_identite_verso"),
+    });
+    fireEvent.click(bouton());
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /carte d'identité — verso/i,
+      );
+    });
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("laisse partir la candidature sans W garage", async () => {
+    // La certification n'est détenue que par une minorité de convoyeurs :
+    // l'exiger écarterait des candidats parfaitement en règle.
+    api.post.mockResolvedValueOnce({ data: {} });
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678" });
+    fireEvent.click(bouton());
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    expect(contenu(api.post.mock.calls[0][1])).not.toHaveProperty("w_garage");
+  });
+
+  it("transmet le W garage lorsqu'il est joint", async () => {
+    api.post.mockResolvedValueOnce({ data: {} });
+    afficher(DevenirConvoyeurPage);
+    await remplir({ phone: "0612345678" });
+    await joindre(["w_garage"]);
+    fireEvent.click(bouton());
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    expect(contenu(api.post.mock.calls[0][1])).toMatchObject({
+      w_garage: "w_garage.pdf",
+    });
+  });
+
+  it("ne demande plus ni SIRET ni assurance déclarative", async () => {
+    // Ces champs ont cédé la place aux pièces qui les prouvent : les
+    // conserver reviendrait à faire saisir ce que le document établit,
+    // et à se fier à une case cochée là où seule l'attestation fait foi.
+    afficher(DevenirConvoyeurPage);
+    expect(
+      screen.queryByPlaceholderText("123 456 789 00012"),
+    ).not.toBeInTheDocument();
+    // Les assurances subsistent, mais comme dépôts de fichiers : c'est
+    // l'attestation qui répond, plus une liste déroulante.
+    for (const nom of ["rc_circulation", "rc_pro"]) {
+      expect(champFichier(nom)).toBeInTheDocument();
+    }
   });
 
   it("efface l'erreur dès que la saisie reprend", async () => {

@@ -33,6 +33,7 @@ import {
   KeyRound,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import BandeauDossier from "../../components/BandeauDossier";
 
 export default function ConvoyeurDashboard() {
   const [missions, setMissions] = useState([]);
@@ -93,6 +94,14 @@ export default function ConvoyeurDashboard() {
 
   return (
     <div>
+      {" "}
+      {/* Le planning est la première page vue à la connexion : c'est ici
+          qu'un dossier incomplet doit se signaler. Le conteneur s'efface
+          avec son contenu, sinon sa marge subsisterait une fois le
+          dossier complet. */}
+      <div className="mb-6 empty:hidden">
+        <BandeauDossier />
+      </div>
       {/* ── Header ──────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
         <div>
@@ -118,7 +127,6 @@ export default function ConvoyeurDashboard() {
           Actualiser
         </button>
       </div>
-
       {/* ── Stats rapides ──────────────────────────────── */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
         <div className="card text-center py-4 px-2">
@@ -143,14 +151,12 @@ export default function ConvoyeurDashboard() {
           <p className="text-xs text-dark-400 mt-1.5">Total</p>
         </div>
       </div>
-
       {/* ── Loading ────────────────────────────────────── */}
       {loading && (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-accent-500" />
         </div>
       )}
-
       {/* ── Empty ──────────────────────────────────────── */}
       {!loading && missions.length === 0 && (
         <div className="space-y-4">
@@ -207,7 +213,6 @@ export default function ConvoyeurDashboard() {
           </div>
         </div>
       )}
-
       {/* ── Mission Cards ──────────────────────────────── */}
       {!loading && missions.length > 0 && (
         <div className="space-y-3">
@@ -645,7 +650,6 @@ export default function ConvoyeurDashboard() {
           })}
         </div>
       )}
-
       {/* ── Real-time indicator ────────────────────────── */}
       {!loading && missions.length > 0 && (
         <div className="flex items-center justify-center gap-2 mt-6 text-xs text-dark-500">

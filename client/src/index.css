@@ -41,6 +41,12 @@
   }
   html {
     scroll-behavior: smooth;
+    /* La barre de navigation est collante : sans cette réserve, un lien
+       d'ancre amène le haut de la section sous la barre, qui en masque
+       les premières dizaines de pixels. Posée ici, la règle vaut pour
+       toutes les ancres — auparavant seules deux d'entre elles la
+       portaient, et les trois autres atterrissaient d'autant plus bas. */
+    scroll-padding-top: calc(var(--nav-h) + 16px);
   }
 
   body {
@@ -122,12 +128,13 @@
   }
 }
 
-/* Ancre invisible : compense la hauteur du header collant pour qu'un lien
-   « #solutions » ne fasse pas passer le titre sous la barre de navigation. */
+/* Ancre invisible, héritée des sections dont l'identifiant ne peut pas
+   être posé sur l'élément lui-même. La compensation de la barre de
+   navigation est désormais globale (`scroll-padding-top` sur `html`) :
+   ce marqueur n'a plus qu'à exister au bon endroit du flux. */
 .anchor-offset {
   display: block;
   height: 0;
-  scroll-margin-top: 96px;
 }
 
 /* ── Buttons ──────────────────────────────────────────
@@ -920,6 +927,13 @@
   line-height: 1.65;
   color: var(--graphite-soft);
   margin: 20px 0 30px;
+}
+/* Ailleurs le repère surmonte un titre centré ; ici la colonne est
+   alignée à gauche. Le centrage hérité le laissait flotter au-dessus du
+   titre sans s'y rattacher — d'autant plus net depuis que le cercle et
+   son libellé tiennent sur une seule ligne. */
+.page-rappel__intro .waypoint-label {
+  justify-content: flex-start;
 }
 /* Le formulaire reste visible pendant que l'on relit les trois étapes. */
 @media (min-width: 981px) {
@@ -2253,6 +2267,149 @@
   }
 }
 
+/* ── Justificatifs, dans le formulaire de candidature ───────── */
+
+/* Les pièces sont détachées visuellement du reste : ce n'est plus de la
+   déclaration mais du dépôt, et le candidat doit voir qu'on change de
+   registre. */
+.depot-section {
+  border-top: 1px solid rgba(11, 29, 58, 0.1);
+  padding-top: 16px;
+  margin-top: 2px;
+}
+.depot-entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.depot-titre {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--graphite);
+}
+/* Le compte des pièces déposées : sur cinq champs, savoir où l'on en est
+   évite de parcourir la liste pour vérifier. */
+.depot-compteur {
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.depot-consigne {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--graphite-soft);
+  margin: 4px 0 12px;
+}
+
+/* Le choix du titre présenté commande le nombre de faces à déposer :
+   il précède donc la liste, dont il modifie le contenu. */
+.depot-choix {
+  margin-bottom: 14px;
+}
+
+.depot-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Toute la ligne est cliquable : viser un bouton « Parcourir » au doigt,
+   sur un téléphone, relève de l'adresse. */
+.depot-ligne {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(11, 29, 58, 0.14);
+  border-radius: 12px;
+  cursor: pointer;
+  background: #fff;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.depot-ligne:hover {
+  border-color: rgba(11, 29, 58, 0.3);
+  background: var(--cream-2);
+}
+.depot-ligne.depose {
+  background: rgba(11, 29, 58, 0.03);
+}
+
+/* Retirer une pièce doit rester possible : un candidat qui joint le mauvais
+   fichier n'a sinon d'autre issue que de recharger la page — et de tout
+   ressaisir. */
+.depot-retirer {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(11, 29, 58, 0.14);
+  background: #fff;
+  color: var(--graphite-soft);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+.depot-retirer:hover {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.4);
+}
+/* L'input reste dans le flux — donc focalisable au clavier — mais
+   invisible : `display: none` le retirerait de l'ordre de tabulation. */
+.depot-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.depot-ligne:focus-within {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(11, 29, 58, 0.1);
+}
+
+.depot-icone {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 29, 58, 0.06);
+  color: var(--graphite);
+}
+.depot-libelle {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.depot-aide {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--graphite-soft);
+  margin-top: 3px;
+}
+.depot-fichier {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  color: var(--graphite);
+  /* Un nom de fichier long ne doit pas élargir la carte. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
 /* Blocage d'éligibilité : le candidat vient de déclarer une assurance
    absente. Ni rouge d'erreur — il n'a rien fait de faux — ni gris neutre,
    qui passerait inaperçu : l'ambre signale un obstacle levable. */
@@ -2449,20 +2606,29 @@
 .waypoint {
   position: relative;
   z-index: 2;
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: var(--asphalt);
   border: 2px solid var(--amber);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 18px;
+  flex-shrink: 0;
   box-shadow: 0 0 0 6px rgba(255, 209, 26, 0.1);
 }
+/* Le repère kilométrique et son pastillage annoncent le titre : ils en
+   font partie. Empilés, ils consommaient près de cent dix pixels avant
+   qu'une seule lettre du titre n'apparaisse — un vide au sommet de chaque
+   section, d'autant plus visible que le texte du repère tient en cinq
+   mots. Côte à côte, l'ensemble se lit comme une seule ligne d'en-tête et
+   la hauteur tombe à la taille du cercle. */
 .waypoint-label {
-  text-align: center;
-  margin-bottom: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  margin-bottom: 18px;
 }
 .tag {
   font-family: "JetBrains Mono", monospace;
@@ -2471,7 +2637,11 @@
   color: var(--amber-deep);
   font-weight: 600;
   display: block;
-  margin-top: 2px;
+}
+/* Le décrochement de deux pixels compensait l'empilement ; sur une ligne
+   il désaxerait le texte par rapport au cercle. */
+.waypoint-label .tag {
+  margin-top: 0;
 }
 
 /* ── Route track animation ──────────────────────── */
@@ -2614,8 +2784,71 @@ body:has(.theme-light) {
 .theme-light [class*="text-dark-700"] {
   color: #64748b;
 }
-/* `text-white` n'est volontairement pas remappé : il habille des fonds
-   colorés (boutons bleus, pastilles de statut) qui, eux, ne changent pas. */
+/* `text-white` sert deux usages qu'il faut distinguer.
+
+   Le premier est un texte posé sur le fond sombre de l'interface : titres
+   de page, nom du produit dans la barre latérale, onglet actif sur
+   `bg-dark-600`. Ce fond devient clair, le texte doit donc devenir sombre,
+   sans quoi il disparaît purement et simplement.
+
+   Le second habille un fond coloré plein — bouton bleu, pastille de
+   statut, icône dans une gommette — qui, lui, ne change pas de teinte
+   entre les deux thèmes. Le blanc y reste indispensable.
+
+   On bascule donc tout en sombre par défaut, puis on rend le blanc aux
+   descendants d'un fond coloré. L'ordre importe : la seconde règle doit
+   suivre la première pour l'emporter à spécificité égale.
+
+   La garde `:not([class*=":text-white"])` écarte les variantes préfixées
+   — `hover:`, `focus:`, `md:` — qu'une recherche par sous-chaîne
+   attraperait sinon. Sans elle, un lien `text-dark-400 hover:text-white`
+   basculerait en permanence dans la couleur de son survol. */
+.theme-light [class*="text-white"]:not([class*=":text-white"]) {
+  color: #0f172a;
+}
+.theme-light [class*="bg-primary-5"] [class*="text-white"],
+.theme-light [class*="bg-primary-6"] [class*="text-white"],
+.theme-light [class*="bg-primary-7"] [class*="text-white"],
+.theme-light [class*="bg-accent-5"] [class*="text-white"],
+.theme-light [class*="bg-accent-6"] [class*="text-white"],
+.theme-light [class*="bg-accent-7"] [class*="text-white"],
+.theme-light [class*="bg-red-5"] [class*="text-white"],
+.theme-light [class*="bg-red-6"] [class*="text-white"],
+.theme-light [class*="bg-orange-5"] [class*="text-white"],
+.theme-light [class*="bg-orange-6"] [class*="text-white"],
+.theme-light [class*="bg-green-5"] [class*="text-white"],
+.theme-light [class*="bg-green-6"] [class*="text-white"],
+.theme-light [class*="bg-emerald-5"] [class*="text-white"],
+.theme-light [class*="bg-emerald-6"] [class*="text-white"],
+.theme-light [class*="bg-blue-5"] [class*="text-white"],
+.theme-light [class*="bg-blue-6"] [class*="text-white"],
+.theme-light [class*="bg-indigo-6"] [class*="text-white"],
+.theme-light [class*="bg-indigo-7"] [class*="text-white"],
+.theme-light [class*="bg-purple-5"] [class*="text-white"],
+.theme-light [class*="bg-purple-6"] [class*="text-white"],
+/* Le fond coloré peut porter lui-même la classe de texte. */
+.theme-light [class*="bg-primary-5"][class*="text-white"],
+.theme-light [class*="bg-primary-6"][class*="text-white"],
+.theme-light [class*="bg-primary-7"][class*="text-white"],
+.theme-light [class*="bg-accent-5"][class*="text-white"],
+.theme-light [class*="bg-accent-6"][class*="text-white"],
+.theme-light [class*="bg-red-5"][class*="text-white"],
+.theme-light [class*="bg-red-6"][class*="text-white"],
+.theme-light [class*="bg-orange-5"][class*="text-white"],
+.theme-light [class*="bg-orange-6"][class*="text-white"],
+.theme-light [class*="bg-green-5"][class*="text-white"],
+.theme-light [class*="bg-emerald-5"][class*="text-white"],
+.theme-light [class*="bg-blue-5"][class*="text-white"],
+.theme-light [class*="bg-blue-6"][class*="text-white"],
+.theme-light [class*="bg-indigo-6"][class*="text-white"],
+.theme-light [class*="bg-indigo-7"][class*="text-white"],
+.theme-light [class*="bg-purple-5"][class*="text-white"] {
+  color: #ffffff;
+}
+/* Les fonds pleins ne sont pas éclaircis : ils portent du texte blanc et
+   fonctionnent dans les deux thèmes. La règle n'existe que pour couper
+   court à un remappage accidentel par les sélecteurs `bg-*-500/xx`, qui
+   ne visent que les fonds transparents. */
 
 /* ── Fonds ──────────────────────────────────────── */
 .theme-light [class*="bg-dark-950"],

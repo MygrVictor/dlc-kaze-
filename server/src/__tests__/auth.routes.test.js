@@ -14,6 +14,7 @@ jest.mock("express-rate-limit", () =>
 // Mock DB pour ne pas toucher la vraie base en CI
 jest.mock("../db", () => ({
   query: jest.fn(),
+  transaction: jest.fn(),
 }));
 
 // Mock email pour éviter les envois réels
@@ -115,10 +116,17 @@ describe("POST /api/auth/login", () => {
 //  POST /api/auth/demande
 // ──────────────────────────────────────────────────────────────
 describe("POST /api/auth/demande", () => {
-  const enregistree = () =>
+  // La demande et ses éventuelles pièces s'écrivent d'un seul tenant. Le
+  // client transactionnel délègue à db.query pour que les assertions
+  // portant sur le SQL émis restent lisibles.
+  const enregistree = () => {
+    db.transaction.mockImplementation((callback) =>
+      callback({ query: (...args) => db.query(...args) }),
+    );
     db.query.mockResolvedValueOnce({
       rows: [{ id: "dem-1", type: "client", created_at: new Date() }],
     });
+  };
 
   it("refuse un type inconnu", async () => {
     const res = await request(app)
@@ -180,19 +188,35 @@ describe("POST /api/auth/demande", () => {
     expect(res.body.error).toMatch(/mobile/i);
   });
 
-  it("enregistre une demande de convoyeur complète", async () => {
+  it("enregistre une candidature de convoyeur complète", async () => {
+    // Les anciennes questions déclaratives — SIRET, assurances — ont cédé
+    // la place aux pièces qui les prouvent : c'est le dossier joint qui
+    // qualifie le candidat, non une case cochée.
     enregistree();
-    const res = await request(app).post("/api/auth/demande").send({
-      type: "convoyeur",
-      firstName: "Marc",
-      lastName: "Driver",
-      email: "driver@test.com",
-      phone: "0612345678",
-      siret: "73282932000074",
-      rcCirculation: "oui",
-      rcPro: "oui",
-      wGarage: false,
-    });
+    const requete = request(app)
+      .post("/api/auth/demande")
+      .field("type", "convoyeur")
+      .field("firstName", "Marc")
+      .field("lastName", "Driver")
+      .field("email", "driver@test.com")
+      .field("phone", "0612345678")
+      .field("typeIdentite", "cni");
+    for (const piece of [
+      "carte_identite",
+      "carte_identite_verso",
+      "permis",
+      "permis_verso",
+      "kbis",
+      "rc_circulation",
+      "rc_pro",
+      "domicile",
+    ]) {
+      requete.attach(piece, Buffer.from("%PDF-1.4"), {
+        filename: `${piece}.pdf`,
+        contentType: "application/pdf",
+      });
+    }
+    const res = await requete;
     expect(res.status).toBe(201);
   });
 

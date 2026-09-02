@@ -81,6 +81,7 @@ export function Requis({ couleur }) {
  * @param {object}   [props.champsInitiaux]       champs propres à la page
  * @param {JSX}      [props.argumentaire]        colonne de gauche facultative
  * @param {Function} [props.bloque]              (form) => bool, désactive l'envoi
+ * @param {Function} [props.fichiers]            (form) => { champ: File }, joints à l'envoi
  */
 export default function PageDemande({
   type,
@@ -94,6 +95,7 @@ export default function PageDemande({
   champsInitiaux,
   argumentaire,
   bloque,
+  fichiers,
   children,
 }) {
   // Le socle ne connaît que les champs communs ; chaque page complète l'état
@@ -137,7 +139,29 @@ export default function PageDemande({
             message: form.message.trim() || undefined,
           };
 
-      await api.post("/auth/demande", { type, ...corps });
+      const joints = fichiers ? fichiers(form) : null;
+
+      if (joints && Object.keys(joints).length > 0) {
+        // Les pièces partent avec le formulaire, en une seule requête :
+        // le serveur n'enregistre la candidature que si le dossier est
+        // complet, les deux ne peuvent donc pas être dissociés.
+        const paquet = new FormData();
+        paquet.append("type", type);
+        for (const [cle, valeur] of Object.entries(corps)) {
+          if (valeur !== undefined && valeur !== null) {
+            paquet.append(cle, valeur);
+          }
+        }
+        for (const [cle, fichier] of Object.entries(joints)) {
+          if (fichier) paquet.append(cle, fichier);
+        }
+        await api.post("/auth/demande", paquet, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await api.post("/auth/demande", { type, ...corps });
+      }
+
       setEnvoye(true);
     } catch (err) {
       const message =

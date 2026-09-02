@@ -22,12 +22,70 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const ALLOWED_TYPES = [
   "permis",
+  "permis_verso",
   "carte_identite",
+  "carte_identite_verso",
   "assurance",
+  "kbis",
+  "rc_circulation",
+  "rc_pro",
+  "domicile",
+  "w_garage",
+];
+
+// Dossier minimal pour convoyer : identité, droit de conduire, adresse et
+// les deux responsabilités civiles. L'ancienne « assurance » générique
+// n'en fait plus partie — les deux RC la remplacent — mais reste dans
+// ALLOWED_TYPES pour que les pièces déjà déposées restent consultables.
+//
+// Le verso du permis et le Kbis, exigés des nouveaux candidats, ne sont
+// délibérément pas requis ici : les ajouter bloquerait du jour au
+// lendemain tous les convoyeurs déjà en activité, qui ne les ont jamais
+// déposés. Ils restent déposables, et le deviendront obligatoires une
+// fois les dossiers existants régularisés.
+//
+// Le W garage, lui, est facultatif par nature : il n'ouvre que des
+// missions supplémentaires et ne conditionnera jamais l'activation.
+const DOCUMENTS_REQUIS = [
+  "permis",
+  "carte_identite",
   "rc_circulation",
   "rc_pro",
   "domicile",
 ];
+
+const DOSSIER_INCOMPLET = `Votre dossier est incomplet : déposez vos ${DOCUMENTS_REQUIS.length} documents obligatoires avant de prendre une mission.`;
+
+/**
+ * État du dossier d'un convoyeur.
+ *
+ * Un document refusé compte comme absent : il devra être redéposé. Un
+ * document en attente de vérification ne bloque pas la prise de mission —
+ * exiger la validation manuelle immobiliserait les convoyeurs le week-end,
+ * quand personne n'est là pour valider et que les missions urgentes
+ * tombent. Le dépôt suffit donc ; c'est le refus, a posteriori, qui
+ * referme l'accès.
+ */
+async function etatDossier(convoyeurId) {
+  const { rows } = await db.query(
+    `SELECT type, status FROM convoyeur_documents
+      WHERE convoyeur_id = $1 AND type = ANY($2::doc_type[])`,
+    [convoyeurId, DOCUMENTS_REQUIS],
+  );
+
+  const deposes = new Set(
+    rows.filter((d) => d.status !== "refuse").map((d) => d.type),
+  );
+  const manquants = DOCUMENTS_REQUIS.filter((t) => !deposes.has(t));
+
+  return {
+    requis: DOCUMENTS_REQUIS.length,
+    deposes: deposes.size,
+    manquants,
+    refuses: rows.filter((d) => d.status === "refuse").map((d) => d.type),
+    complet: manquants.length === 0,
+  };
+}
 
 // Le type MIME est déclaré par le client : il ne prouve rien. C'est
 // l'extension du fichier stocké qui décidera du Content-Type au moment
@@ -499,6 +557,16 @@ router.post("/kaze-missions/:kazeJobId/prendre", async (req, res, next) => {
       });
     }
 
+    // Un convoyeur sans dossier complet ne peut se voir confier aucun
+    // véhicule : ni l'assurance ni la responsabilité ne seraient couvertes.
+    const dossier = await etatDossier(req.user.id);
+    if (!dossier.complet) {
+      return res.status(403).json({
+        error: DOSSIER_INCOMPLET,
+        documentsManquants: dossier.manquants,
+      });
+    }
+
     // Vérifier que la mission est encore disponible
     const job = await kazeService.fetchJob(req.params.kazeJobId);
     if (!job) {
@@ -539,6 +607,14 @@ router.post("/kaze-missions/:kazeJobId/prendre", async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 router.post("/missions/:id/prendre", async (req, res, next) => {
   try {
+    const dossier = await etatDossier(req.user.id);
+    if (!dossier.complet) {
+      return res.status(403).json({
+        error: DOSSIER_INCOMPLET,
+        documentsManquants: dossier.manquants,
+      });
+    }
+
     const { rows } = await db.query("SELECT * FROM missions WHERE id = $1", [
       req.params.id,
     ]);
@@ -692,7 +768,10 @@ router.get("/documents", async (req, res, next) => {
        ORDER BY type ASC`,
       [req.user.id],
     );
-    res.json({ documents: rows });
+    // L'état accompagne la liste : l'interface a besoin de savoir si le
+    // dossier ouvre droit aux missions, et le calculer côté client
+    // reviendrait à dupliquer la règle — avec le risque qu'elle diverge.
+    res.json({ documents: rows, dossier: await etatDossier(req.user.id) });
   } catch (err) {
     next(err);
   }
