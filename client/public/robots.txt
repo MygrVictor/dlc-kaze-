@@ -1,0 +1,12 @@
+# Les espaces authentifiés n'ont rien à faire dans un index de recherche :
+# ils renvoient de toute façon vers la connexion, et les y exposer révèle
+# inutilement la structure de l'application.
+User-agent: *
+Disallow: /client/
+Disallow: /convoyeur/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /reinitialiser-mot-de-passe
+Disallow: /uploads/
+
+Sitemap: https://www.drivelineconnect.com/sitemap.xml
