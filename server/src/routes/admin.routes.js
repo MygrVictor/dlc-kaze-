@@ -11,7 +11,7 @@ const path = require("path");
 
 // Racine des fichiers déposés. Sert à effacer du disque les pièces d'une
 // candidature écartée : la cascade SQL n'emporte que les lignes.
-const UPLOADS_DIR = path.join(__dirname, "../../../uploads");
+const UPLOADS_DIR = require("../lib/uploads").RACINE_UPLOADS;
 
 const router = express.Router();
 

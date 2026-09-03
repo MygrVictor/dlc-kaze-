@@ -207,7 +207,7 @@ app.use("/api/v1", partnerRoutes);
 //
 // Le jeton est accepté en query param car ces URL sont posées dans des
 // balises <img>/<a> qui ne peuvent pas porter d'en-tête Authorization.
-const uploadsDir = path.resolve(__dirname, "../../uploads");
+const uploadsDir = require("./lib/uploads").RACINE_UPLOADS;
 if (!require("fs").existsSync(uploadsDir))
   require("fs").mkdirSync(uploadsDir, { recursive: true });
 

@@ -17,8 +17,7 @@ const {
 } = require("../middleware/security.middleware");
 
 // ── Configuration Multer ─────────────────────────────────────
-const UPLOAD_DIR = path.join(__dirname, "../../../uploads/documents");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const UPLOAD_DIR = require("../lib/uploads").dossier("documents");
 
 const ALLOWED_TYPES = [
   "permis",

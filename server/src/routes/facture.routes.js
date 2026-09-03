@@ -27,8 +27,7 @@ const db = require("../db");
 const { authenticate, authorize } = require("../middleware/auth.middleware");
 const { auditLog } = require("../middleware/security.middleware");
 
-const UPLOAD_DIR = path.join(__dirname, "../../../uploads/factures");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const UPLOAD_DIR = require("../lib/uploads").dossier("factures");
 
 // Une facture est un document comptable : le PDF est le seul format qui
 // garantisse une mise en page stable et une valeur probante.

@@ -27,8 +27,7 @@ const router = express.Router();
 // Le dossier part avec le formulaire : cinq pièces, ni plus ni moins.
 // Les réclamer après coup par courriel n'aboutissait presque jamais, et
 // une candidature sans pièces n'est de toute façon pas instruisible.
-const UPLOAD_DIR = path.join(__dirname, "../../../uploads/documents");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const UPLOAD_DIR = require("../lib/uploads").dossier("documents");
 
 // Le permis compte pour deux pièces : la validité et les catégories
 // figurent au recto, les restrictions et la date de délivrance au verso.

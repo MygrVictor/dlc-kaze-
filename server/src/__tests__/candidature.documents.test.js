@@ -45,7 +45,7 @@ jest.mock("../services/devis.service", () => ({ generateDevisPDF: jest.fn() }));
 const db = require("../db");
 const app = require("./app.test-setup");
 
-const UPLOAD_DIR = path.join(__dirname, "../../../uploads/documents");
+const UPLOAD_DIR = path.join(process.env.UPLOADS_DIR, "documents");
 const DEMANDE_ID = "11111111-2222-3333-4444-555555555555";
 const TOKEN = "a".repeat(64);
 
