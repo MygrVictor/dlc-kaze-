@@ -88,13 +88,21 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        // Crisp (messagerie de l'espace client) charge son widget depuis
+        // ses propres domaines : sans ces autorisations, le navigateur
+        // bloque le script et aucune bulle n'apparaît.
+        scriptSrc: ["'self'", "https://client.crisp.chat"],
         // Google Fonts : la feuille de style vient de fonts.googleapis.com,
         // mais les fichiers de police (.woff2) sont servis par un autre
         // domaine, fonts.gstatic.com. Les deux sont nécessaires — n'en
         // autoriser qu'un donne un texte en police de repli, sans erreur
         // visible dans la console.
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com",
+          "https://client.crisp.chat",
+        ],
         // Fournisseurs de tuiles utilisés par la carte admin (AdminMap.jsx).
         // Toute nouvelle couche doit être ajoutée ici, sinon le navigateur
         // bloque silencieusement les images en production.
@@ -107,6 +115,9 @@ app.use(
           "https://*.tile.openstreetmap.org",
           "https://*.tile.openstreetmap.fr",
           "https://*.tile.opentopomap.org",
+          "https://client.crisp.chat",
+          "https://image.crisp.chat",
+          "https://storage.crisp.chat",
         ],
         connectSrc: [
           "'self'",
@@ -117,10 +128,22 @@ app.use(
           "https://*.tile.openstreetmap.org",
           "https://*.tile.openstreetmap.fr",
           "https://*.tile.opentopomap.org",
+          "https://client.crisp.chat",
+          // La conversation est temps réel : elle passe par une
+          // WebSocket, que `connect-src` gouverne aussi.
+          "wss://client.relay.crisp.chat",
+          "wss://stream.relay.crisp.chat",
         ].filter(Boolean),
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        fontSrc: [
+          "'self'",
+          "https://fonts.gstatic.com",
+          "https://client.crisp.chat",
+        ],
         objectSrc: ["'none'"],
-        frameSrc: ["'none'"],
+        // Crisp affiche son interface dans une iframe, et les pièces
+        // jointes envoyées par l'équipe s'ouvrent depuis son stockage.
+        frameSrc: ["'self'", "https://client.crisp.chat"],
+        mediaSrc: ["'self'", "https://client.crisp.chat"],
       },
     },
     crossOriginEmbedderPolicy: false,
