@@ -45,6 +45,7 @@ etape "Migrations de base de données"
 # Chaque migration est idempotente (IF NOT EXISTS), la rejouer est sans risque.
 node server/src/db/migrate.js
 node server/src/db/migrate-demande-documents.js
+node server/src/db/migrate-password-reset.js
 
 etape "Vérification du démarrage"
 # On lance l'application quelques secondes : mieux vaut détecter ici un module

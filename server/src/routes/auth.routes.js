@@ -737,6 +737,157 @@ router.post("/login", authLimiter, async (req, res, next) => {
   }
 });
 
+// ── Réinitialisation de mot de passe ─────────────────────────
+//
+// Durée volontairement courte : le lien vaut identification complète,
+// il n'a pas à survivre à la boîte mail qui le transporte.
+const RESET_VALIDITE_MINUTES = 30;
+
+/** Empreinte du jeton : seule elle est conservée en base. */
+const empreinte = (jeton) =>
+  crypto.createHash("sha256").update(jeton).digest("hex");
+
+router.post("/forgot-password", authLimiter, async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || "")
+      .toLowerCase()
+      .trim();
+
+    // Réponse identique quoi qu'il arrive : distinguer les cas
+    // transformerait ce point d'entrée en énumérateur de comptes.
+    const reponse = {
+      message:
+        "Si un compte existe pour cette adresse, un lien de réinitialisation vient d'être envoyé.",
+    };
+
+    if (!email) return res.json(reponse);
+
+    const { rows } = await db.query(
+      "SELECT id, email, full_name FROM users WHERE email = $1",
+      [email],
+    );
+    const user = rows[0];
+    if (!user) {
+      auditLog("PASSWORD_RESET_REQUESTED", null, {
+        ip: req.ip,
+        email,
+        reason: "user_not_found",
+      });
+      return res.json(reponse);
+    }
+
+    // Une nouvelle demande annule les précédentes : sans cela, plusieurs
+    // liens vivraient en parallèle, et le plus ancien courrier resterait
+    // exploitable longtemps après que l'utilisateur a cru le remplacer.
+    await db.query(
+      `UPDATE password_resets SET used_at = NOW()
+        WHERE user_id = $1 AND used_at IS NULL`,
+      [user.id],
+    );
+
+    const jeton = crypto.randomBytes(32).toString("hex");
+    await db.query(
+      `INSERT INTO password_resets (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval)`,
+      [user.id, empreinte(jeton), String(RESET_VALIDITE_MINUTES)],
+    );
+
+    const lien = `${process.env.CLIENT_URL}/reinitialiser-mot-de-passe?token=${jeton}`;
+
+    // L'échec d'envoi ne doit pas révéler l'existence du compte : on
+    // consigne, et la réponse reste la même.
+    try {
+      await emailService.notifyPasswordReset(
+        user.email,
+        user.full_name,
+        lien,
+        RESET_VALIDITE_MINUTES,
+      );
+    } catch (err) {
+      console.error("Envoi du lien de réinitialisation échoué :", err.message);
+    }
+
+    auditLog("PASSWORD_RESET_REQUESTED", user.id, { ip: req.ip, email });
+    res.json(reponse);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/reset-password", authLimiter, async (req, res, next) => {
+  try {
+    const { token, password } = req.body || {};
+
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json({ error: "Lien et nouveau mot de passe obligatoires." });
+    }
+    if (String(password).length < 8) {
+      return res.status(400).json({
+        error: "Le mot de passe doit contenir au moins 8 caractères.",
+      });
+    }
+
+    const { rows } = await db.query(
+      `SELECT pr.id, pr.expires_at, pr.used_at, u.id AS user_id, u.email, u.full_name
+         FROM password_resets pr
+         JOIN users u ON u.id = pr.user_id
+        WHERE pr.token_hash = $1`,
+      [empreinte(String(token))],
+    );
+    const demande = rows[0];
+
+    // Un seul message pour les trois causes d'échec — jeton inconnu,
+    // déjà consommé, expiré : les distinguer renseignerait un attaquant
+    // sur la validité des jetons qu'il essaie.
+    const invalide = () =>
+      res.status(400).json({
+        error:
+          "Ce lien n'est plus valable. Demandez-en un nouveau depuis la page de connexion.",
+      });
+
+    if (!demande || demande.used_at) return invalide();
+    if (new Date(demande.expires_at) <= new Date()) return invalide();
+
+    const hash = await bcrypt.hash(String(password), 10);
+
+    // Marquage et changement dans la même transaction : un jeton consommé
+    // sans mot de passe changé enfermerait l'utilisateur dehors.
+    await db.transaction(async (client) => {
+      await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [
+        hash,
+        demande.user_id,
+      ]);
+      await client.query(
+        "UPDATE password_resets SET used_at = NOW() WHERE id = $1",
+        [demande.id],
+      );
+    });
+
+    try {
+      await emailService.notifyPasswordChanged(
+        demande.email,
+        demande.full_name,
+      );
+    } catch (err) {
+      console.error("Envoi de la confirmation échoué :", err.message);
+    }
+
+    auditLog("PASSWORD_RESET_COMPLETED", demande.user_id, {
+      ip: req.ip,
+      email: demande.email,
+    });
+
+    res.json({
+      message:
+        "Mot de passe modifié. Vous pouvez maintenant vous connecter avec vos nouveaux identifiants.",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── Profil courant ───────────────────────────────────────────
 router.get("/me", authenticate, (req, res) => {
   res.json({ user: req.user });

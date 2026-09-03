@@ -632,6 +632,51 @@ async function notifyDemandeRecue(email, nom, type) {
   });
 }
 
+/**
+ * Lien de réinitialisation de mot de passe.
+ *
+ * L'email ne dit jamais si l'adresse est connue de la plateforme — il
+ * n'est envoyé que si elle l'est. La durée de validité est rappelée au
+ * destinataire : sans elle, un lien périmé passerait pour une panne.
+ */
+async function notifyPasswordReset(email, nom, lien, minutes) {
+  const html = baseTemplate(`
+    <h2>Bonjour${nom ? ` ${echapperHtml(nom)}` : ""},</h2>
+    <p>Vous avez demandé à réinitialiser le mot de passe de votre compte Drive Line Connect.</p>
+    <p style="text-align: center;">
+      <a href="${lien}" class="btn">Choisir un nouveau mot de passe</a>
+    </p>
+    <p style="font-size: 13px; color: #64748b;">Ce lien est valable ${minutes} minutes et ne peut servir qu'une fois.</p>
+    <p style="font-size: 13px; color: #64748b;">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.</p>
+  `);
+
+  return transporter.sendMail({
+    from: FROM,
+    to: email,
+    subject: "Réinitialisation de votre mot de passe — Drive Line Connect",
+    html,
+  });
+}
+
+/**
+ * Confirmation après changement effectif. C'est le seul signal dont
+ * dispose un utilisateur dont le compte aurait été détourné.
+ */
+async function notifyPasswordChanged(email, nom) {
+  const html = baseTemplate(`
+    <h2>Bonjour${nom ? ` ${echapperHtml(nom)}` : ""},</h2>
+    <p>Le mot de passe de votre compte Drive Line Connect vient d'être modifié.</p>
+    <p>Si vous n'êtes pas à l'origine de ce changement, contactez-nous immédiatement.</p>
+  `);
+
+  return transporter.sendMail({
+    from: FROM,
+    to: email,
+    subject: "Votre mot de passe a été modifié — Drive Line Connect",
+    html,
+  });
+}
+
 module.exports = {
   notifyDevisPropose,
   notifyMissionAssignee,
@@ -646,6 +691,8 @@ module.exports = {
   notifyMissionACoter,
   notifyDevisRefuse,
   notifyDemandeRecue,
+  notifyPasswordReset,
+  notifyPasswordChanged,
   echapperHtml,
   purgerHtml,
   purgerEntete,

@@ -162,6 +162,21 @@ export default function LoginPage() {
             style={{
               textAlign: "center",
               fontSize: 14,
+              marginTop: 16,
+            }}
+          >
+            <Link
+              to="/mot-de-passe-oublie"
+              style={{ color: "var(--graphite-soft)", fontWeight: 600 }}
+            >
+              Mot de passe oublié ?
+            </Link>
+          </p>
+
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: 14,
               color: "var(--graphite-soft)",
               marginTop: 24,
             }}

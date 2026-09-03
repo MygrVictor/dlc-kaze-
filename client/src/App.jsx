@@ -8,6 +8,8 @@ import DashboardLayout from "./layouts/DashboardLayout";
 // Pages publiques
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
+import MotDePasseOubliePage from "./pages/MotDePasseOubliePage";
+import ReinitialiserMotDePassePage from "./pages/ReinitialiserMotDePassePage";
 import DevenirConvoyeurPage from "./pages/DevenirConvoyeurPage";
 import EtreRappelePage from "./pages/EtreRappelePage";
 
@@ -72,6 +74,11 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/mot-de-passe-oublie" element={<MotDePasseOubliePage />} />
+        <Route
+          path="/reinitialiser-mot-de-passe"
+          element={<ReinitialiserMotDePassePage />}
+        />
         <Route path="/devenir-convoyeur" element={<DevenirConvoyeurPage />} />
         <Route path="/etre-rappele" element={<EtreRappelePage />} />
         {/* L'ouverture de compte en libre-service laissait entrer des
