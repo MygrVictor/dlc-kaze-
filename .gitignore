@@ -30,6 +30,16 @@ uploads/
 *.log
 .DS_Store
 
+# Répertoire surveillé par Passenger (o2switch) : y toucher `restart.txt`
+# recharge l'application, mais rien de tout cela n'a à être versionné.
+tmp/
+
+# Résidus laissés par le wrapper npm de cPanel : lancé avec un `--prefix`
+# inadapté, il fabrique dans le dépôt des dossiers portant le nom du paquet
+# ou de la commande. Purement parasites.
+/node
+/npm
+/*@[0-9]*
 
 # Archives de déploiement (générées localement)
 *.zip
