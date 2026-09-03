@@ -15,6 +15,7 @@
     "migrate:docs-rc": "node src/db/migrate-docs-rc.js",
     "migrate:demande-docs": "node src/db/migrate-demande-documents.js",
     "migrate:password-reset": "node src/db/migrate-password-reset.js",
+    "migrate:index-tri": "node src/db/migrate-index-tri.js",
     "migrate:missions-internes": "node src/db/migrate-missions-internes.js",
     "migrate:vitrine": "npm run migrate:demande-poste && npm run migrate:convoyeur-qualif",
     "seed": "node src/db/seed.js",

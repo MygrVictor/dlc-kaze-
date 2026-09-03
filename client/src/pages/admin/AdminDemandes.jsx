@@ -70,6 +70,10 @@ export default function AdminDemandes() {
   const [filtreType, setFiltreType] = useState("");
   const [aSupprimer, setASupprimer] = useState(null);
   const [suppression, setSuppression] = useState(false);
+  // Le serveur ne renvoie plus tout l'historique d'un coup : on affiche les
+  // plus récentes et l'on remonte à la demande de l'utilisateur.
+  const [plafond, setPlafond] = useState(100);
+  const [reste, setReste] = useState(false);
 
   // Conversion : la demande sert de brouillon au formulaire de création.
   const [conversion, setConversion] = useState(null);
@@ -82,14 +86,18 @@ export default function AdminDemandes() {
     const params = new URLSearchParams();
     if (filtreStatut) params.set("status", filtreStatut);
     if (filtreType) params.set("type", filtreType);
-    const qs = params.toString() ? `?${params.toString()}` : "";
+    params.set("limit", String(plafond));
+    const qs = `?${params.toString()}`;
 
     api
       .get(`/admin/demandes${qs}`)
-      .then((res) => setDemandes(res.data.demandes))
+      .then((res) => {
+        setDemandes(res.data.demandes);
+        setReste(Boolean(res.data.pagination?.hasMore));
+      })
       .catch(() => toast.error("Erreur de chargement des demandes."))
       .finally(() => setLoading(false));
-  }, [filtreStatut, filtreType]);
+  }, [filtreStatut, filtreType, plafond]);
 
   useEffect(charger, [charger]);
 
@@ -417,6 +425,17 @@ export default function AdminDemandes() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {reste && !loading && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={() => setPlafond((p) => p + 100)}
+            className="btn-secondary"
+          >
+            Afficher les demandes plus anciennes
+          </button>
         </div>
       )}
 

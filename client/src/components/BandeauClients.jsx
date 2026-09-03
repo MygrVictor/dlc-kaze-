@@ -24,20 +24,20 @@ import LogoClient from "./LogoClient";
  * petits à emprise égale, faute d'une marge blanche intégrée au fichier.
  */
 const CLIENTS = [
-  { nom: "GRDF", src: "/images/clients/grdf.png" },
-  { nom: "EQUANS", src: "/images/clients/equans.png" },
-  { nom: "Groupe GCA", src: "/images/clients/gca.png" },
-  { nom: "Groupe 2L Logistics", src: "/images/clients/2l-logistics.png" },
-  { nom: "La Coopérative Welcoop", src: "/images/clients/welcoop.png" },
-  { nom: "Land Rover", src: "/images/clients/land-rover.png" },
-  { nom: "Altacama", src: "/images/clients/altacama.png" },
+  { nom: "GRDF", src: "/images/clients/grdf.webp" },
+  { nom: "EQUANS", src: "/images/clients/equans.webp" },
+  { nom: "Groupe GCA", src: "/images/clients/gca.webp" },
+  { nom: "Groupe 2L Logistics", src: "/images/clients/2l-logistics.webp" },
+  { nom: "La Coopérative Welcoop", src: "/images/clients/welcoop.webp" },
+  { nom: "Land Rover", src: "/images/clients/land-rover.webp" },
+  { nom: "Altacama", src: "/images/clients/altacama.webp" },
   {
     nom: "Saga Mercedes",
-    src: "/images/clients/saga-mercedes.png",
+    src: "/images/clients/saga-mercedes.webp",
     echelle: 1.25,
   },
-  { nom: "By My Car", src: "/images/clients/by-my-car.png" },
-  { nom: "Cristalens", src: "/images/clients/cristalens.png" },
+  { nom: "By My Car", src: "/images/clients/by-my-car.webp" },
+  { nom: "Cristalens", src: "/images/clients/cristalens.webp" },
 ];
 
 /**
@@ -50,9 +50,9 @@ const CLIENTS = [
  * d'un coup d'œil, et le mouvement détournerait de la mention d'assurance.
  */
 const ASSUREURS = [
-  { nom: "Areas Assurances", src: "/images/assurance/areas.png" },
-  { nom: "Tetris Assurance", src: "/images/assurance/tetris.png" },
-  { nom: "Generali", src: "/images/assurance/generali.png" },
+  { nom: "Areas Assurances", src: "/images/assurance/areas.webp" },
+  { nom: "Tetris Assurance", src: "/images/assurance/tetris.webp" },
+  { nom: "Generali", src: "/images/assurance/generali.webp" },
 ];
 
 export default function BandeauClients() {

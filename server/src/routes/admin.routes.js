@@ -279,7 +279,11 @@ router.get("/stats", async (_req, res, next) => {
 
 router.get("/demandes", async (req, res, next) => {
   try {
-    const { status, type } = req.query;
+    const { status, type, limit = 100 } = req.query;
+    // Chaque ligne embarque la liste de ses pièces jointes : sans plafond,
+    // la réponse gonflait avec l'ancienneté du service. Le client demande
+    // explicitement davantage lorsqu'il veut remonter plus loin.
+    const safeLimit = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
     const conditions = [];
     const params = [];
 
@@ -293,8 +297,9 @@ router.get("/demandes", async (req, res, next) => {
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const { rows } = await db.query(
-      `SELECT cr.id, cr.type, cr.first_name, cr.last_name, cr.company, cr.job_title,
+    const [{ rows }, { rows: countRows }] = await Promise.all([
+      db.query(
+        `SELECT cr.id, cr.type, cr.first_name, cr.last_name, cr.company, cr.job_title,
               cr.email, cr.phone, cr.message,
               cr.siret, cr.rc_circulation, cr.rc_pro, cr.w_garage,
               cr.status, cr.admin_note, cr.converted_user_id, cr.handled_at, cr.created_at,
@@ -314,11 +319,18 @@ router.get("/demandes", async (req, res, next) => {
               ) AS documents
          FROM contact_requests cr
          ${where}
-         ORDER BY cr.created_at DESC`,
-      params,
-    );
+         ORDER BY cr.created_at DESC
+         LIMIT $${params.length + 1}`,
+        [...params, safeLimit],
+      ),
+      db.query(`SELECT COUNT(*) FROM contact_requests cr ${where}`, params),
+    ]);
 
-    res.json({ demandes: rows });
+    const total = parseInt(countRows[0]?.count || "0", 10);
+    res.json({
+      demandes: rows,
+      pagination: { limit: safeLimit, total, hasMore: rows.length < total },
+    });
   } catch (err) {
     next(err);
   }
@@ -420,16 +432,29 @@ router.delete("/demandes/:id", async (req, res, next) => {
 
 router.get("/users", async (req, res, next) => {
   try {
-    const { role } = req.query;
+    const { role, limit = 100 } = req.query;
+    const safeLimit = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
     let query = `SELECT id, email, full_name, phone, company, role, is_validated, kaze_driver_id, created_at FROM users`;
+    let countQuery = `SELECT COUNT(*) FROM users`;
     const params = [];
     if (role) {
-      query += " WHERE role = $1";
+      const where = " WHERE role = $1";
+      query += where;
+      countQuery += where;
       params.push(role);
     }
-    query += " ORDER BY created_at DESC";
-    const { rows } = await db.query(query, params);
-    res.json({ users: rows });
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
+
+    const [{ rows }, { rows: countRows }] = await Promise.all([
+      db.query(query, [...params, safeLimit]),
+      db.query(countQuery, params),
+    ]);
+
+    const total = parseInt(countRows[0]?.count || "0", 10);
+    res.json({
+      users: rows,
+      pagination: { limit: safeLimit, total, hasMore: rows.length < total },
+    });
   } catch (err) {
     next(err);
   }

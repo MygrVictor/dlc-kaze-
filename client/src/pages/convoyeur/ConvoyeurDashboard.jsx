@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import BandeauDossier from "../../components/BandeauDossier";
+import useSondage from "../../lib/useSondage";
 
 export default function ConvoyeurDashboard() {
   const [missions, setMissions] = useState([]);
@@ -43,7 +44,6 @@ export default function ConvoyeurDashboard() {
   const [missionsDispoCount, setMissionsDispoCount] = useState(0);
 
   const fetchMissions = useCallback(() => {
-    setLoading(true);
     api
       .get("/convoyeur/missions")
       .then((res) => {
@@ -67,16 +67,18 @@ export default function ConvoyeurDashboard() {
     }
   }, []);
 
-  useEffect(() => {
+  const rafraichir = useCallback(() => {
     fetchMissions();
     fetchMissionsDispoCount();
-    // Auto-refresh toutes les 30s
-    const interval = setInterval(() => {
-      fetchMissions();
-      fetchMissionsDispoCount();
-    }, 30000);
-    return () => clearInterval(interval);
   }, [fetchMissions, fetchMissionsDispoCount]);
+
+  useEffect(() => {
+    rafraichir();
+  }, [rafraichir]);
+
+  // Le planning d'un convoyeur ne change qu'au rythme des décisions de
+  // l'exploitation : une minute est largement suffisante.
+  useSondage(rafraichir, 60000);
 
   // ── Actions ──────────────────────────────────────────────
   // Le démarrage et la clôture d'une mission n'existent plus ici : ils se

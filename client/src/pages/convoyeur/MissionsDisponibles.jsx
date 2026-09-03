@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
+import useSondage from "../../lib/useSondage";
 import { libelle, classeDePeage } from "../../lib/vehicules";
 import BandeauDossier from "../../components/BandeauDossier";
 import {
@@ -36,7 +37,6 @@ export default function MissionsDisponibles() {
 
   const fetchMissions = useCallback(async () => {
     try {
-      setLoading(true);
       const { data } = await api.get("/convoyeur/missions-disponibles");
       setMissions(data.missions || data);
     } catch {
@@ -48,10 +48,12 @@ export default function MissionsDisponibles() {
 
   useEffect(() => {
     fetchMissions();
-    // Rafraîchir toutes les 15 secondes pour le temps réel
-    const interval = setInterval(fetchMissions, 15000);
-    return () => clearInterval(interval);
   }, [fetchMissions]);
+
+  // Une minute au lieu de quinze secondes. La prise de mission reste
+  // arbitrée par le serveur : un affichage légèrement en retard ne peut pas
+  // provoquer de double attribution, au pire un message d'indisponibilité.
+  useSondage(fetchMissions, 60000);
 
   const handlePrendre = async (mission) => {
     if (!confirm("Voulez-vous vraiment prendre cette mission ?")) return;

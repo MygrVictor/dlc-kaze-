@@ -78,13 +78,22 @@ export default function AdminUsers() {
   // Envoi en cours, par identifiant : le tableau peut compter des
   // dizaines de lignes, un indicateur global ne dirait pas laquelle.
   const [envoiReset, setEnvoiReset] = useState({});
+  // Même principe que les demandes : la liste complète n'est plus chargée
+  // systématiquement, elle s'étend à la demande.
+  const [plafond, setPlafond] = useState(100);
+  const [reste, setReste] = useState(false);
 
   const fetchUsers = () => {
     setLoading(true);
-    const params = roleFilter ? `?role=${roleFilter}` : "";
+    const params = new URLSearchParams();
+    if (roleFilter) params.set("role", roleFilter);
+    params.set("limit", String(plafond));
     api
-      .get(`/admin/users${params}`)
-      .then((res) => setUsers(res.data.users))
+      .get(`/admin/users?${params.toString()}`)
+      .then((res) => {
+        setUsers(res.data.users);
+        setReste(Boolean(res.data.pagination?.hasMore));
+      })
       .catch((err) => {
         console.error(err);
         toast.error("Erreur de chargement des utilisateurs.");
@@ -92,7 +101,7 @@ export default function AdminUsers() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(fetchUsers, [roleFilter]);
+  useEffect(fetchUsers, [roleFilter, plafond]);
 
   const handleValidate = async (userId) => {
     try {
@@ -460,6 +469,17 @@ export default function AdminUsers() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {reste && !loading && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={() => setPlafond((p) => p + 100)}
+            className="btn-secondary"
+          >
+            Afficher les comptes plus anciens
+          </button>
         </div>
       )}
 

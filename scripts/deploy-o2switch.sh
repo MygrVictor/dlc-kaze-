@@ -53,6 +53,7 @@ etape "Migrations de base de données"
 node server/src/db/migrate.js
 node server/src/db/migrate-demande-documents.js
 node server/src/db/migrate-password-reset.js
+node server/src/db/migrate-index-tri.js
 
 etape "Vérification du démarrage"
 # On lance l'application quelques secondes : mieux vaut détecter ici un module
