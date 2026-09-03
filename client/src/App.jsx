@@ -1,39 +1,69 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
-// Layouts
+// La page d'accueil et son gabarit sont les seuls modules chargés
+// immédiatement : ce sont eux que découvre un visiteur venu de Google.
+// Tout le reste est découpé en fichiers séparés par `lazy()`, téléchargés
+// uniquement lorsque l'internaute emprunte la route correspondante. Sans
+// cela, chaque visiteur de la vitrine téléchargeait aussi les espaces
+// client, convoyeur et administration — dont la cartographie Leaflet.
 import PublicLayout from "./layouts/PublicLayout";
-import DashboardLayout from "./layouts/DashboardLayout";
+import LandingPage from "./pages/LandingPage";
+
+const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
 
 // Pages publiques
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import MotDePasseOubliePage from "./pages/MotDePasseOubliePage";
-import ReinitialiserMotDePassePage from "./pages/ReinitialiserMotDePassePage";
-import DevenirConvoyeurPage from "./pages/DevenirConvoyeurPage";
-import EtreRappelePage from "./pages/EtreRappelePage";
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const MotDePasseOubliePage = lazy(() => import("./pages/MotDePasseOubliePage"));
+const ReinitialiserMotDePassePage = lazy(
+  () => import("./pages/ReinitialiserMotDePassePage"),
+);
+const DevenirConvoyeurPage = lazy(() => import("./pages/DevenirConvoyeurPage"));
+const EtreRappelePage = lazy(() => import("./pages/EtreRappelePage"));
 
 // Pages Client
-import ClientDashboard from "./pages/client/ClientDashboard";
-import NewMission from "./pages/client/NewMission";
-import MissionDetail from "./pages/client/MissionDetail";
-import ClientFactures from "./pages/client/ClientFactures";
+const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
+const NewMission = lazy(() => import("./pages/client/NewMission"));
+const MissionDetail = lazy(() => import("./pages/client/MissionDetail"));
+const ClientFactures = lazy(() => import("./pages/client/ClientFactures"));
 
 // Pages Admin
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminMissions from "./pages/admin/AdminMissions";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminDemandes from "./pages/admin/AdminDemandes";
-import AdminMap from "./pages/admin/AdminMap";
-import AdminKaze from "./pages/admin/AdminKaze";
-import AdminFactures from "./pages/admin/AdminFactures";
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminMissions = lazy(() => import("./pages/admin/AdminMissions"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminDemandes = lazy(() => import("./pages/admin/AdminDemandes"));
+const AdminMap = lazy(() => import("./pages/admin/AdminMap"));
+const AdminKaze = lazy(() => import("./pages/admin/AdminKaze"));
+const AdminFactures = lazy(() => import("./pages/admin/AdminFactures"));
 
 // Pages Convoyeur
-import ConvoyeurDashboard from "./pages/convoyeur/ConvoyeurDashboard";
-import MissionsDisponibles from "./pages/convoyeur/MissionsDisponibles";
-import ConvoyeurHistorique from "./pages/convoyeur/ConvoyeurHistorique";
-import ConvoyeurProfil from "./pages/convoyeur/ConvoyeurProfil";
-import ConvoyeurFactures from "./pages/convoyeur/ConvoyeurFactures";
+const ConvoyeurDashboard = lazy(
+  () => import("./pages/convoyeur/ConvoyeurDashboard"),
+);
+const MissionsDisponibles = lazy(
+  () => import("./pages/convoyeur/MissionsDisponibles"),
+);
+const ConvoyeurHistorique = lazy(
+  () => import("./pages/convoyeur/ConvoyeurHistorique"),
+);
+const ConvoyeurProfil = lazy(() => import("./pages/convoyeur/ConvoyeurProfil"));
+const ConvoyeurFactures = lazy(
+  () => import("./pages/convoyeur/ConvoyeurFactures"),
+);
+
+// ── Écran d'attente ─────────────────────────────────────────
+// Affiché le temps que le fichier de la page demandée arrive. Il reprend
+// l'apparence de l'attente d'authentification pour que la transition ne
+// se remarque pas.
+function Chargement() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-dark-950">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500" />
+    </div>
+  );
+}
+
 // ── Route protégée ──────────────────────────────────────────
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -69,92 +99,97 @@ export default function App() {
   };
 
   return (
-    <Routes>
-      {/* ── Pages publiques ──────────────────── */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/mot-de-passe-oublie" element={<MotDePasseOubliePage />} />
-        <Route
-          path="/reinitialiser-mot-de-passe"
-          element={<ReinitialiserMotDePassePage />}
-        />
-        <Route path="/devenir-convoyeur" element={<DevenirConvoyeurPage />} />
-        <Route path="/etre-rappele" element={<EtreRappelePage />} />
-        {/* L'ouverture de compte en libre-service laissait entrer des
+    <Suspense fallback={<Chargement />}>
+      <Routes>
+        {/* ── Pages publiques ──────────────────── */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/mot-de-passe-oublie"
+            element={<MotDePasseOubliePage />}
+          />
+          <Route
+            path="/reinitialiser-mot-de-passe"
+            element={<ReinitialiserMotDePassePage />}
+          />
+          <Route path="/devenir-convoyeur" element={<DevenirConvoyeurPage />} />
+          <Route path="/etre-rappele" element={<EtreRappelePage />} />
+          {/* L'ouverture de compte en libre-service laissait entrer des
             dossiers non qualifiés : les comptes clients sont désormais
             créés par nos soins après l'entretien téléphonique. Les liens
             et signets existants restent valides. */}
-        <Route
-          path="/devenir-client"
-          element={<Navigate to="/etre-rappele" replace />}
-        />
-        <Route
-          path="/register"
-          element={<Navigate to="/etre-rappele" replace />}
-        />
-      </Route>
+          <Route
+            path="/devenir-client"
+            element={<Navigate to="/etre-rappele" replace />}
+          />
+          <Route
+            path="/register"
+            element={<Navigate to="/etre-rappele" replace />}
+          />
+        </Route>
 
-      {/* ── Dashboard Client ─────────────────── */}
-      <Route
-        path="/client"
-        element={
-          <ProtectedRoute roles={["client"]}>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<ClientDashboard />} />
-        <Route path="nouvelle-mission" element={<NewMission />} />
-        <Route path="missions/:id" element={<MissionDetail />} />
-        <Route path="factures" element={<ClientFactures />} />
-      </Route>
+        {/* ── Dashboard Client ─────────────────── */}
+        <Route
+          path="/client"
+          element={
+            <ProtectedRoute roles={["client"]}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ClientDashboard />} />
+          <Route path="nouvelle-mission" element={<NewMission />} />
+          <Route path="missions/:id" element={<MissionDetail />} />
+          <Route path="factures" element={<ClientFactures />} />
+        </Route>
 
-      {/* ── Dashboard Admin ──────────────────── */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute roles={["admin"]}>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<AdminDashboard />} />
-        <Route path="missions" element={<AdminMissions />} />
-        {/* Même formulaire que le client : les champs administratifs
+        {/* ── Dashboard Admin ──────────────────── */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="missions" element={<AdminMissions />} />
+          {/* Même formulaire que le client : les champs administratifs
             n'apparaissent que si le compte connecté est admin. */}
-        <Route path="nouvelle-mission" element={<NewMission />} />
-        <Route path="carte" element={<AdminMap />} />
-        <Route path="utilisateurs" element={<AdminUsers />} />
-        <Route path="demandes" element={<AdminDemandes />} />
-        <Route path="factures" element={<AdminFactures />} />
-        <Route path="kaze" element={<AdminKaze />} />
-      </Route>
+          <Route path="nouvelle-mission" element={<NewMission />} />
+          <Route path="carte" element={<AdminMap />} />
+          <Route path="utilisateurs" element={<AdminUsers />} />
+          <Route path="demandes" element={<AdminDemandes />} />
+          <Route path="factures" element={<AdminFactures />} />
+          <Route path="kaze" element={<AdminKaze />} />
+        </Route>
 
-      {/* ── Portail Convoyeur ────────────────── */}
-      <Route
-        path="/convoyeur"
-        element={
-          <ProtectedRoute roles={["convoyeur"]}>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<ConvoyeurDashboard />} />
-        <Route path="disponibles" element={<MissionsDisponibles />} />{" "}
-        <Route path="historique" element={<ConvoyeurHistorique />} />{" "}
-        <Route path="profil" element={<ConvoyeurProfil />} />
-        <Route path="factures" element={<ConvoyeurFactures />} />
-      </Route>
+        {/* ── Portail Convoyeur ────────────────── */}
+        <Route
+          path="/convoyeur"
+          element={
+            <ProtectedRoute roles={["convoyeur"]}>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ConvoyeurDashboard />} />
+          <Route path="disponibles" element={<MissionsDisponibles />} />{" "}
+          <Route path="historique" element={<ConvoyeurHistorique />} />{" "}
+          <Route path="profil" element={<ConvoyeurProfil />} />
+          <Route path="factures" element={<ConvoyeurFactures />} />
+        </Route>
 
-      {/* ── Raccourci dashboard ──────────────── */}
-      <Route
-        path="/dashboard"
-        element={<Navigate to={getDashboardPath()} replace />}
-      />
+        {/* ── Raccourci dashboard ──────────────── */}
+        <Route
+          path="/dashboard"
+          element={<Navigate to={getDashboardPath()} replace />}
+        />
 
-      {/* ── 404 ──────────────────────────────── */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* ── 404 ──────────────────────────────── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
