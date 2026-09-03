@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import TelephoneRequis from "../components/TelephoneRequis";
+import CrispChat from "../components/CrispChat";
 
 /**
  * Reproduit la règle serveur : seuls les mobiles reçoivent WhatsApp.
@@ -240,6 +241,10 @@ export default function DashboardLayout() {
         theme === "light" ? "theme-light bg-slate-100" : "bg-slate-950"
       }`}
     >
+      {/* Messagerie réservée aux clients : les convoyeurs passent par
+          l'équipe opérationnelle, et les administrateurs sont de l'autre
+          côté de la conversation. */}
+      {user?.role === "client" && <CrispChat user={user} />}
       {/* ── Sidebar desktop ──────────────────── */}
       <aside className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-30 bg-slate-900 border-r border-slate-800">
         <Sidebar />
