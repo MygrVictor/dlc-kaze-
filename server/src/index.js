@@ -351,11 +351,34 @@ app.get("/api/health", (_req, res) => {
 if (isProduction) {
   const clientBuild = path.resolve(__dirname, "../../client/dist");
   app.use(express.static(clientBuild));
-  // SPA fallback : toute route non-API renvoie index.html
+
+  // Adresses que l'application React ne connaît pas : elles n'ont aucune
+  // raison de recevoir la page d'accueil.
+  //
+  // Le repli SPA est indispensable pour que /devenir-convoyeur fonctionne
+  // au rechargement, mais appliqué sans discernement il répondait 200 à
+  // tout — y compris aux robots qui sondent /.env, /wp-login.php ou
+  // /storage/logs/laravel.log. Deux effets : ces scanners croient avoir
+  // trouvé quelque chose, et Google indexe des centaines d'adresses
+  // servant la même page, ce qu'il pénalise comme du contenu dupliqué.
+  //
+  // On ne peut pas énumérer les routes valides ici sans les dédoubler du
+  // client. On écarte donc ce qui ne peut manifestement pas en être une :
+  // toute adresse portant une extension de fichier — le fichier aurait
+  // été servi par `express.static` s'il existait — et les chemins
+  // caractéristiques des sondages automatisés.
+  const RESSOURCE_ABSENTE = /\.[a-z0-9]{1,6}$/i;
+  const SONDAGE_CONNU =
+    /^\/(wp-|wordpress|xmlrpc|feed|storage|vendor|\.git|\.env)/i;
+
   app.get("*", (req, res) => {
-    if (!req.path.startsWith("/api")) {
-      res.sendFile(path.join(clientBuild, "index.html"));
+    if (req.path.startsWith("/api")) return;
+
+    if (RESSOURCE_ABSENTE.test(req.path) || SONDAGE_CONNU.test(req.path)) {
+      return res.status(404).type("text/plain").send("Introuvable");
     }
+
+    res.sendFile(path.join(clientBuild, "index.html"));
   });
 }
 
