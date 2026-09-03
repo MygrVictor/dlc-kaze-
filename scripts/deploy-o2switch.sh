@@ -21,8 +21,15 @@ etape() { printf "\n\033[1;36m▸ %s\033[0m\n" "$1"; }
 
 # L'environnement virtuel fournit le bon `node` (v22) ; sans lui, le node
 # système est trop ancien et l'application refuse de démarrer.
+#
+# `set -u` est levé le temps du chargement : le script d'activation généré
+# par cPanel lit CL_VIRTUAL_ENV avant de la définir, ce qui suffirait à
+# tout interrompre — un défaut qui n'est pas le nôtre et que nous ne
+# pouvons pas corriger, le fichier étant régénéré par l'hébergeur.
+set +u
 # shellcheck disable=SC1090
 source "$NODE_ENV_ACTIVATE"
+set -u
 cd "$RACINE"
 
 etape "Sauvegarde de la base"
