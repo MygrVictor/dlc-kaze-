@@ -2,7 +2,15 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
+    <!-- Le SVG sert les navigateurs modernes, le PNG assure le repli et
+         l'icône d'accueil sur iOS, qui ignore les favicons vectoriels. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <!-- Colore la barre d'adresse sur mobile, et l'habillage de la
+         fenêtre lorsque le site est installé depuis le navigateur. -->
+    <meta name="theme-color" content="#0b1d3a" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
