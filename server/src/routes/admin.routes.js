@@ -6,6 +6,7 @@ const syncService = require("../services/sync.service");
 const emailService = require("../services/email.service");
 const geocodingService = require("../services/geocoding.service");
 const { auditLog } = require("../middleware/security.middleware");
+const { creerLienReinitialisation } = require("../lib/password-reset");
 const fs = require("fs");
 const path = require("path");
 
@@ -458,6 +459,62 @@ router.patch("/users/:id/validate", async (req, res, next) => {
     res.json({
       user: updated.rows[0],
       message: `${updated.rows[0].role === "convoyeur" ? "Convoyeur" : "Client"} validé.`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Envoi d'un lien de réinitialisation à la demande d'un administrateur.
+ *
+ * Cas d'usage : l'utilisateur appelle parce qu'il n'arrive plus à se
+ * connecter et ne retrouve pas le courrier automatique. L'administrateur
+ * relance la procédure sans jamais connaître le mot de passe — c'est ce
+ * qui distingue ce bouton de l'ancienne pratique consistant à en générer
+ * un et à le dicter au téléphone.
+ *
+ * Contrairement à la route publique, l'échec est ici explicite : la
+ * réponse va à un administrateur, qui doit savoir si l'envoi a abouti.
+ */
+router.post("/users/:id/reset-password", async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT id, email, full_name, role FROM users WHERE id = $1",
+      [req.params.id],
+    );
+    const user = rows[0];
+    if (!user)
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+
+    const { lien, minutes } = await creerLienReinitialisation(user.id);
+
+    try {
+      await emailService.notifyPasswordReset(
+        user.email,
+        user.full_name,
+        lien,
+        minutes,
+      );
+    } catch (emailErr) {
+      console.error(
+        "⚠️ Lien de réinitialisation non envoyé :",
+        emailErr.message,
+      );
+      return res.status(502).json({
+        error:
+          "Le lien a été créé mais l'email n'est pas parti. Réessayez dans quelques instants.",
+      });
+    }
+
+    auditLog("PASSWORD_RESET_SENT_BY_ADMIN", req.user.id, {
+      ip: req.ip,
+      cible: user.email,
+      role: user.role,
+    });
+
+    res.json({
+      message: `Lien de réinitialisation envoyé à ${user.email}. Il est valable ${minutes} minutes.`,
     });
   } catch (err) {
     next(err);

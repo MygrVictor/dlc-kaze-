@@ -27,6 +27,8 @@ import {
   CreditCard,
   ShieldCheck,
   Home,
+  KeyRound,
+  Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -73,6 +75,10 @@ export default function AdminUsers() {
   const [deleteModal, setDeleteModal] = useState(null); // user obj
   const [deleting, setDeleting] = useState(false);
 
+  // Envoi en cours, par identifiant : le tableau peut compter des
+  // dizaines de lignes, un indicateur global ne dirait pas laquelle.
+  const [envoiReset, setEnvoiReset] = useState({});
+
   const fetchUsers = () => {
     setLoading(true);
     const params = roleFilter ? `?role=${roleFilter}` : "";
@@ -95,6 +101,27 @@ export default function AdminUsers() {
       fetchUsers();
     } catch (err) {
       toast.error(err.response?.data?.error || "Erreur.");
+    }
+  };
+
+  // L'administrateur ne voit jamais le mot de passe : il déclenche le
+  // même parcours que le « mot de passe oublié », l'utilisateur reste
+  // seul à choisir le sien.
+  const handleEnvoyerReset = async (u) => {
+    if (
+      !confirm(
+        `Envoyer un lien de réinitialisation à ${u.email} ?\nSon mot de passe actuel reste valable tant qu'il ne l'utilise pas.`,
+      )
+    )
+      return;
+    setEnvoiReset((p) => ({ ...p, [u.id]: true }));
+    try {
+      const { data } = await api.post(`/admin/users/${u.id}/reset-password`);
+      toast.success(data.message);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de l'envoi.");
+    } finally {
+      setEnvoiReset((p) => ({ ...p, [u.id]: false }));
     }
   };
 
@@ -396,6 +423,20 @@ export default function AdminUsers() {
                               Valider
                             </button>
                           )}
+                        {u.role !== "admin" && (
+                          <button
+                            onClick={() => handleEnvoyerReset(u)}
+                            disabled={envoiReset[u.id]}
+                            className="p-1.5 rounded-lg text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
+                            title="Envoyer un lien de réinitialisation de mot de passe"
+                          >
+                            {envoiReset[u.id] ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <KeyRound size={15} />
+                            )}
+                          </button>
+                        )}
                         {u.role !== "admin" && (
                           <button
                             onClick={() => setDeleteModal(u)}

@@ -42,6 +42,7 @@ jest.mock("../services/email.service", () => ({
   notifyDevisPropose: jest.fn().mockResolvedValue(undefined),
   notifyMissionAssignee: jest.fn().mockResolvedValue(undefined),
   notifyMissionDisponible: jest.fn().mockResolvedValue(undefined),
+  notifyPasswordReset: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("../services/geocoding.service", () => ({
@@ -499,6 +500,84 @@ describe("Gestion des utilisateurs", () => {
     const res = await auth(request(app).delete(`/api/admin/users/${USER_ID}`));
 
     expect(res.status).toBe(404);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+//  POST /api/admin/users/:id/reset-password
+// ═════════════════════════════════════════════════════════════
+describe("POST /api/admin/users/:id/reset-password", () => {
+  const CIBLE = {
+    id: USER_ID,
+    email: "convoyeur@test.com",
+    full_name: "Jean Convoyeur",
+    role: "convoyeur",
+  };
+
+  const isLectureCible = (sql) =>
+    /SELECT id, email, full_name, role FROM users WHERE id = \$1/i.test(sql);
+
+  it("envoie le lien et journalise l'action", async () => {
+    const requetes = [];
+    mockDb(ADMIN, (sql) => {
+      requetes.push(sql);
+      if (isLectureCible(sql)) return { rows: [CIBLE] };
+    });
+
+    const res = await auth(
+      request(app).post(`/api/admin/users/${USER_ID}/reset-password`),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/convoyeur@test\.com/);
+    expect(emailService.notifyPasswordReset).toHaveBeenCalledTimes(1);
+
+    // Le jeton doit être créé, et les précédents invalidés.
+    expect(requetes.some((s) => /INSERT INTO password_resets/i.test(s))).toBe(
+      true,
+    );
+    expect(
+      requetes.some((s) => /UPDATE password_resets SET used_at/i.test(s)),
+    ).toBe(true);
+  });
+
+  it("ne communique jamais le jeton à l'administrateur", async () => {
+    mockDb(ADMIN, (sql) => {
+      if (isLectureCible(sql)) return { rows: [CIBLE] };
+    });
+
+    const res = await auth(
+      request(app).post(`/api/admin/users/${USER_ID}/reset-password`),
+    );
+
+    expect(JSON.stringify(res.body)).not.toMatch(/[0-9a-f]{64}/);
+  });
+
+  it("retourne 404 pour un utilisateur inconnu", async () => {
+    mockDb(ADMIN, () => ({ rows: [] }));
+
+    const res = await auth(
+      request(app).post(`/api/admin/users/${USER_ID}/reset-password`),
+    );
+
+    expect(res.status).toBe(404);
+    expect(emailService.notifyPasswordReset).not.toHaveBeenCalled();
+  });
+
+  it("signale l'échec d'envoi plutôt que de le taire", async () => {
+    mockDb(ADMIN, (sql) => {
+      if (isLectureCible(sql)) return { rows: [CIBLE] };
+    });
+    emailService.notifyPasswordReset.mockRejectedValueOnce(
+      new Error("SMTP indisponible"),
+    );
+
+    const res = await auth(
+      request(app).post(`/api/admin/users/${USER_ID}/reset-password`),
+    );
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toMatch(/email n'est pas parti/i);
   });
 });
 

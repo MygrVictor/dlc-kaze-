@@ -14,6 +14,10 @@ const {
   sanitizeInputs,
 } = require("../middleware/security.middleware");
 const emailService = require("../services/email.service");
+const {
+  creerLienReinitialisation,
+  empreinte,
+} = require("../lib/password-reset");
 const kazeService = require("../services/kaze.service");
 const { isValidSiret, normaliserSiret } = require("../lib/siret");
 
@@ -739,14 +743,6 @@ router.post("/login", authLimiter, async (req, res, next) => {
 
 // ── Réinitialisation de mot de passe ─────────────────────────
 //
-// Durée volontairement courte : le lien vaut identification complète,
-// il n'a pas à survivre à la boîte mail qui le transporte.
-const RESET_VALIDITE_MINUTES = 30;
-
-/** Empreinte du jeton : seule elle est conservée en base. */
-const empreinte = (jeton) =>
-  crypto.createHash("sha256").update(jeton).digest("hex");
-
 router.post("/forgot-password", authLimiter, async (req, res, next) => {
   try {
     const email = String(req.body?.email || "")
@@ -776,23 +772,7 @@ router.post("/forgot-password", authLimiter, async (req, res, next) => {
       return res.json(reponse);
     }
 
-    // Une nouvelle demande annule les précédentes : sans cela, plusieurs
-    // liens vivraient en parallèle, et le plus ancien courrier resterait
-    // exploitable longtemps après que l'utilisateur a cru le remplacer.
-    await db.query(
-      `UPDATE password_resets SET used_at = NOW()
-        WHERE user_id = $1 AND used_at IS NULL`,
-      [user.id],
-    );
-
-    const jeton = crypto.randomBytes(32).toString("hex");
-    await db.query(
-      `INSERT INTO password_resets (user_id, token_hash, expires_at)
-       VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval)`,
-      [user.id, empreinte(jeton), String(RESET_VALIDITE_MINUTES)],
-    );
-
-    const lien = `${process.env.CLIENT_URL}/reinitialiser-mot-de-passe?token=${jeton}`;
+    const { lien, minutes } = await creerLienReinitialisation(user.id);
 
     // L'échec d'envoi ne doit pas révéler l'existence du compte : on
     // consigne, et la réponse reste la même.
@@ -801,7 +781,7 @@ router.post("/forgot-password", authLimiter, async (req, res, next) => {
         user.email,
         user.full_name,
         lien,
-        RESET_VALIDITE_MINUTES,
+        minutes,
       );
     } catch (err) {
       console.error("Envoi du lien de réinitialisation échoué :", err.message);
