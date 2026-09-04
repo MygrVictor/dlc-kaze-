@@ -37,4 +37,5 @@ env \
   WHATSAPP_PHONE_ID= \
   RESEND_API_KEY= \
   SYNC_ENABLED=false \
+  MODE_DEMO=true \
   npm run dev

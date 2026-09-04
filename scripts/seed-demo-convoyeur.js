@@ -137,11 +137,16 @@ const creer = async () => {
   const clientId = clientRows[0].id;
 
   const { rows: convoyeurRows } = await db.query(
-    `INSERT INTO users (email, password_hash, full_name, company, phone, role, is_validated)
-     VALUES ($1, $2, 'Julien Bertrand', 'JB Convoyage', '0611223344', 'convoyeur', true)
-     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
+    `INSERT INTO users (email, password_hash, full_name, company, phone, role, is_validated, kaze_driver_id)
+     VALUES ($1, $2, 'Julien Bertrand', 'JB Convoyage', '0611223344', 'convoyeur', true, $3)
+     ON CONFLICT (email) DO UPDATE
+       SET password_hash = EXCLUDED.password_hash,
+           kaze_driver_id = EXCLUDED.kaze_driver_id
      RETURNING id`,
-    [EMAIL_CONVOYEUR, hash],
+    // Identifiant volontairement fictif : il suffit à faire disparaître le
+    // bandeau « compte non lié » à l'écran, et MODE_DEMO empêche de toute
+    // façon le moindre appel vers Kaze.
+    [EMAIL_CONVOYEUR, hash, "demo-driver-0000"],
   );
   const convoyeurId = convoyeurRows[0].id;
   console.log("· comptes créés");
