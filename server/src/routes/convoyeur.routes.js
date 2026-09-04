@@ -45,6 +45,16 @@ const ALLOWED_TYPES = [
 //
 // Le W garage, lui, est facultatif par nature : il n'ouvre que des
 // missions supplémentaires et ne conditionnera jamais l'activation.
+// Mode présentation. Enregistrer une démonstration suppose de prendre
+// une mission à l'écran : le parcours doit se dérouler comme en
+// production, mais sans rien écrire dans Kaze ni afficher
+// d'avertissement de synchronisation, incompréhensible pour qui
+// regarde la vidéo.
+//
+// Activé par scripts/demo-local.sh seulement. Absent du .env de
+// production, il y vaut false.
+const MODE_DEMO = process.env.MODE_DEMO === "true";
+
 const DOCUMENTS_REQUIS = [
   "permis",
   "carte_identite",
@@ -148,7 +158,9 @@ router.get("/profil", async (req, res, next) => {
     if (user.kaze_driver_id) {
       kazeLinked = true;
       try {
-        kazeDriverInfo = await kazeService.getDriver(user.kaze_driver_id);
+        kazeDriverInfo = MODE_DEMO
+          ? { id: user.kaze_driver_id }
+          : await kazeService.getDriver(user.kaze_driver_id);
       } catch {
         // Kaze indisponible, on retourne quand même le profil
         kazeDriverInfo = { id: user.kaze_driver_id };
@@ -293,7 +305,7 @@ router.get("/missions", async (req, res, next) => {
     const { kaze_driver_id } = req.user;
 
     // Si le convoyeur a un ID Kaze, on récupère directement depuis Kaze
-    if (kaze_driver_id) {
+    if (kaze_driver_id && !MODE_DEMO) {
       try {
         const kazeData = await kazeService.getMissionsByDriver(kaze_driver_id);
         const kazeMissions = kazeData.missions || kazeData;
@@ -486,6 +498,12 @@ router.get("/missions-disponibles", async (req, res, next) => {
     const dlcMissions = rows.map((m) => ({ ...m, source: "dlc" }));
 
     // ── 2. Missions Kaze (waiting, sans performer) ───────────
+    // Mélanger de vraies courses aux missions de démonstration
+    // exposerait des adresses et des références clients à l'écran.
+    if (MODE_DEMO) {
+      return res.json({ missions: dlcMissions });
+    }
+
     let kazeMissions = [];
     try {
       const rawJobs = await kazeService.fetchRecentJobs(60);
@@ -651,7 +669,11 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
     // (filet de rattrapage si la création Kaze avait échoué silencieusement
     // à l'étape « client accepte le devis »)
     const kazeSync = { synced: false, error: null };
-    if (req.user.kaze_driver_id) {
+    if (MODE_DEMO) {
+      // La mission rejoint le planning comme en conditions réelles ;
+      // seul l'appel sortant vers Kaze est omis.
+      kazeSync.synced = true;
+    } else if (req.user.kaze_driver_id) {
       try {
         const kazeMissionId =
           await syncService.ensureKazeMission(updatedMission);
