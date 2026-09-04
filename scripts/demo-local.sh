@@ -24,7 +24,7 @@ echo "▸ Mode démonstration — Kaze, Telegram et WhatsApp déconnectés"
 echo
 
 env \
-  KAZE_API_BASE_URL= \
+  KAZE_API_BASE_URL=http://127.0.0.1:9/api \
   KAZE_API_TOKEN= \
   KAZE_API_KEY= \
   KAZE_LOGIN= \
