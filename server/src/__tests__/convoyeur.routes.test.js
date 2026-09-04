@@ -343,6 +343,22 @@ describe("GET /api/convoyeur/missions", () => {
     expect(requete).toMatch(/'ASSIGNEE', 'EN_COURS'/);
     expect(params).toEqual([CONVOYEUR.id]);
   });
+
+  it("laisse les missions livrées au seul onglet Historique", async () => {
+    let requete;
+    mockDb(CONVOYEUR_SANS_KAZE, (sql) => {
+      if (/FROM missions m/i.test(sql)) {
+        requete = sql;
+        return { rows: [] };
+      }
+    });
+
+    await lister(CONVOYEUR_SANS_KAZE);
+
+    // Le planning répond à « qu'ai-je à faire ? ». Une mission terminée
+    // n'y a plus sa place, même livrée du matin même.
+    expect(requete).not.toMatch(/LIVREE/);
+  });
 });
 
 // ═════════════════════════════════════════════════════════════

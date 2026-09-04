@@ -375,13 +375,11 @@ router.get("/missions", async (req, res, next) => {
        FROM missions m
        LEFT JOIN users u ON u.id = m.client_id
        WHERE m.convoyeur_id = $1
-         AND (
-           m.status IN ('ASSIGNEE', 'EN_COURS')
-           -- Les missions livrées restent visibles une semaine, le temps que
-           -- le convoyeur vérifie son historique récent, sans faire grossir
-           -- la liste indéfiniment.
-           OR (m.status = 'LIVREE' AND m.updated_at > NOW() - INTERVAL '7 days')
-         )
+         -- Le planning répond à une seule question : qu'ai-je à faire ?
+         -- Une mission livrée n'y a donc plus sa place, même du jour
+         -- même : elle relève de l'onglet Historique, dont c'est
+         -- précisément l'objet.
+         AND m.status IN ('ASSIGNEE', 'EN_COURS')
        ORDER BY m.departure_date ASC NULLS LAST`,
       [req.user.id],
     );
