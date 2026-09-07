@@ -274,6 +274,32 @@ router.post(
       // sont les convoyeurs qu'il faut prévenir, pas l'admin lui-même.
       // Le client, lui, attend une cotation.
       if (estAdmin) {
+        // Elle naît « ACCEPTEE », donc sans passer par la route
+        // d'acceptation client — seul endroit qui envoyait jusqu'ici la
+        // mission à Kaze. Sans cet appel, une mission administrative
+        // était publiée aux convoyeurs tout en restant invisible dans
+        // Kaze : le convoyeur la prenait chez nous sans avoir d'ordre en
+        // face. On reproduit donc ici la création, avec la même règle —
+        // un échec Kaze ne fait pas échouer la mission, la
+        // synchronisation périodique rattrape.
+        for (const mission of createdMissions) {
+          try {
+            const reponseKaze = await kazeService.createMission(mission);
+            const idKaze = reponseKaze.id || reponseKaze.mission_id;
+            if (idKaze) {
+              await db.query(
+                "UPDATE missions SET kaze_mission_id = $1, updated_at = NOW() WHERE id = $2",
+                [idKaze, mission.id],
+              );
+              mission.kaze_mission_id = idKaze;
+            }
+          } catch (kazeErr) {
+            console.error(
+              `⚠️  Kaze : création de la mission ${mission.id} échouée (mission conservée en local) : ${kazeErr.message}`,
+            );
+          }
+        }
+
         const lienMission = process.env.CLIENT_URL
           ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
           : undefined;
