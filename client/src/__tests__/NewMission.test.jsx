@@ -87,7 +87,7 @@ describe("NewMission", () => {
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() =>
       expect(
-        screen.getByPlaceholderText(/28 RUE DES PILIERS/i),
+        screen.getByLabelText("Adresse d'enlèvement"),
       ).toBeInTheDocument(),
     );
   });
@@ -96,15 +96,15 @@ describe("NewMission", () => {
     await rendreSurEtapeVehicule();
     await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByPlaceholderText(/28 RUE DES PILIERS/i));
+    await waitFor(() => screen.getByLabelText("Adresse d'enlèvement"));
     await userEvent.type(
-      screen.getByPlaceholderText(/28 RUE DES PILIERS/i),
+      screen.getByLabelText("Adresse d'enlèvement"),
       "Paris",
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() =>
       expect(
-        screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i),
+        screen.getByLabelText("Adresse de livraison"),
       ).toBeInTheDocument(),
     );
   });
@@ -130,15 +130,15 @@ describe("NewMission", () => {
     await rendreSurEtapeVehicule();
     await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByPlaceholderText(/28 RUE DES PILIERS/i));
+    await waitFor(() => screen.getByLabelText("Adresse d'enlèvement"));
     await userEvent.type(
-      screen.getByPlaceholderText(/28 RUE DES PILIERS/i),
+      screen.getByLabelText("Adresse d'enlèvement"),
       "Paris",
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i));
+    await waitFor(() => screen.getByLabelText("Adresse de livraison"));
     await userEvent.type(
-      screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i),
+      screen.getByLabelText("Adresse de livraison"),
       "Lyon",
     );
     // Étape Services / Rétribution / Urgence
@@ -163,15 +163,15 @@ describe("NewMission", () => {
     await rendreSurEtapeVehicule();
     await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByPlaceholderText(/28 RUE DES PILIERS/i));
+    await waitFor(() => screen.getByLabelText("Adresse d'enlèvement"));
     await userEvent.type(
-      screen.getByPlaceholderText(/28 RUE DES PILIERS/i),
+      screen.getByLabelText("Adresse d'enlèvement"),
       "Paris",
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i));
+    await waitFor(() => screen.getByLabelText("Adresse de livraison"));
     await userEvent.type(
-      screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i),
+      screen.getByLabelText("Adresse de livraison"),
       "Lyon",
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));

@@ -787,6 +787,7 @@ export default function NewMission() {
                   setDeparture({ ...departure, address: adresse })
                 }
                 placeholder="12 RUE DE L'INDUSTRIE 44000 NANTES"
+                ariaLabel="Adresse d'enlèvement"
                 required
               />
             </div>
@@ -910,6 +911,7 @@ export default function NewMission() {
                   setArrival({ ...arrival, address: adresse })
                 }
                 placeholder="45 AVENUE DE LA GARE 45000 ORLÉANS"
+                ariaLabel="Adresse de livraison"
                 required
               />
             </div>

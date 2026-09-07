@@ -59,6 +59,7 @@ export default function ChampAdresse({
   placeholder,
   required = false,
   id,
+  ariaLabel,
 }) {
   const idAuto = useId();
   const idChamp = id || idAuto;
@@ -188,6 +189,7 @@ export default function ChampAdresse({
           required={required}
           autoComplete="off"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={ouvert}
           aria-autocomplete="list"
           aria-controls={`${idChamp}-suggestions`}
