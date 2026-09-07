@@ -440,10 +440,24 @@ router.post(
     // Les fichiers déjà écrits par Multer doivent disparaître dès que la
     // requête est rejetée : sinon chaque tentative invalide laisserait un
     // résidu sur le disque.
+    //
+    // La suppression est synchrone à dessein. En version asynchrone, la
+    // réponse partait avant que le disque soit propre : l'appelant voyait
+    // un refus alors que les fichiers étaient encore là. Le décalage est
+    // invisible en usage normal, mais il rend l'invariant « rien ne reste
+    // après un refus » indémontrable, et la vérification intermittente.
+    // Quelques `unlink` sur une requête déjà perdue ne coûtent rien.
     const nettoyerFichiers = () => {
       for (const liste of Object.values(req.files || {})) {
         for (const f of liste) {
-          fs.unlink(path.join(UPLOAD_DIR, f.filename), () => {});
+          // `f.path` est le chemin réellement écrit par Multer : le
+          // recomposer supposerait que la destination ne change jamais.
+          try {
+            fs.unlinkSync(f.path || path.join(UPLOAD_DIR, f.filename));
+          } catch {
+            // Fichier déjà retiré, ou disque en lecture seule : le refus
+            // de la demande reste la réponse utile à donner.
+          }
         }
       }
     };
