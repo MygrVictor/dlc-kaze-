@@ -122,6 +122,12 @@ app.use(
         connectSrc: [
           "'self'",
           process.env.CLIENT_URL,
+          // Base Adresse Nationale : le champ d'adresse du formulaire de
+          // mission interroge la BAN directement depuis le navigateur
+          // (CORS ouvert, aucune clé à protéger). Sans cette entrée, le
+          // navigateur bloque la requête sans le moindre signe visible :
+          // le champ paraît simplement inerte.
+          "https://api-adresse.data.gouv.fr",
           "https://server.arcgisonline.com",
           "https://*.basemaps.cartocdn.com",
           "https://tile.openstreetmap.org",
