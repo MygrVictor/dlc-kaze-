@@ -55,7 +55,7 @@ function renderNewMission() {
 async function rendreSurEtapeVehicule() {
   const rendu = renderNewMission();
   fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-  await waitFor(() => screen.getByPlaceholderText("HK-988-CG"));
+  await waitFor(() => screen.getByPlaceholderText("AA-123-BB"));
   return rendu;
 }
 
@@ -78,12 +78,12 @@ describe("NewMission", () => {
 
   it("affiche le champ plaque d'immatriculation", async () => {
     await rendreSurEtapeVehicule();
-    expect(screen.getByPlaceholderText("HK-988-CG")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("AA-123-BB")).toBeInTheDocument();
   });
 
   it("affiche les champs d'adresse en cliquant sur l'\u00e9tape D\u00e9part", async () => {
     await rendreSurEtapeVehicule();
-    await userEvent.type(screen.getByPlaceholderText("HK-988-CG"), "AA-001-BB");
+    await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() =>
       expect(
@@ -94,7 +94,7 @@ describe("NewMission", () => {
 
   it("affiche les champs de livraison en cliquant sur l'\u00e9tape Livraison", async () => {
     await rendreSurEtapeVehicule();
-    await userEvent.type(screen.getByPlaceholderText("HK-988-CG"), "AA-001-BB");
+    await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => screen.getByPlaceholderText(/28 RUE DES PILIERS/i));
     await userEvent.type(
@@ -104,7 +104,7 @@ describe("NewMission", () => {
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() =>
       expect(
-        screen.getByPlaceholderText(/84 RUE CLEMENT ADER/i),
+        screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i),
       ).toBeInTheDocument(),
     );
   });
@@ -121,14 +121,14 @@ describe("NewMission", () => {
     const addBtn = screen.getByRole("button", { name: /ajouter un véhicule/i });
     fireEvent.click(addBtn);
     await waitFor(() => {
-      const plates = screen.getAllByPlaceholderText("HK-988-CG");
+      const plates = screen.getAllByPlaceholderText("AA-123-BB");
       expect(plates.length).toBe(2);
     });
   });
 
   it("soumet le formulaire apr\u00e8s avoir rempli les \u00e9tapes", async () => {
     await rendreSurEtapeVehicule();
-    await userEvent.type(screen.getByPlaceholderText("HK-988-CG"), "AA-001-BB");
+    await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => screen.getByPlaceholderText(/28 RUE DES PILIERS/i));
     await userEvent.type(
@@ -136,9 +136,9 @@ describe("NewMission", () => {
       "Paris",
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByPlaceholderText(/84 RUE CLEMENT ADER/i));
+    await waitFor(() => screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i));
     await userEvent.type(
-      screen.getByPlaceholderText(/84 RUE CLEMENT ADER/i),
+      screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i),
       "Lyon",
     );
     // Étape Services / Rétribution / Urgence
@@ -161,7 +161,7 @@ describe("NewMission", () => {
     // C'est cette adresse que Kaze utilisera pour envoyer le PV, les
     // photos et les réserves à la livraison.
     await rendreSurEtapeVehicule();
-    await userEvent.type(screen.getByPlaceholderText("HK-988-CG"), "AA-001-BB");
+    await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => screen.getByPlaceholderText(/28 RUE DES PILIERS/i));
     await userEvent.type(
@@ -169,9 +169,9 @@ describe("NewMission", () => {
       "Paris",
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByPlaceholderText(/84 RUE CLEMENT ADER/i));
+    await waitFor(() => screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i));
     await userEvent.type(
-      screen.getByPlaceholderText(/84 RUE CLEMENT ADER/i),
+      screen.getByPlaceholderText(/45 AVENUE DE LA GARE/i),
       "Lyon",
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
