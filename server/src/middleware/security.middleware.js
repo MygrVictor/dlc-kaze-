@@ -265,8 +265,22 @@ const securityHeaders = (_req, res, next) => {
 
 // ─── 10. Détection de tentatives suspectes ────────────────────
 // Patterns vérifiés dans l'URL uniquement (les bodies sont déjà sanitisés par XSS)
-const urlSuspiciousPatterns = [
+//
+// La distinction chemin / chaîne de requête n'est pas cosmétique. Les
+// marqueurs de commentaire SQL (`--`, `'`) ne sont dangereux que là où une
+// valeur peut être concaténée à une requête, c'est-à-dire dans la chaîne de
+// requête. Appliquée au chemin, la règle rejetait des fichiers légitimes :
+// Vite nomme ses modules avec un condensé en base64url, alphabet qui
+// contient le tiret, et produit donc régulièrement des noms comme
+// « unlink--b8TDQRw.js ». Le serveur répondait 400, React ne pouvait plus
+// charger le module, et une page entière tombait — sur un fichier différent
+// à chaque build, ce qui donnait un défaut d'apparence aléatoire.
+const requeteSuspecte = [
   /(%27)|(')|(--)|(\\%23)|(#)/i, // SQL injection classiques
+];
+
+// Ces attaques-là passent aussi bien par le chemin que par la requête.
+const urlSuspiciousPatterns = [
   /((%3C)|<)((%2F)\/)*[a-z0-9%]+((%3E)|>)/i, // XSS tags
   /((%3C)|<)((%69)|i|(%49))((%6D)|m|(%4D))((%67)|g|(%47))/i, // img tags
   /(\.\.\/|\.\.\\)/i, // Path traversal
@@ -282,11 +296,24 @@ const bodySuspiciousPatterns = [
 
 const detectSuspiciousActivity = (req, res, next) => {
   const fullUrl = req.originalUrl || "";
+  // Tout ce qui suit le premier « ? » : c'est là que voyagent les valeurs
+  // susceptibles d'atteindre une requête SQL.
+  const separateur = fullUrl.indexOf("?");
+  const chaineRequete = separateur === -1 ? "" : fullUrl.slice(separateur);
 
   for (const pattern of urlSuspiciousPatterns) {
     if (pattern.test(fullUrl)) {
       console.warn(
         `🚨 SUSPICIOUS URL blocked from ${req.ip}: ${req.method} ${fullUrl}`,
+      );
+      return res.status(400).json({ error: "Requête rejetée." });
+    }
+  }
+
+  for (const pattern of requeteSuspecte) {
+    if (pattern.test(chaineRequete)) {
+      console.warn(
+        `🚨 SUSPICIOUS QUERY blocked from ${req.ip}: ${req.method} ${fullUrl}`,
       );
       return res.status(400).json({ error: "Requête rejetée." });
     }
