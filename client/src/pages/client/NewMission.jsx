@@ -532,7 +532,7 @@ export default function NewMission() {
                       updateVehicle(idx, "plate", e.target.value.toUpperCase())
                     }
                     className="input-field"
-                    placeholder="HK-988-CG"
+                    placeholder="AA-123-BB"
                   />
                 </div>
 
@@ -551,7 +551,7 @@ export default function NewMission() {
                       )
                     }
                     className="input-field font-mono"
-                    placeholder="VF1RDA00876470090"
+                    placeholder="VF1XXXXXXXXXXXXXX"
                     maxLength={17}
                   />
                   {v.vin && v.vin.length !== 17 && v.vin.length > 0 && (
@@ -709,7 +709,7 @@ export default function NewMission() {
                     })
                   }
                   className="input-field"
-                  placeholder="NET AUTO"
+                  placeholder="GARAGE DU CENTRE"
                 />
               </div>
             </div>
@@ -726,7 +726,7 @@ export default function NewMission() {
                     setDeparture({ ...departure, contactName: e.target.value })
                   }
                   className="input-field"
-                  placeholder="ALYS TESSEYRE"
+                  placeholder="PRÉNOM NOM"
                 />
               </div>
               <div>
@@ -741,7 +741,7 @@ export default function NewMission() {
                     setDeparture({ ...departure, contactPhone: e.target.value })
                   }
                   className="input-field"
-                  placeholder="02 51 78 88 71"
+                  placeholder="01 23 45 67 89"
                 />
               </div>
             </div>
@@ -786,7 +786,7 @@ export default function NewMission() {
                 onChange={(adresse) =>
                   setDeparture({ ...departure, address: adresse })
                 }
-                placeholder="28 RUE DES PILIERS DE LA CHAUVINIERE 44800 SAINT HERBLAIN"
+                placeholder="12 RUE DE L'INDUSTRIE 44000 NANTES"
                 required
               />
             </div>
@@ -830,7 +830,7 @@ export default function NewMission() {
                   setArrival({ ...arrival, structureName: e.target.value })
                 }
                 className="input-field"
-                placeholder="GRDF"
+                placeholder="CONCESSION AUTO"
               />
             </div>
 
@@ -846,7 +846,7 @@ export default function NewMission() {
                     setArrival({ ...arrival, contactName: e.target.value })
                   }
                   className="input-field"
-                  placeholder="Ludovic LECONTE"
+                  placeholder="PRÉNOM NOM"
                 />
               </div>
               <div>
@@ -861,7 +861,7 @@ export default function NewMission() {
                     setArrival({ ...arrival, contactPhone: e.target.value })
                   }
                   className="input-field"
-                  placeholder="06 31 79 35 44"
+                  placeholder="06 12 34 56 78"
                 />
               </div>
             </div>
@@ -909,7 +909,7 @@ export default function NewMission() {
                 onChange={(adresse) =>
                   setArrival({ ...arrival, address: adresse })
                 }
-                placeholder="84 RUE CLEMENT ADER 45770 SARAN"
+                placeholder="45 AVENUE DE LA GARE 45000 ORLÉANS"
                 required
               />
             </div>
