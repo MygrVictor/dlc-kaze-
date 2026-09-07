@@ -27,6 +27,7 @@ import {
   Check,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ChampAdresse from "../../components/ChampAdresse";
 
 const ENERGIES = ["Essence", "Diesel", "Électrique", "Hybride"];
 
@@ -780,12 +781,11 @@ export default function NewMission() {
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Adresse d'enlèvement *
               </label>
-              <input
+              <ChampAdresse
                 value={departure.address}
-                onChange={(e) =>
-                  setDeparture({ ...departure, address: e.target.value })
+                onChange={(adresse) =>
+                  setDeparture({ ...departure, address: adresse })
                 }
-                className="input-field"
                 placeholder="28 RUE DES PILIERS DE LA CHAUVINIERE 44800 SAINT HERBLAIN"
                 required
               />
@@ -904,12 +904,11 @@ export default function NewMission() {
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Adresse de livraison *
               </label>
-              <input
+              <ChampAdresse
                 value={arrival.address}
-                onChange={(e) =>
-                  setArrival({ ...arrival, address: e.target.value })
+                onChange={(adresse) =>
+                  setArrival({ ...arrival, address: adresse })
                 }
-                className="input-field"
                 placeholder="84 RUE CLEMENT ADER 45770 SARAN"
                 required
               />

@@ -17,7 +17,8 @@ const {
 } = require("../middleware/security.middleware");
 
 // ── Configuration Multer ─────────────────────────────────────
-const UPLOAD_DIR = require("../lib/uploads").dossier("documents");
+const { dossier, cheminDisque } = require("../lib/uploads");
+const UPLOAD_DIR = dossier("documents");
 
 const ALLOWED_TYPES = [
   "permis",
@@ -45,14 +46,13 @@ const ALLOWED_TYPES = [
 //
 // Le W garage, lui, est facultatif par nature : il n'ouvre que des
 // missions supplémentaires et ne conditionnera jamais l'activation.
-// Mode présentation. Enregistrer une démonstration suppose de prendre
-// une mission à l'écran : le parcours doit se dérouler comme en
-// production, mais sans rien écrire dans Kaze ni afficher
-// d'avertissement de synchronisation, incompréhensible pour qui
-// regarde la vidéo.
-//
-// Activé par scripts/demo-local.sh seulement. Absent du .env de
-// production, il y vaut false.
+
+// Mode présentation. Enregistrer une démonstration suppose de prendre une
+// mission à l'écran : le parcours doit se dérouler exactement comme en
+// production, mais sans rien écrire dans Kaze ni afficher d'avertissement
+// de synchronisation qui n'aurait aucun sens pour le spectateur.
+// Activé par scripts/demo-local.sh uniquement ; absent du .env de
+// production, il vaut false partout ailleurs.
 const MODE_DEMO = process.env.MODE_DEMO === "true";
 
 const DOCUMENTS_REQUIS = [
@@ -158,6 +158,9 @@ router.get("/profil", async (req, res, next) => {
     if (user.kaze_driver_id) {
       kazeLinked = true;
       try {
+        // En présentation, l'identifiant est fictif : l'interroger ferait
+        // partir une requête vers app.kaze.so et ralentirait l'affichage
+        // pour rien. On se contente de l'état « lié ».
         kazeDriverInfo = MODE_DEMO
           ? { id: user.kaze_driver_id }
           : await kazeService.getDriver(user.kaze_driver_id);
@@ -388,9 +391,9 @@ router.get("/missions", async (req, res, next) => {
        LEFT JOIN users u ON u.id = m.client_id
        WHERE m.convoyeur_id = $1
          -- Le planning répond à une seule question : qu'ai-je à faire ?
-         -- Une mission livrée n'y a donc plus sa place, même du jour
-         -- même : elle relève de l'onglet Historique, dont c'est
-         -- précisément l'objet.
+         -- Les missions livrées n'y ont donc pas leur place, même
+         -- récentes — elles brouillaient la lecture en semaine chargée.
+         -- Elles restent consultables dans l'onglet Historique.
          AND m.status IN ('ASSIGNEE', 'EN_COURS')
        ORDER BY m.departure_date ASC NULLS LAST`,
       [req.user.id],
@@ -405,8 +408,8 @@ router.get("/missions", async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 // Convoyeur : Historique de ses missions terminées
 //
-// Le planning ne montre que les 7 derniers jours pour rester
-// lisible. Cette route sert l'archive complète, paginée, afin que
+// Le planning ne montre que les missions à faire. Cette route sert
+// l'archive complète, paginée, afin que
 // le convoyeur puisse retrouver une course ancienne et vérifier sa
 // rémunération. Comme partout côté convoyeur, on expose
 // price_convoyeur sous le nom « price » : le prix client ne doit
@@ -498,14 +501,14 @@ router.get("/missions-disponibles", async (req, res, next) => {
     const dlcMissions = rows.map((m) => ({ ...m, source: "dlc" }));
 
     // ── 2. Missions Kaze (waiting, sans performer) ───────────
-    // Mélanger de vraies courses aux missions de démonstration
-    // exposerait des adresses et des références clients à l'écran.
-    if (MODE_DEMO) {
-      return res.json({ missions: dlcMissions });
-    }
-
+    // En mode présentation, on s'en tient aux missions locales : mélanger
+    // de vraies courses à l'écran exposerait des adresses et des
+    // références clients dans la vidéo.
     let kazeMissions = [];
     try {
+      if (MODE_DEMO) {
+        return res.json({ missions: dlcMissions });
+      }
       const rawJobs = await kazeService.fetchRecentJobs(60);
       // IDs des jobs Kaze déjà liés à une mission DLC
       const linkedKazeIds = new Set(
@@ -670,7 +673,7 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
     // à l'étape « client accepte le devis »)
     const kazeSync = { synced: false, error: null };
     if (MODE_DEMO) {
-      // La mission rejoint le planning comme en conditions réelles ;
+      // La mission bascule dans le planning comme en conditions réelles ;
       // seul l'appel sortant vers Kaze est omis.
       kazeSync.synced = true;
     } else if (req.user.kaze_driver_id) {
@@ -823,12 +826,8 @@ router.post(
         [req.user.id, type],
       );
       if (existing.rows[0]) {
-        const oldPath = path.join(
-          __dirname,
-          "../../..",
-          existing.rows[0].file_path,
-        );
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        const oldPath = cheminDisque(existing.rows[0].file_path);
+        if (oldPath && fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
       }
 
       // Upsert : insert ou remplacement si déjà existant
@@ -883,8 +882,8 @@ router.delete("/documents/:type", async (req, res, next) => {
     }
 
     // Supprimer le fichier physique
-    const oldPath = path.join(__dirname, "../../..", rows[0].file_path);
-    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    const oldPath = cheminDisque(rows[0].file_path);
+    if (oldPath && fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
 
     res.json({ message: "Document supprimé." });
   } catch (err) {

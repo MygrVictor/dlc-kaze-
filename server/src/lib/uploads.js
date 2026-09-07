@@ -29,4 +29,24 @@ const dossier = (nom) => {
   return chemin;
 };
 
-module.exports = { RACINE_UPLOADS, dossier };
+/**
+ * Traduit un chemin public (`/uploads/documents/abc.pdf`, tel qu'il est
+ * stocké en base et servi au navigateur) en chemin disque réel.
+ *
+ * Indispensable dès que `UPLOADS_DIR` déplace la racine : recalculer ce
+ * chemin depuis `__dirname` viserait le dépôt, et la suppression d'un
+ * document remplacé échouerait en silence — laissant des pièces
+ * d'identité périmées traîner sur le serveur.
+ *
+ * Renvoie `null` si le chemin sort de la racine, ce qui neutralise une
+ * valeur corrompue en base avant qu'elle ne serve à un `unlink`.
+ */
+const cheminDisque = (cheminPublic) => {
+  const relatif = String(cheminPublic || "").replace(/^\/?uploads\//, "");
+  const cible = path.resolve(path.join(RACINE_UPLOADS, relatif));
+  return cible.startsWith(path.resolve(RACINE_UPLOADS) + path.sep)
+    ? cible
+    : null;
+};
+
+module.exports = { RACINE_UPLOADS, dossier, cheminDisque };

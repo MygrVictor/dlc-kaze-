@@ -49,6 +49,13 @@ jest.mock("../services/devis.service", () => ({
   generateDevisGroupePDF: jest.fn(),
 }));
 
+// Le géocodage part sans être attendu à la création d'une mission. Sans
+// ce mock, ses requêtes au cache d'adresses se glissent dans les appels
+// enregistrés par le faux `db` et faussent les tests suivants.
+jest.mock("../services/geocoding.service", () => ({
+  geocodeBatch: jest.fn().mockResolvedValue(new Map()),
+}));
+
 const db = require("../db");
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");

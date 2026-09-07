@@ -10,6 +10,7 @@ const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
 const whatsappService = require("../services/whatsapp.service");
 const telegramService = require("../services/telegram.service");
+const geocodingService = require("../services/geocoding.service");
 const {
   generateDevisPDF,
   generateDevisGroupePDF,
@@ -129,6 +130,29 @@ router.post(
         return res
           .status(400)
           .json({ error: "Adresses de départ et d'arrivée obligatoires." });
+      }
+
+      // Les champs libres sont bornés en base. Sans ce contrôle, une
+      // saisie trop longue remonte en erreur PostgreSQL, donc en 500 :
+      // l'utilisateur voit « erreur interne » sans savoir quoi corriger,
+      // et l'équipe reçoit une alerte pour une simple faute de frappe.
+      // On préfère dire précisément quel champ reprendre.
+      const LONGUEURS_MAX = {
+        "Téléphone de départ": [departureContactPhone, 120],
+        "Téléphone d'arrivée": [arrivalContactPhone, 120],
+        "Téléphone d'urgence": [emergencyPhone, 120],
+        "Contact de départ": [departureContactName, 150],
+        "Contact d'arrivée": [arrivalContactName, 150],
+        "Contact d'urgence": [emergencyContactName, 150],
+        "Structure de départ": [departureStructureName, 150],
+      };
+
+      for (const [libelle, [valeur, max]] of Object.entries(LONGUEURS_MAX)) {
+        if (valeur && String(valeur).length > max) {
+          return res.status(400).json({
+            error: `${libelle} : ${max} caractères maximum (${String(valeur).length} saisis).`,
+          });
+        }
       }
 
       // Normaliser : accepte un tableau de véhicules ou un seul véhicule (rétrocompat)
@@ -278,6 +302,18 @@ router.post(
           );
         }
       }
+
+      // Les coordonnées des deux adresses sont préparées dès la création :
+      // la carte de suivi lit le cache de géocodage, et une adresse absente
+      // du cache y laisse un trou jusqu'au prochain rattrapage hors ligne.
+      // Le géocodage part sans être attendu — il interroge un service
+      // externe, et une mission ne doit jamais échouer parce que la BAN
+      // répond mal. Au pire la coordonnée manque, la mission existe.
+      geocodingService
+        .geocodeBatch([departureAddress, arrivalAddress])
+        .catch((err) =>
+          console.error("⚠️ Géocodage mission échoué :", err.message),
+        );
 
       res.status(201).json({
         missions: createdMissions,

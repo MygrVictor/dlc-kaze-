@@ -210,6 +210,34 @@ const creer = async () => {
     },
     {
       plaque: "DM-103-CC",
+      marque: "Audi",
+      modele: "Q5",
+      de: "9 chemin des Vignes, 69400 Villefranche-sur-Saône",
+      vers: "140 rue du Faubourg Saint-Honoré, 75008 Paris",
+      contact: "Pascal Girard",
+      tel: "0474556677",
+      jours: 3,
+      prix: 560,
+      remuneration: 320,
+      statut: "ASSIGNEE",
+      convoyeur: true,
+    },
+    {
+      plaque: "DM-104-DD",
+      marque: "BMW",
+      modele: "Série 1",
+      de: "22 route de Genève, 74000 Annecy",
+      vers: "17 rue Sainte-Catherine, 73000 Chambéry",
+      contact: "Julien Perrin",
+      tel: "0450334455",
+      jours: 4,
+      prix: 270,
+      remuneration: 150,
+      statut: "ASSIGNEE",
+      convoyeur: true,
+    },
+    {
+      plaque: "DM-105-EE",
       marque: "Volkswagen",
       modele: "Transporter",
       de: "3 rue du Dauphiné, 38000 Grenoble",
@@ -423,7 +451,7 @@ const creer = async () => {
   Client    : ${EMAIL_CLIENT}
   Mot de passe : ${MOT_DE_PASSE}
 ────────────────────────────────────────────────
-  Planning        3 missions (2 assignées, 1 en cours)
+  Planning        5 missions (4 assignées, 1 en cours)
   Disponibles     4 missions à prendre
   Historique      3 missions livrées
   Factures        3 (2 payées, 1 émise)

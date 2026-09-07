@@ -230,6 +230,22 @@ const migrate = async () => {
     -- l'équipe puisse le rappeler et ajuster la proposition.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS refus_motif  TEXT;
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS refused_at   TIMESTAMPTZ;
+
+    -- ──────────────────────────────────────────────────────────
+    -- Téléphones : 30 caractères se sont révélés trop courts.
+    --
+    -- Le champ est libre et le terrain y met couramment plus qu'un
+    -- numéro : deux contacts séparés par une barre oblique, un poste
+    -- interne, une précision d'horaire. « 06 12 34 56 78 / 07 89 01 23
+    -- 45 » fait déjà 33 caractères et faisait échouer la création de la
+    -- mission avec une erreur 500.
+    --
+    -- Élargir plutôt que tronquer : un numéro coupé silencieusement
+    -- serait pire que l'erreur, le convoyeur appellerait dans le vide.
+    -- ──────────────────────────────────────────────────────────
+    ALTER TABLE missions ALTER COLUMN departure_contact_phone TYPE VARCHAR(120);
+    ALTER TABLE missions ALTER COLUMN arrival_contact_phone   TYPE VARCHAR(120);
+    ALTER TABLE missions ALTER COLUMN emergency_phone         TYPE VARCHAR(120);
   `);
 
   // Refus de devis par le client : statut distinct d'ANNULEE afin de pouvoir
