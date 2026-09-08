@@ -468,208 +468,215 @@ export default function AdminMissions() {
       {/* Table — sous 768 px, `table-stack` empile chaque ligne en carte
           plutôt que d'imposer un défilement latéral. */}
       {!(loading && kazeLoading) && !error && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm table-stack">
-            <thead>
-              <tr className="border-b border-dark-700">
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Source
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Trajet
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Client
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Véhicule
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Date
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Prix
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Statut
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Convoyeur
-                </th>
-                <th className="text-right py-3 px-4 text-dark-400 font-medium">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayMissions.map((m) => (
-                <tr
-                  key={m.id}
-                  onClick={() => {
-                    setPriceModal(m);
-                    setLectureSeule(true);
-                  }}
-                  className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors cursor-pointer"
-                >
-                  <td className="py-3 px-4" data-label="Source">
-                    {m.source === "kaze" ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                        <Zap size={10} /> Kaze
+        <div className="card p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm table-stack">
+              <thead>
+                <tr className="border-b border-dark-700 bg-dark-800/50">
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Source
+                  </th>
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Trajet
+                  </th>
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Client
+                  </th>
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Véhicule
+                  </th>
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Date
+                  </th>
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Prix
+                  </th>
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Statut
+                  </th>
+                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                    Convoyeur
+                  </th>
+                  <th className="text-right py-3 px-4 text-dark-400 font-medium">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayMissions.map((m) => (
+                  <tr
+                    key={m.id}
+                    onClick={() => {
+                      setPriceModal(m);
+                      setLectureSeule(true);
+                    }}
+                    className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3 px-4" data-label="Source">
+                      {m.source === "kaze" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                          <Zap size={10} /> Kaze
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20">
+                          DLC
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4" data-label="Trajet">
+                      <span className="font-medium text-dark-100">
+                        {m.departure_address}
+                        {m.arrival_address ? ` → ${m.arrival_address}` : ""}
                       </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20">
-                        DLC
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4" data-label="Trajet">
-                    <span className="font-medium">
-                      {m.departure_address}
-                      {m.arrival_address ? ` → ${m.arrival_address}` : ""}
-                    </span>
-                    {m.is_urgent && (
-                      <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40 align-middle">
-                        <AlertTriangle size={10} />
-                        URGENT
-                      </span>
-                    )}
-                    {m.kaze_reference && (
-                      <p className="text-[10px] text-orange-400/70 mt-0.5">
-                        Réf. {m.kaze_reference}
-                      </p>
-                    )}
-                  </td>
-                  <td className="py-3 px-4" data-label="Client">
-                    <div>
-                      {/* Une mission prise en direct n'a pas de
-                          commanditaire enregistré : le signaler vaut
-                          mieux qu'une cellule vide. */}
-                      <p className="font-medium">
-                        {m.client_name || (
-                          <span className="text-dark-500 italic">
-                            Mission interne
-                          </span>
-                        )}
-                      </p>
-                      {m.client_email && (
-                        <p className="text-xs text-dark-500">
-                          {m.client_email}
+                      {m.is_urgent && (
+                        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40 align-middle">
+                          <AlertTriangle size={10} />
+                          URGENT
+                        </span>
+                      )}
+                      {m.kaze_reference && (
+                        <p className="text-[10px] text-orange-400/70 mt-0.5">
+                          Réf. {m.kaze_reference}
                         </p>
                       )}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-dark-300" data-label="Véhicule">
-                    {m.vehicle_brand || m.vehicle_model
-                      ? `${m.vehicle_brand || ""} ${m.vehicle_model || ""}`.trim()
-                      : m.source === "kaze"
-                        ? "—"
-                        : ""}
-                  </td>
-                  <td className="py-3 px-4 text-dark-400" data-label="Date">
-                    {formatDate(m.departure_date || m.created_at)}
-                  </td>
-                  <td className="py-3 px-4 font-semibold" data-label="Prix">
-                    {m.price ? (
+                    </td>
+                    <td className="py-3 px-4" data-label="Client">
                       <div>
-                        {formatPrice(m.price)}
-                        {m.price_convoyeur && (
-                          <p className="text-[10px] font-normal text-accent-400">
-                            Conv. {formatPrice(m.price_convoyeur)}
+                        {/* Une mission prise en direct n'a pas de
+                          commanditaire enregistré : le signaler vaut
+                          mieux qu'une cellule vide. */}
+                        <p className="font-medium text-dark-200">
+                          {m.client_name || (
+                            <span className="text-dark-500 italic">
+                              Mission interne
+                            </span>
+                          )}
+                        </p>
+                        {m.client_email && (
+                          <p className="text-xs text-dark-500">
+                            {m.client_email}
                           </p>
                         )}
                       </div>
-                    ) : (
-                      <span className="text-dark-500 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4" data-label="Statut">
-                    {m.source === "kaze" && m.kaze_status ? (
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${KAZE_STATUS_COLORS[m.kaze_status] || "bg-dark-700 text-dark-300"}`}
-                      >
-                        {KAZE_STATUS_LABELS[m.kaze_status] || m.kaze_status}
-                      </span>
-                    ) : (
-                      <span className={`badge ${STATUS_COLORS[m.status]}`}>
-                        {STATUS_LABELS[m.status]}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4" data-label="Convoyeur">
-                    {m.convoyeur_name ? (
-                      <span className="flex items-center gap-1.5 text-accent-400 text-xs font-medium">
-                        <Truck size={13} />
-                        {m.convoyeur_name}
-                      </span>
-                    ) : (
-                      <span className="text-dark-500 text-xs">
-                        {m.source === "kaze" && m.kaze_status === "assigned"
-                          ? "Intervenant non assigné"
-                          : "Non assigné"}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div
-                      className="flex flex-wrap items-center gap-2 justify-end"
-                      onClick={(e) => e.stopPropagation()}
+                    </td>
+                    <td
+                      className="py-3 px-4 text-dark-300"
+                      data-label="Véhicule"
                     >
-                      {m.source === "dlc" &&
-                        ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
-                          m.status,
-                        ) && (
-                          <button
-                            onClick={() => {
-                              setPriceModal(m);
-                              setLectureSeule(false);
-                              setPriceValue("");
-                              setPriceConvoyeurValue("");
-                            }}
-                            className="btn-primary btn-xs"
-                          >
-                            <Euro size={14} />
-                            {m.status === "DEVIS_REFUSE" ? "Recoter" : "Coter"}
-                          </button>
-                        )}
-                      {m.source === "dlc" &&
-                        [
-                          "EN_ATTENTE_DE_COTATION",
-                          "DEVIS_PROPOSE",
-                          "DEVIS_REFUSE",
-                          "ANNULEE",
-                        ].includes(m.status) && (
-                          <button
-                            onClick={() => handleDeleteMission(m)}
-                            disabled={deletingId === m.id}
-                            title="Supprimer définitivement"
-                            className="btn-soft-danger btn-xs"
-                          >
-                            <Trash2 size={14} />
-                            {deletingId === m.id ? "…" : "Supprimer"}
-                          </button>
-                        )}
-                      {canAssign(m) && (
-                        <button
-                          onClick={() => openAssignModal(m)}
-                          className="btn-success btn-xs"
-                        >
-                          <UserCheck size={14} />
-                          {m.convoyeur_name ? "Réassigner" : "Assigner"}
-                        </button>
+                      {m.vehicle_brand || m.vehicle_model
+                        ? `${m.vehicle_brand || ""} ${m.vehicle_model || ""}`.trim()
+                        : m.source === "kaze"
+                          ? "—"
+                          : ""}
+                    </td>
+                    <td className="py-3 px-4 text-dark-400" data-label="Date">
+                      {formatDate(m.departure_date || m.created_at)}
+                    </td>
+                    <td className="py-3 px-4 font-semibold" data-label="Prix">
+                      {m.price ? (
+                        <div>
+                          {formatPrice(m.price)}
+                          {m.price_convoyeur && (
+                            <p className="text-[10px] font-normal text-accent-400">
+                              Conv. {formatPrice(m.price_convoyeur)}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-dark-500 text-xs">—</span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {displayMissions.length === 0 && (
-                <tr>
-                  <td colSpan="9" className="py-12 text-center text-dark-400">
-                    Aucune mission trouvée.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="py-3 px-4" data-label="Statut">
+                      {m.source === "kaze" && m.kaze_status ? (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${KAZE_STATUS_COLORS[m.kaze_status] || "bg-dark-700 text-dark-300"}`}
+                        >
+                          {KAZE_STATUS_LABELS[m.kaze_status] || m.kaze_status}
+                        </span>
+                      ) : (
+                        <span className={`badge ${STATUS_COLORS[m.status]}`}>
+                          {STATUS_LABELS[m.status]}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4" data-label="Convoyeur">
+                      {m.convoyeur_name ? (
+                        <span className="flex items-center gap-1.5 text-accent-400 text-xs font-medium">
+                          <Truck size={13} />
+                          {m.convoyeur_name}
+                        </span>
+                      ) : (
+                        <span className="text-dark-500 text-xs">
+                          {m.source === "kaze" && m.kaze_status === "assigned"
+                            ? "Intervenant non assigné"
+                            : "Non assigné"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div
+                        className="flex flex-wrap items-center gap-2 justify-end"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {m.source === "dlc" &&
+                          ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
+                            m.status,
+                          ) && (
+                            <button
+                              onClick={() => {
+                                setPriceModal(m);
+                                setLectureSeule(false);
+                                setPriceValue("");
+                                setPriceConvoyeurValue("");
+                              }}
+                              className="btn-primary btn-xs"
+                            >
+                              <Euro size={14} />
+                              {m.status === "DEVIS_REFUSE"
+                                ? "Recoter"
+                                : "Coter"}
+                            </button>
+                          )}
+                        {m.source === "dlc" &&
+                          [
+                            "EN_ATTENTE_DE_COTATION",
+                            "DEVIS_PROPOSE",
+                            "DEVIS_REFUSE",
+                            "ANNULEE",
+                          ].includes(m.status) && (
+                            <button
+                              onClick={() => handleDeleteMission(m)}
+                              disabled={deletingId === m.id}
+                              title="Supprimer définitivement"
+                              className="btn-soft-danger btn-xs"
+                            >
+                              <Trash2 size={14} />
+                              {deletingId === m.id ? "…" : "Supprimer"}
+                            </button>
+                          )}
+                        {canAssign(m) && (
+                          <button
+                            onClick={() => openAssignModal(m)}
+                            className="btn-success btn-xs"
+                          >
+                            <UserCheck size={14} />
+                            {m.convoyeur_name ? "Réassigner" : "Assigner"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {displayMissions.length === 0 && (
+                  <tr>
+                    <td colSpan="9" className="py-12 text-center text-dark-400">
+                      Aucune mission trouvée.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

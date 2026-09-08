@@ -3071,6 +3071,7 @@ body:has(.theme-light) {
 }
 .theme-light [class*="text-blue-400"],
 .theme-light [class*="text-primary-400"],
+.theme-light [class*="text-indigo-400"],
 .theme-light [class*="text-cyan-400"] {
   color: #1d4ed8;
 }

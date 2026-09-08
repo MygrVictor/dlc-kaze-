@@ -22,14 +22,12 @@ const STATUTS = {
   emise: {
     libelle: "À régler",
     icone: Clock,
-    classe:
-      "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
+    classe: "bg-amber-500/10 text-amber-400 border-amber-500/30",
   },
   payee: {
     libelle: "Payée",
     icone: CheckCircle2,
-    classe:
-      "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+    classe: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
   },
   annulee: {
     libelle: "Annulée",
@@ -101,7 +99,7 @@ export default function EspaceFactures({
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-2xl font-bold flex items-center gap-2 text-dark-100">
           <Receipt size={24} />
           {titre}
         </h1>
@@ -110,8 +108,10 @@ export default function EspaceFactures({
 
       {enAttente > 0 && (
         <div className="mb-5 p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center justify-between gap-4 flex-wrap">
-          <span className="text-sm font-medium">{libelleTotal}</span>
-          <span className="text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+          <span className="text-sm font-medium text-dark-100">
+            {libelleTotal}
+          </span>
+          <span className="text-xl font-bold tabular-nums text-amber-400">
             {formaterMontant(enAttente)}
           </span>
         </div>
@@ -138,10 +138,7 @@ export default function EspaceFactures({
             const retard = estEnRetard(f);
 
             return (
-              <li
-                key={f.id}
-                className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-wrap items-center gap-4"
-              >
+              <li key={f.id} className="card flex flex-wrap items-center gap-4">
                 <div className="flex-1 min-w-[200px]">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-xs text-slate-500">
@@ -160,7 +157,7 @@ export default function EspaceFactures({
                       </span>
                     )}
                   </div>
-                  <p className="font-medium mt-1">
+                  <p className="font-medium mt-1 text-dark-100">
                     {f.libelle || libelleDefaut}
                   </p>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -172,7 +169,7 @@ export default function EspaceFactures({
                 </div>
 
                 <div className="text-right">
-                  <div className="text-lg font-bold tabular-nums">
+                  <div className="text-lg font-bold tabular-nums text-dark-100">
                     {formaterMontant(f.montant_ttc)}
                   </div>
                   <div className="text-xs text-slate-500">TTC</div>
@@ -182,7 +179,7 @@ export default function EspaceFactures({
                   href={`${f.file_path}?token=${localStorage.getItem("dlc_token")}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dark-700 text-sm font-medium hover:bg-dark-700 transition"
                 >
                   <Download size={15} />
                   PDF

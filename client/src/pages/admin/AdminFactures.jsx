@@ -30,14 +30,12 @@ const STATUTS = {
   emise: {
     libelle: "Émise",
     icone: Clock,
-    classe:
-      "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
+    classe: "bg-amber-500/10 text-amber-400 border-amber-500/30",
   },
   payee: {
     libelle: "Payée",
     icone: CheckCircle2,
-    classe:
-      "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+    classe: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
   },
   annulee: {
     libelle: "Annulée",
@@ -225,7 +223,7 @@ export default function AdminFactures() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 text-dark-100">
             <Receipt size={24} />
             Factures
           </h1>
@@ -244,10 +242,7 @@ export default function AdminFactures() {
       </div>
 
       {formulaireOuvert && (
-        <form
-          onSubmit={soumettre}
-          className="mb-6 p-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
-        >
+        <form onSubmit={soumettre} className="card mb-6">
           <div className="flex gap-2 mb-4">
             {[
               { valeur: "client", libelle: "Client", icone: Users },
@@ -262,8 +257,8 @@ export default function AdminFactures() {
                 }}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition ${
                   roleCible === valeur
-                    ? "border-indigo-500 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                    : "border-slate-300 dark:border-slate-600 text-slate-500"
+                    ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                    : "border-dark-700 text-slate-500"
                 }`}
               >
                 <Icone size={15} />
@@ -274,13 +269,13 @@ export default function AdminFactures() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <label className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-1">
-              <span className="text-sm font-medium">
+              <span className="text-sm font-medium text-dark-200">
                 {roleCible === "client" ? "Client" : "Convoyeur"} *
               </span>
               <select
                 value={form.destinataire_id}
                 onChange={majForm("destinataire_id")}
-                className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+                className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
                 required
               >
                 <option value="">Sélectionner…</option>
@@ -294,32 +289,32 @@ export default function AdminFactures() {
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Numéro *</span>
+              <span className="text-sm font-medium text-dark-200">Numéro *</span>
               <input
                 type="text"
                 value={form.numero}
                 onChange={majForm("numero")}
                 placeholder="F-2026-001"
                 maxLength={60}
-                className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+                className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
                 required
               />
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Montant TTC (€)</span>
+              <span className="text-sm font-medium text-dark-200">Montant TTC (€)</span>
               <input
                 type="text"
                 inputMode="decimal"
                 value={form.montant_ttc}
                 onChange={majForm("montant_ttc")}
                 placeholder="1234,56"
-                className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+                className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
               />
             </label>
 
             <label className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-medium">Libellé</span>
+              <span className="text-sm font-medium text-dark-200">Libellé</span>
               <input
                 type="text"
                 value={form.libelle}
@@ -330,39 +325,39 @@ export default function AdminFactures() {
                     : "Relevé de prestations"
                 }
                 maxLength={200}
-                className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+                className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
               />
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Période</span>
+              <span className="text-sm font-medium text-dark-200">Période</span>
               <input
                 type="text"
                 value={form.periode}
                 onChange={majForm("periode")}
                 placeholder="Janvier 2026"
                 maxLength={40}
-                className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+                className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
               />
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Date d'émission</span>
+              <span className="text-sm font-medium text-dark-200">Date d'émission</span>
               <input
                 type="date"
                 value={form.date_emission}
                 onChange={majForm("date_emission")}
-                className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+                className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
               />
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Échéance</span>
+              <span className="text-sm font-medium text-dark-200">Échéance</span>
               <input
                 type="date"
                 value={form.date_echeance}
                 onChange={majForm("date_echeance")}
-                className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+                className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
               />
             </label>
           </div>
@@ -380,9 +375,7 @@ export default function AdminFactures() {
             }}
             onClick={() => champFichier.current?.click()}
             className={`mt-4 p-6 rounded-lg border-2 border-dashed text-center cursor-pointer transition ${
-              survol
-                ? "border-indigo-500 bg-indigo-500/5"
-                : "border-slate-300 dark:border-slate-600"
+              survol ? "border-indigo-500 bg-indigo-500/5" : "border-dark-700"
             }`}
           >
             <input
@@ -394,7 +387,7 @@ export default function AdminFactures() {
             />
             <Upload size={22} className="mx-auto mb-2 text-slate-400" />
             {fichier ? (
-              <p className="text-sm font-medium">{fichier.name}</p>
+              <p className="text-sm font-medium text-dark-200">{fichier.name}</p>
             ) : (
               <p className="text-sm text-slate-500">
                 Glissez le PDF ici, ou cliquez pour le choisir
@@ -431,13 +424,13 @@ export default function AdminFactures() {
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
             placeholder="Numéro, libellé, destinataire…"
-            className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-dark-700 bg-transparent"
           />
         </div>
         <select
           value={filtreRole}
           onChange={(e) => setFiltreRole(e.target.value)}
-          className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+          className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
         >
           <option value="">Tous les destinataires</option>
           <option value="client">Clients</option>
@@ -446,7 +439,7 @@ export default function AdminFactures() {
         <select
           value={filtreStatut}
           onChange={(e) => setFiltreStatut(e.target.value)}
-          className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent"
+          className="px-3 py-2 rounded-lg border border-dark-700 bg-transparent"
         >
           <option value="">Tous les statuts</option>
           <option value="emise">Émises</option>
@@ -469,29 +462,42 @@ export default function AdminFactures() {
           <p>Aucune facture pour le moment.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+        <div className="card p-0 overflow-hidden overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 text-left">
+            <thead className="bg-dark-800 text-left">
               <tr>
                 <th className="px-4 py-3 font-semibold">Numéro</th>
-                <th className="px-4 py-3 font-semibold">Destinataire</th>
-                <th className="px-4 py-3 font-semibold">Libellé</th>
-                <th className="px-4 py-3 font-semibold text-right">Montant</th>
-                <th className="px-4 py-3 font-semibold">Émission</th>
-                <th className="px-4 py-3 font-semibold">Échéance</th>
-                <th className="px-4 py-3 font-semibold">Statut</th>
-                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                <th className="px-4 py-3 font-semibold text-dark-400">
+                  Destinataire
+                </th>
+                <th className="px-4 py-3 font-semibold text-dark-400">
+                  Libellé
+                </th>
+                <th className="px-4 py-3 font-semibold text-right text-dark-400">
+                  Montant
+                </th>
+                <th className="px-4 py-3 font-semibold text-dark-400">
+                  Émission
+                </th>
+                <th className="px-4 py-3 font-semibold text-dark-400">
+                  Échéance
+                </th>
+                <th className="px-4 py-3 font-semibold text-dark-400">
+                  Statut
+                </th>
+                <th className="px-4 py-3 font-semibold text-right text-dark-400">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {filtrees.map((f) => (
-                <tr
-                  key={f.id}
-                  className="border-t border-slate-200 dark:border-slate-700"
-                >
-                  <td className="px-4 py-3 font-mono text-xs">{f.numero}</td>
+                <tr key={f.id} className="border-t border-dark-700">
+                  <td className="px-4 py-3 font-mono text-xs text-dark-300">
+                    {f.numero}
+                  </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 font-medium">
+                    <div className="flex items-center gap-1.5 font-medium text-dark-200">
                       {f.destinataire_role === "convoyeur" ? (
                         <Truck size={13} className="text-slate-400" />
                       ) : (
@@ -509,11 +515,15 @@ export default function AdminFactures() {
                     {f.libelle || "—"}
                     {f.periode && <div className="text-xs">{f.periode}</div>}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums">
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-dark-100">
                     {formaterMontant(f.montant_ttc)}
                   </td>
-                  <td className="px-4 py-3">{formaterDate(f.date_emission)}</td>
-                  <td className="px-4 py-3">{formaterDate(f.date_echeance)}</td>
+                  <td className="px-4 py-3 text-dark-300">
+                    {formaterDate(f.date_emission)}
+                  </td>
+                  <td className="px-4 py-3 text-dark-300">
+                    {formaterDate(f.date_echeance)}
+                  </td>
                   <td className="px-4 py-3">
                     <Badge statut={f.statut} />
                   </td>
@@ -524,7 +534,7 @@ export default function AdminFactures() {
                         target="_blank"
                         rel="noreferrer"
                         title="Télécharger"
-                        className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                        className="p-1.5 rounded hover:bg-dark-700"
                       >
                         <Download size={16} />
                       </a>
