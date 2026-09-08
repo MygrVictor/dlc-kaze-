@@ -2912,6 +2912,94 @@ body:has(.theme-light) {
   border: 1px solid #e2e8f0;
 }
 
+/* ── Boutons neutres ────────────────────────────────
+   `btn-outline`, `btn-secondary` et `btn-ghost` sont des classes
+   composées : leurs couleurs sont écrites en dur, elles échappent donc
+   au remappage des utilitaires qui fait tout le reste du mode clair.
+   Toutes trois posent du blanc — texte, bordure, fond translucide — ce
+   qui les rendait purement et simplement invisibles sur fond clair. On
+   leur donne ici l'équivalent sombre, en conservant leur hiérarchie :
+   `outline` affirme un contour, `secondary` un fond discret, `ghost`
+   ne se révèle qu'au survol.
+
+   Les fonds translucides sont remplacés par des couleurs pleines : sur
+   un fond blanc, du noir à 7 % donne un gris sale, tandis que la palette
+   slate reste accordée au reste de l'interface. */
+.theme-light .btn-outline {
+  background: transparent;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+.theme-light .btn-outline:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.theme-light .btn-secondary {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+.theme-light .btn-secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+.theme-light .btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: #475569;
+}
+.theme-light .btn-ghost:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Le contour de focus est dessiné en blanc pour le thème sombre ; il
+   disparaît sur fond clair, privant la navigation au clavier de son
+   seul repère. */
+.theme-light .btn-outline:focus-visible,
+.theme-light .btn-secondary:focus-visible,
+.theme-light .btn-ghost:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Les variantes teintées portent un texte pensé pour le fond sombre —
+   vert clair, orange clair, rouge clair. Sur blanc, ces tons pâlissent
+   au point de devenir illisibles : on descend d'environ trois crans
+   dans chaque nuance, et on remplace le fond translucide par une teinte
+   pleine très claire. */
+.theme-light .btn-soft-success {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #15803d;
+}
+.theme-light .btn-soft-success:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #4ade80;
+}
+
+.theme-light .btn-soft-warning {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #c2410c;
+}
+.theme-light .btn-soft-warning:hover:not(:disabled) {
+  background: #ffedd5;
+  border-color: #fb923c;
+}
+
+.theme-light .btn-soft-danger {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+.theme-light .btn-soft-danger:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
 .dash.theme-light .input-field,
 .theme-light input:not([type="checkbox"]):not([type="radio"]),
 .theme-light textarea,
