@@ -1105,6 +1105,129 @@ router.delete("/missions/:id", async (req, res, next) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// Corriger une mission existante.
+//
+// Sans cette route, la moindre coquille dans une adresse imposait de
+// détruire le dossier pour le ressaisir — et l'on perdait au passage
+// l'historique, l'identifiant Kaze et l'affectation du convoyeur.
+//
+// Les champs modifiables sont énumérés explicitement : le statut, le
+// client, le convoyeur et l'identifiant Kaze ont chacun leur propre
+// route, avec les effets de bord qui vont avec (notifications, appels
+// Kaze, transitions). Les laisser passer ici ouvrirait une porte
+// dérobée pour contourner ces règles.
+// ─────────────────────────────────────────────────────────────
+const CHAMPS_MODIFIABLES = [
+  "vehicle_plate",
+  "vehicle_vin",
+  "vehicle_brand",
+  "vehicle_model",
+  "vehicle_finish",
+  "vehicle_energy",
+  "vehicle_state",
+  "vehicle_year",
+  "vehicle_type",
+  "vehicle_keys",
+  "departure_address",
+  "departure_date",
+  "departure_contact_name",
+  "departure_contact_phone",
+  "departure_contact_email",
+  "departure_instructions",
+  "departure_structure",
+  "departure_structure_name",
+  "arrival_address",
+  "arrival_date",
+  "arrival_contact_name",
+  "arrival_contact_phone",
+  "arrival_contact_email",
+  "arrival_instructions",
+  "emergency_phone",
+  "emergency_contact_name",
+  "emergency_contact_email",
+  "desired_delivery_date",
+  "is_urgent",
+  "comments",
+  "price",
+  "price_convoyeur",
+];
+
+router.patch("/missions/:id", async (req, res, next) => {
+  try {
+    const mission = await getMissionById(req.params.id);
+    if (!mission)
+      return res.status(404).json({ error: "Mission introuvable." });
+
+    // Une mission livrée ou annulée est un dossier clos : le retoucher
+    // fausserait la facturation et les états déjà transmis au client.
+    if (mission.status === "LIVREE" || mission.status === "ANNULEE") {
+      return res.status(400).json({
+        error: `Impossible de modifier une mission au statut "${mission.status}".`,
+      });
+    }
+
+    const champs = [];
+    const valeurs = [];
+    for (const champ of CHAMPS_MODIFIABLES) {
+      if (!(champ in req.body)) continue;
+      let valeur = req.body[champ];
+      // Une chaîne vide venue d'un formulaire signifie « champ vidé »,
+      // ce que la base exprime par NULL — sauf pour les adresses, qui
+      // sont obligatoires.
+      if (typeof valeur === "string") {
+        valeur = valeur.trim();
+        if (valeur === "") valeur = null;
+      }
+      if (
+        valeur === null &&
+        (champ === "departure_address" || champ === "arrival_address")
+      ) {
+        return res
+          .status(400)
+          .json({ error: `Le champ "${champ}" ne peut pas être vide.` });
+      }
+      valeurs.push(valeur);
+      champs.push(`${champ} = $${valeurs.length}`);
+    }
+
+    if (champs.length === 0) {
+      return res.status(400).json({ error: "Aucun champ modifiable fourni." });
+    }
+
+    valeurs.push(mission.id);
+    const { rows } = await db.query(
+      `UPDATE missions SET ${champs.join(", ")}, updated_at = NOW()
+       WHERE id = $${valeurs.length} RETURNING *`,
+      valeurs,
+    );
+
+    // La mise à jour d'un job Kaze demande de reconstruire l'intégralité
+    // du gabarit de workflow ; un envoi partiel remet le job à l'état
+    // « initial » et le rend inexploitable. On signale donc simplement
+    // que la resynchronisation est à déclencher, via la route dédiée.
+    const resyncKaze = Boolean(
+      mission.kaze_mission_id &&
+      ("departure_address" in req.body ||
+        "arrival_address" in req.body ||
+        "departure_date" in req.body ||
+        "arrival_date" in req.body),
+    );
+
+    res.json({
+      mission: rows[0],
+      message: "Mission mise à jour.",
+      resyncKaze,
+      ...(resyncKaze && {
+        avertissement:
+          "Les modifications ne sont pas encore répercutées sur Kaze. Lancez la resynchronisation depuis la fiche mission.",
+      }),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
   try {
     const { convoyeurId, kazeDriverId } = req.body;
