@@ -74,6 +74,8 @@ router.post(
         departureInstructions,
         // Étape 3 : Arrivée
         arrivalAddress,
+        arrivalStructure,
+        arrivalStructureName,
         arrivalContactName,
         arrivalContactPhone,
         arrivalContactEmail,
@@ -145,6 +147,7 @@ router.post(
         "Contact d'arrivée": [arrivalContactName, 150],
         "Contact d'urgence": [emergencyContactName, 150],
         "Structure de départ": [departureStructureName, 150],
+        "Structure de livraison": [arrivalStructureName, 150],
       };
 
       for (const [libelle, [valeur, max]] of Object.entries(LONGUEURS_MAX)) {
@@ -198,6 +201,7 @@ router.post(
             departure_instructions,
             arrival_address, arrival_date, arrival_contact_name, arrival_contact_phone,
             arrival_contact_email, arrival_instructions,
+            arrival_structure, arrival_structure_name,
             service_refuel, service_document_management, service_handover,
             retribution_details,
             emergency_contact_name, emergency_phone, emergency_contact_email,
@@ -213,6 +217,7 @@ router.post(
             $20,
             $21, $22, $23, $24,
             $25, $26,
+            $43, $44,
             $27, $28, $29,
             $30,
             $31, $32, $33,
@@ -265,6 +270,11 @@ router.post(
             priceClient || null,
             priceConvoyeur || null,
             estAdmin ? req.user.id : null,
+            // $43, $44 — ajoutés après coup, d'où leur position en fin de
+            // tableau : renuméroter les quarante-deux autres ferait courir
+            // un risque de décalage sans rien apporter.
+            arrivalStructure || null,
+            arrivalStructureName || null,
           ],
         );
         createdMissions.push(rows[0]);

@@ -266,8 +266,9 @@ describe("POST /api/missions — création", () => {
 
     // 34 champs du formulaire + date souhaitée + urgence + identifiant
     // de lot + destinataire du récapitulatif + statut initial + les deux
-    // prix et l'auteur, réservés à la saisie administrative.
-    expect(params).toHaveLength(42);
+    // prix et l'auteur, réservés à la saisie administrative, + la
+    // structure de livraison et sa raison sociale.
+    expect(params).toHaveLength(44);
     expect(params).toEqual(
       expect.arrayContaining([
         CLIENT.id,
@@ -327,7 +328,9 @@ describe("POST /api/missions — création", () => {
     });
 
     expect(sqlVu).toMatch(/recap_email/);
-    expect(params[params.length - 1]).toBeNull();
+    // Le rang de recap_email dans la requête ne doit pas conditionner ce
+    // test : c'est l'absence de chaîne vide parmi les valeurs qui importe.
+    expect(params).not.toContain("");
   });
 });
 
@@ -580,7 +583,7 @@ describe("POST /api/missions — dates et urgence", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(capture.params).toHaveLength(42);
+      expect(capture.params).toHaveLength(44);
       expect(capture.sql).toMatch(/service_handover/);
     });
   });

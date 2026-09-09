@@ -54,6 +54,7 @@ node server/src/db/migrate.js
 node server/src/db/migrate-demande-documents.js
 node server/src/db/migrate-password-reset.js
 node server/src/db/migrate-index-tri.js
+node server/src/db/migrate-structure-assureur.js
 
 etape "Vérification du démarrage"
 # On lance l'application quelques secondes : mieux vaut détecter ici un module

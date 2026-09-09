@@ -200,7 +200,8 @@ describe("POST /api/auth/demande", () => {
       .field("lastName", "Driver")
       .field("email", "driver@test.com")
       .field("phone", "0612345678")
-      .field("typeIdentite", "cni");
+      .field("typeIdentite", "cni")
+      .field("assureurRc", "tetris");
     for (const piece of [
       "carte_identite",
       "carte_identite_verso",

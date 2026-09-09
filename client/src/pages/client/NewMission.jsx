@@ -183,6 +183,7 @@ export default function NewMission() {
   });
 
   const [arrival, setArrival] = useState({
+    structure: "",
     structureName: "",
     contactName: "",
     contactPhone: "",
@@ -199,11 +200,17 @@ export default function NewMission() {
     retributionDetails: "",
   });
 
-  const [emergency, setEmergency] = useState({
-    contactName: "",
-    phone: "",
-    contactEmail: "",
-  });
+  // Le convoyeur appelle ce contact en cas d'imprévu sur la route. Dans la
+  // quasi-totalité des cas c'est l'astreinte Drive Line Connect qui traite,
+  // d'où le pré-remplissage. Le client reste libre de désigner son propre
+  // référent quand la mission le justifie.
+  const URGENCE_DLC = {
+    contactName: "Drive Line Connect",
+    phone: "06 69 58 34 30",
+    contactEmail: "drivelineconnect@gmail.com",
+  };
+
+  const [emergency, setEmergency] = useState({ ...URGENCE_DLC });
 
   const [observations, setObservations] = useState("");
 
@@ -266,6 +273,7 @@ export default function NewMission() {
         departureInstructions: departure.instructions || null,
         arrivalAddress: arrival.address,
         arrivalDate: arrival.date || null,
+        arrivalStructure: arrival.structure || null,
         arrivalStructureName: arrival.structureName || null,
         arrivalContactName: arrival.contactName || null,
         arrivalContactPhone: arrival.contactPhone || null,
@@ -275,9 +283,10 @@ export default function NewMission() {
         serviceDocumentManagement: services.documentManagement || null,
         serviceHandover: services.handover,
         retributionDetails: services.retributionDetails || null,
-        emergencyContactName: emergency.contactName || null,
-        emergencyPhone: emergency.phone || null,
-        emergencyContactEmail: emergency.contactEmail || null,
+        emergencyContactName: emergency.contactName || URGENCE_DLC.contactName,
+        emergencyPhone: emergency.phone || URGENCE_DLC.phone,
+        emergencyContactEmail:
+          emergency.contactEmail || URGENCE_DLC.contactEmail,
         comments: observations || null,
         // Souhait du client : conservé côté DLC, non transmis à Kaze.
         desiredDeliveryDate: arrival.date || null,
@@ -551,7 +560,7 @@ export default function NewMission() {
                       )
                     }
                     className="input-field font-mono"
-                    placeholder="VF1XXXXXXXXXXXXXX"
+                    placeholder="17 caractères"
                     maxLength={17}
                   />
                   {v.vin && v.vin.length !== 17 && v.vin.length > 0 && (
@@ -591,7 +600,7 @@ export default function NewMission() {
                       updateVehicle(idx, "model", e.target.value)
                     }
                     className="input-field"
-                    placeholder="RENAULT MASTER"
+                    placeholder="Marque et modèle"
                   />
                 </div>
 
@@ -686,14 +695,17 @@ export default function NewMission() {
                   <Building2 size={14} className="inline mr-1" />
                   Structure
                 </label>
-                <input
+                <select
                   value={departure.structure}
                   onChange={(e) =>
                     setDeparture({ ...departure, structure: e.target.value })
                   }
                   className="input-field"
-                  placeholder="Concession / Garage / Particulier"
-                />
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="PROFESSIONNEL">Professionnel</option>
+                  <option value="PARTICULIER">Particulier</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-1.5">
@@ -709,7 +721,7 @@ export default function NewMission() {
                     })
                   }
                   className="input-field"
-                  placeholder="GARAGE DU CENTRE"
+                  placeholder="Raison sociale"
                 />
               </div>
             </div>
@@ -726,7 +738,7 @@ export default function NewMission() {
                     setDeparture({ ...departure, contactName: e.target.value })
                   }
                   className="input-field"
-                  placeholder="PRÉNOM NOM"
+                  placeholder="Nom et prénom"
                 />
               </div>
               <div>
@@ -786,7 +798,7 @@ export default function NewMission() {
                 onChange={(adresse) =>
                   setDeparture({ ...departure, address: adresse })
                 }
-                placeholder="12 RUE DE L'INDUSTRIE 44000 NANTES"
+                placeholder="Numéro, voie, code postal, ville"
                 ariaLabel="Adresse d'enlèvement"
                 required
               />
@@ -820,19 +832,38 @@ export default function NewMission() {
           </div>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                <Building2 size={14} className="inline mr-1" />
-                Nom de la structure
-              </label>
-              <input
-                value={arrival.structureName}
-                onChange={(e) =>
-                  setArrival({ ...arrival, structureName: e.target.value })
-                }
-                className="input-field"
-                placeholder="CONCESSION AUTO"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                  <Building2 size={14} className="inline mr-1" />
+                  Structure
+                </label>
+                <select
+                  value={arrival.structure}
+                  onChange={(e) =>
+                    setArrival({ ...arrival, structure: e.target.value })
+                  }
+                  className="input-field"
+                >
+                  <option value="">Sélectionner</option>
+                  <option value="PROFESSIONNEL">Professionnel</option>
+                  <option value="PARTICULIER">Particulier</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                  <Building2 size={14} className="inline mr-1" />
+                  Nom de la structure
+                </label>
+                <input
+                  value={arrival.structureName}
+                  onChange={(e) =>
+                    setArrival({ ...arrival, structureName: e.target.value })
+                  }
+                  className="input-field"
+                  placeholder="Raison sociale"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -847,7 +878,7 @@ export default function NewMission() {
                     setArrival({ ...arrival, contactName: e.target.value })
                   }
                   className="input-field"
-                  placeholder="PRÉNOM NOM"
+                  placeholder="Nom et prénom"
                 />
               </div>
               <div>
@@ -910,7 +941,7 @@ export default function NewMission() {
                 onChange={(adresse) =>
                   setArrival({ ...arrival, address: adresse })
                 }
-                placeholder="45 AVENUE DE LA GARE 45000 ORLÉANS"
+                placeholder="Numéro, voie, code postal, ville"
                 ariaLabel="Adresse de livraison"
                 required
               />
@@ -927,7 +958,7 @@ export default function NewMission() {
                   setArrival({ ...arrival, date: e.target.value })
                 }
                 className="input-field"
-                placeholder="LE PLUS TÔT POSSIBLE"
+                placeholder="Délai souhaité"
               />
               <p className="text-xs text-dark-500 mt-1">
                 Laissez vide si vous souhaitez une livraison le plus tôt
@@ -1090,7 +1121,7 @@ export default function NewMission() {
                       })
                     }
                     className="input-field"
-                    placeholder="Drive Line Connect"
+                    placeholder="Nom et prénom"
                   />
                 </div>
                 <div>
@@ -1105,7 +1136,7 @@ export default function NewMission() {
                       setEmergency({ ...emergency, phone: e.target.value })
                     }
                     className="input-field"
-                    placeholder="06 69 58 34 30"
+                    placeholder="06 12 34 56 78"
                   />
                 </div>
               </div>
@@ -1124,11 +1155,13 @@ export default function NewMission() {
                     })
                   }
                   className="input-field"
-                  placeholder="drivelineconnect@gmail.com"
+                  placeholder="contact@entreprise.fr"
                 />
               </div>
               <p className="text-xs text-dark-500">
-                Laissez vide pour utiliser les coordonnées DLC par défaut.
+                Coordonnées de l'astreinte Drive Line Connect, proposées par
+                défaut. Remplacez-les si un autre référent doit être joint
+                pendant le convoyage.
               </p>
             </div>
           </div>

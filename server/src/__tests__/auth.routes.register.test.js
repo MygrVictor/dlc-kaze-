@@ -558,6 +558,10 @@ describe("Routes publiques — cas résiduels", () => {
       .field(
         "typeIdentite",
         "typeIdentite" in champs ? champs.typeIdentite : "cni",
+      )
+      .field(
+        "assureurRc",
+        "assureurRc" in champs ? champs.assureurRc : "tetris",
       );
     for (const piece of pieces) {
       requete.attach(piece, Buffer.from("%PDF-1.4"), {
@@ -767,6 +771,27 @@ describe("Routes publiques — cas résiduels", () => {
     const res = await candidater({ typeIdentite: "" });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/carte nationale ou un passeport/i);
+  });
+
+  it("refuse une candidature sans assureur RC déclaré (400)", async () => {
+    const res = await candidater({ assureurRc: "" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Tetris ou Generali/i);
+  });
+
+  it("refuse un assureur hors des deux compagnies reconnues (400)", async () => {
+    // La liste est close côté serveur : un menu déroulant contraint
+    // l'interface, pas une requête forgée à la main.
+    const res = await candidater({ assureurRc: "axa" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Tetris ou Generali/i);
+  });
+
+  it("accepte les deux assureurs reconnus (201)", async () => {
+    for (const assureur of ["tetris", "generali"]) {
+      const res = await candidater({ assureurRc: assureur });
+      expect(res.status).toBe(201);
+    }
   });
 
   it("rejette un fichier dont le format n'est pas accepté (400)", async () => {

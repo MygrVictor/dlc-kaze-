@@ -107,7 +107,8 @@ describe("Candidature convoyeur — sort des fichiers reçus", () => {
       .field("lastName", "Convoy")
       .field("email", "jean@convoy.fr")
       .field("phone", "0612345678")
-      .field("typeIdentite", "cni");
+      .field("typeIdentite", "cni")
+      .field("assureurRc", "tetris");
     if (champs.company) req.field("company", champs.company);
     for (const piece of pieces) {
       req.attach(piece, FICHIER, {
@@ -186,6 +187,7 @@ describe("Candidature convoyeur — sort des fichiers reçus", () => {
       .field("email", "jean@convoy.fr")
       .field("phone", "0612345678")
       .field("typeIdentite", "cni")
+      .field("assureurRc", "tetris")
       .attach("carte_identite", Buffer.from("<script>alert(1)</script>"), {
         filename: "piege.html",
         contentType: "text/html",
@@ -206,6 +208,7 @@ describe("Candidature convoyeur — sort des fichiers reçus", () => {
       .field("email", "jean@convoy.fr")
       .field("phone", "0612345678")
       .field("typeIdentite", "cni")
+      .field("assureurRc", "tetris")
       .attach("attestation_fiscale", FICHIER, {
         filename: "autre.pdf",
         contentType: "application/pdf",

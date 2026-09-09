@@ -31,6 +31,10 @@ const CHAMPS_CONVOYEUR = {
   // Le type de pièce ne se déduit pas d'un fichier : il faut le demander,
   // sans quoi on ne saurait pas si un verso manque ou s'il n'existe pas.
   typeIdentite: "cni",
+  // Seules deux compagnies sont acceptées. Le champ part vide plutôt que
+  // pré-rempli : proposer Tetris par défaut ferait valider sans lire à des
+  // candidats assurés ailleurs, et fausserait le filtre.
+  assureurRc: "",
   // Les pièces sont retenues dans l'état du formulaire et partent avec
   // lui : le serveur n'enregistre pas une candidature incomplète, les
   // deux ne peuvent donc pas être dissociés.
@@ -132,6 +136,9 @@ const documentsAttendus = (form) =>
     ? DOCUMENTS
     : [DOCUMENTS[0], VERSO_IDENTITE, ...DOCUMENTS.slice(1)];
 
+/** Les deux compagnies dont le donneur d'ordre accepte les attestations. */
+const ASSUREURS_RECONNUS = ["tetris", "generali"];
+
 export default function DevenirConvoyeurPage() {
   const valider = (form) => {
     if (!form.firstName.trim() || !form.lastName.trim()) {
@@ -145,6 +152,12 @@ export default function DevenirConvoyeurPage() {
     }
     if (!mobileValide(form.phone)) {
       return "Numéro de mobile invalide. Format attendu : 06 12 34 56 78.";
+    }
+    // Seules deux compagnies sont reconnues par le donneur d'ordre :
+    // l'annoncer dès la candidature évite d'instruire un dossier qui sera
+    // écarté après lecture de l'attestation.
+    if (!ASSUREURS_RECONNUS.includes(form.assureurRc)) {
+      return "Votre RC Circulation doit être souscrite chez Tetris ou Generali.";
     }
     // Le dossier complet conditionne l'envoi : une candidature sans
     // justificatifs n'est pas instruisible, et les réclamer ensuite par
@@ -171,6 +184,7 @@ export default function DevenirConvoyeurPage() {
     email: form.email.trim(),
     phone: form.phone.trim(),
     typeIdentite: form.typeIdentite,
+    assureurRc: form.assureurRc,
     message: form.message.trim() || undefined,
   });
 
@@ -319,17 +333,79 @@ export default function DevenirConvoyeurPage() {
             </div>
 
             <div className="depot-liste">
-              {documentsAttendus(form).map((doc) => (
-                <ChampDocument
-                  key={doc.nom}
-                  nom={doc.nom}
-                  libelle={doc.libelle}
-                  aide={doc.aide}
-                  fichier={form[doc.nom]}
-                  accent={accent}
-                  onChange={deposer(setForm, doc)}
-                />
-              ))}
+              {documentsAttendus(form).map((doc) => {
+                // L'attestation ne peut être jointe qu'une fois la
+                // compagnie déclarée, et seulement si elle fait partie des
+                // deux reconnues. Le champ reste visible mais inerte : le
+                // masquer laisserait croire qu'aucune RC n'est demandée.
+                const estRc = doc.nom === "rc_circulation";
+                const assureurRecevable = ASSUREURS_RECONNUS.includes(
+                  form.assureurRc,
+                );
+
+                const champ = (
+                  <ChampDocument
+                    key={doc.nom}
+                    nom={doc.nom}
+                    libelle={doc.libelle}
+                    aide={
+                      estRc && !assureurRecevable
+                        ? "Indiquez d'abord votre compagnie d'assurance ci-dessus."
+                        : doc.aide
+                    }
+                    fichier={form[doc.nom]}
+                    accent={accent}
+                    desactive={estRc && !assureurRecevable}
+                    onChange={deposer(setForm, doc)}
+                  />
+                );
+
+                if (!estRc) return champ;
+
+                // Le sélecteur précède immédiatement le dépôt qu'il
+                // commande : la question et sa conséquence se lisent d'un
+                // seul regard.
+                return (
+                  <div key="rc-circulation-bloc" className="champ-doc">
+                    <label style={labelStyle} htmlFor="assureurRc">
+                      Assureur de votre RC Circulation{" "}
+                      <Requis couleur={accent} />
+                    </label>
+                    <select
+                      id="assureurRc"
+                      name="assureurRc"
+                      value={form.assureurRc}
+                      onChange={(e) => {
+                        const choix = e.target.value;
+                        // Un assureur non reconnu retire l'attestation
+                        // déjà déposée : elle ne serait pas retenue, et la
+                        // conserver afficherait une pièce fournie sous un
+                        // champ devenu inerte.
+                        setForm((prev) => ({
+                          ...prev,
+                          assureurRc: choix,
+                          rc_circulation: ASSUREURS_RECONNUS.includes(choix)
+                            ? prev.rc_circulation
+                            : null,
+                        }));
+                      }}
+                      className="input-field"
+                      style={{ marginBottom: 10 }}
+                    >
+                      <option value="">Sélectionner votre assureur</option>
+                      <option value="tetris">Tetris</option>
+                      <option value="generali">Generali</option>
+                      <option value="autre">Autre </option>
+                    </select>
+                    {form.assureurRc === "autre" && (
+                      <p className="depot-consigne">
+                        Nous ne travaillons qu'avec Tetris et Generali.
+                      </p>
+                    )}
+                    {champ}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

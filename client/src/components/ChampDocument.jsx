@@ -47,6 +47,10 @@ export default function ChampDocument({
   onChange,
   accent,
   requis = true,
+  // Un dépôt peut dépendre d'une réponse donnée plus haut dans le
+  // formulaire. Le champ reste alors visible mais inerte : le masquer
+  // ferait disparaître une pièce pourtant exigée, sans dire pourquoi.
+  desactive = false,
 }) {
   const champ = useRef(null);
 
@@ -69,7 +73,12 @@ export default function ChampDocument({
     <div className="champ-doc">
       <label
         className={fichier ? "depot-ligne depose" : "depot-ligne"}
-        style={fichier ? { borderColor: accent } : undefined}
+        style={{
+          ...(fichier ? { borderColor: accent } : {}),
+          ...(desactive
+            ? { opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" }
+            : {}),
+        }}
       >
         <input
           ref={champ}
@@ -77,6 +86,7 @@ export default function ChampDocument({
           name={nom}
           accept=".jpg,.jpeg,.png,.webp,.pdf"
           className="depot-input"
+          disabled={desactive}
           onChange={(e) => choisir(e.target.files?.[0])}
         />
         <span

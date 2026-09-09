@@ -58,6 +58,15 @@ const DOCUMENTS_REQUIS = [
 // bloquerait un dossier parfaitement valable.
 const TYPES_IDENTITE = ["cni", "passeport"];
 
+// La RC Circulation n'est pas seulement exigée : elle doit émaner de l'une
+// des deux compagnies avec lesquelles le donneur d'ordre travaille. Une
+// attestation d'un autre assureur ne sera pas retenue, autant l'annoncer
+// au moment de la candidature plutôt qu'après instruction du dossier.
+//
+// La liste est fermée côté serveur : un menu déroulant contraint
+// l'interface, pas une requête forgée à la main.
+const ASSUREURS_RC = ["tetris", "generali"];
+
 // Le W garage n'est pas exigible : il ouvre des missions supplémentaires
 // sans conditionner l'accès. Le réclamer écarterait des convoyeurs
 // parfaitement en règle.
@@ -473,6 +482,7 @@ router.post(
         phone,
         message,
         typeIdentite,
+        assureurRc,
       } = req.body;
 
       const refuser = (error) => {
@@ -539,6 +549,15 @@ router.post(
           );
         }
 
+        // L'assureur suit la même logique : il ne se lit pas de façon
+        // fiable dans le PDF déposé, mais il conditionne la recevabilité.
+        const assureur = assureurRc ? String(assureurRc).trim() : "";
+        if (!ASSUREURS_RC.includes(assureur)) {
+          return refuser(
+            "Votre RC Circulation doit être souscrite chez Tetris ou Generali.",
+          );
+        }
+
         const attendus = [...DOCUMENTS_REQUIS];
         // Une carte nationale se lit sur ses deux faces ; un passeport
         // tient sur sa page d'identification.
@@ -575,8 +594,8 @@ router.post(
       const demande = await db.transaction(async (client) => {
         const { rows } = await client.query(
           `INSERT INTO contact_requests
-             (type, first_name, last_name, company, job_title, email, phone, message, ip)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             (type, first_name, last_name, company, job_title, email, phone, message, ip, assureur_rc)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING id, type, created_at`,
           [
             type,
@@ -588,6 +607,9 @@ router.post(
             tel,
             message ? message.trim() : null,
             req.ip || null,
+            // Renseigné pour les seules candidatures convoyeur : un client
+            // n'a pas de RC Circulation à déclarer.
+            type === "convoyeur" ? String(assureurRc).trim() : null,
           ],
         );
 

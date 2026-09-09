@@ -251,7 +251,7 @@ export default function PublicLayout() {
               marginBottom: 20,
             }}
           >
-            Contact . 06 69 58 34 30
+            Contact . 02 40 82 42 31
           </div>
           <div
             style={{
