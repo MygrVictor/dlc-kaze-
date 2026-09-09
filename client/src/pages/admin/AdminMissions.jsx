@@ -75,6 +75,9 @@ export default function AdminMissions() {
   const [lectureSeule, setLectureSeule] = useState(false);
   const [priceValue, setPriceValue] = useState("");
   const [priceConvoyeurValue, setPriceConvoyeurValue] = useState("");
+  // L'administrateur convoie lui-même une partie des missions : cocher
+  // retient celle-ci pour lui dès la cotation.
+  const [prendreLaMission, setPrendreLaMission] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -235,11 +238,17 @@ export default function AdminMissions() {
       await api.post(`/admin/missions/${priceModal.id}/proposer-prix`, {
         price: Number(priceValue),
         price_convoyeur: Number(priceConvoyeurValue),
+        assignerAdmin: prendreLaMission,
       });
-      toast.success("Devis proposé au client.");
+      toast.success(
+        prendreLaMission
+          ? "Devis proposé au client. La mission vous reviendra dès son accord."
+          : "Devis proposé au client.",
+      );
       setPriceModal(null);
       setPriceValue("");
       setPriceConvoyeurValue("");
+      setPrendreLaMission(false);
       fetchMissions();
     } catch (err) {
       toast.error(err.response?.data?.error || "Erreur.");
@@ -278,7 +287,7 @@ export default function AdminMissions() {
     setAssignModal(mission);
     setSelectedConvoyeur("");
     try {
-      const res = await api.get("/admin/users?role=convoyeur");
+      const res = await api.get("/admin/users?role=convoyeur,admin");
       setConvoyeurs(res.data.users);
     } catch {
       toast.error("Impossible de charger les convoyeurs.");
@@ -1110,6 +1119,27 @@ export default function AdminMissions() {
                         )}
                       </div>
                     )}
+
+                  {/* Une mission retenue ici ne paraîtra jamais dans la
+                      bourse aux missions : elle passe directement en
+                      « assignée » dès que le client valide le devis. */}
+                  <label className="mb-4 flex items-start gap-3 p-3 bg-dark-800/40 border border-dark-700 rounded-lg cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={prendreLaMission}
+                      onChange={(e) => setPrendreLaMission(e.target.checked)}
+                      className="mt-0.5 accent-accent-500"
+                    />
+                    <span>
+                      <span className="block text-sm text-dark-200">
+                        Je prends cette mission
+                      </span>
+                      <span className="block text-xs text-dark-500 mt-0.5">
+                        Elle ne sera pas proposée aux convoyeurs et vous sera
+                        assignée dès l&apos;accord du client.
+                      </span>
+                    </span>
+                  </label>
 
                   <div className="flex gap-3">
                     <button

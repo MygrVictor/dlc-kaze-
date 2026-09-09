@@ -402,7 +402,22 @@ describe("Gestion des utilisateurs", () => {
 
     await auth(request(app).get("/api/admin/users?role=convoyeur"));
 
-    expect(params).toEqual(["convoyeur"]);
+    expect(params).toEqual([["convoyeur"]]);
+  });
+
+  it("accepte plusieurs rôles en un seul filtre", async () => {
+    // L'assignation d'une mission propose les convoyeurs et
+    // l'administrateur, qui convoie lui aussi : sans cumul, il faudrait
+    // deux appels et une fusion côté navigateur.
+    let params;
+    mockDb(ADMIN, (sql, p) => {
+      params = p;
+      return { rows: [] };
+    });
+
+    await auth(request(app).get("/api/admin/users?role=convoyeur,admin"));
+
+    expect(params).toEqual([["convoyeur", "admin"]]);
   });
 
   it("valide un compte et notifie l'utilisateur", async () => {
@@ -889,6 +904,69 @@ describe("POST /api/admin/missions/:id/proposer-prix", () => {
 
     expect(res.status).toBe(200);
   });
+
+  it("retient la mission pour l'administrateur qui la prend", async () => {
+    // Cocher « je prends cette mission » inscrit le convoyeur dès la
+    // cotation : à l'accord du client, elle lui reviendra sans passer par
+    // la bourse aux missions.
+    let params;
+    mockDb({ ...ADMIN, kaze_driver_id: "kz-paul" }, (sql, p) => {
+      if (isGetMissionById(sql)) return { rows: [enAttente] };
+      if (/status = 'DEVIS_PROPOSE'/i.test(sql)) {
+        params = p;
+        return { rows: [{ ...enAttente, status: "DEVIS_PROPOSE" }] };
+      }
+      if (/SELECT email, full_name FROM users/i.test(sql))
+        return { rows: [{ email: CLIENT.email }] };
+    });
+
+    const res = await proposer({
+      price: 500,
+      price_convoyeur: 300,
+      assignerAdmin: true,
+    });
+
+    expect(res.status).toBe(200);
+    expect(params[2]).toBe(ADMIN.id);
+  });
+
+  it("laisse la mission libre quand l'administrateur ne la prend pas", async () => {
+    // Le champ est remis à null : décocher lors d'une recotation doit
+    // rendre la mission aux convoyeurs, sans quoi un choix ne se
+    // reprendrait plus.
+    let params;
+    mockDb({ ...ADMIN, kaze_driver_id: "kz-paul" }, (sql, p) => {
+      if (isGetMissionById(sql)) return { rows: [enAttente] };
+      if (/status = 'DEVIS_PROPOSE'/i.test(sql)) {
+        params = p;
+        return { rows: [{ ...enAttente, status: "DEVIS_PROPOSE" }] };
+      }
+      if (/SELECT email, full_name FROM users/i.test(sql))
+        return { rows: [{ email: CLIENT.email }] };
+    });
+
+    await proposer({ price: 500, price_convoyeur: 300 });
+
+    expect(params[2]).toBeNull();
+  });
+
+  it("refuse de retenir la mission sans compte Kaze lié", async () => {
+    // Sans liaison, la mission partirait chez Kaze sans intervenant et
+    // l'échec n'apparaîtrait qu'après l'accord du client — trop tard pour
+    // la proposer à quelqu'un d'autre.
+    mockDb(ADMIN, (sql) => {
+      if (isGetMissionById(sql)) return { rows: [enAttente] };
+    });
+
+    const res = await proposer({
+      price: 500,
+      price_convoyeur: 300,
+      assignerAdmin: true,
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/pas lié à Kaze/i);
+  });
 });
 
 // ═════════════════════════════════════════════════════════════
@@ -936,7 +1014,7 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
 
   it("attribue la mission et la synchronise dans Kaze", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/role = 'convoyeur'/i.test(sql)) return { rows: [CONVOYEUR_ROW] };
+      if (/role = ANY\(\$2\)/i.test(sql)) return { rows: [CONVOYEUR_ROW] };
       if (isGetMissionById(sql))
         return { rows: [{ id: MISSION_ID, client_id: CLIENT.id }] };
       if (/SET convoyeur_id = \$1/i.test(sql))
@@ -964,7 +1042,7 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
 
   it("signale un convoyeur sans compte Kaze sans bloquer l'attribution", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/role = 'convoyeur'/i.test(sql))
+      if (/role = ANY\(\$2\)/i.test(sql))
         return { rows: [{ ...CONVOYEUR_ROW, kaze_driver_id: null }] };
       if (isGetMissionById(sql)) return { rows: [{ id: MISSION_ID }] };
       if (/SET convoyeur_id = \$1/i.test(sql))
@@ -983,7 +1061,7 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
     const requetes = [];
     mockDb(ADMIN, (sql) => {
       requetes.push(sql);
-      if (/role = 'convoyeur'/i.test(sql))
+      if (/role = ANY\(\$2\)/i.test(sql))
         return { rows: [{ ...CONVOYEUR_ROW, kaze_driver_id: null }] };
       if (isGetMissionById(sql)) return { rows: [{ id: MISSION_ID }] };
       if (/SET convoyeur_id = \$1/i.test(sql))
@@ -1002,7 +1080,7 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
 
   it("remonte l'erreur détaillée quand l'assignation Kaze échoue", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/role = 'convoyeur'/i.test(sql)) return { rows: [CONVOYEUR_ROW] };
+      if (/role = ANY\(\$2\)/i.test(sql)) return { rows: [CONVOYEUR_ROW] };
       if (isGetMissionById(sql)) return { rows: [{ id: MISSION_ID }] };
       if (/SET convoyeur_id = \$1/i.test(sql))
         return { rows: [{ id: MISSION_ID }] };

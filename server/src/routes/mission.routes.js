@@ -580,10 +580,14 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
         );
       }
 
-      // 2. Passer le statut en ACCEPTEE
+      // 2. Passer le statut en ACCEPTEE — ou directement en ASSIGNEE si un
+      //    convoyeur a été retenu dès la cotation. Dans ce cas la mission ne
+      //    doit pas transiter par la bourse : elle y serait visible le temps
+      //    qu'un autre s'en saisisse.
+      const preAssignee = Boolean(mission.convoyeur_id);
       await client.query(
-        `UPDATE missions SET status = 'ACCEPTEE', updated_at = NOW() WHERE id = $1`,
-        [mission.id],
+        `UPDATE missions SET status = $1, updated_at = NOW() WHERE id = $2`,
+        [preAssignee ? "ASSIGNEE" : "ACCEPTEE", mission.id],
       );
 
       // 3. Envoyer la mission à l'API Kaze
@@ -596,13 +600,32 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
           `UPDATE missions SET kaze_mission_id = $1, updated_at = NOW() WHERE id = $2`,
           [kazeMissionId, mission.id],
         );
+
+        // Le convoyeur retenu est déclaré à Kaze dans la foulée : sans quoi
+        // la mission y resterait sans intervenant, et lui ne la verrait pas.
+        if (preAssignee && kazeMissionId) {
+          const { rows: retenu } = await client.query(
+            "SELECT kaze_driver_id FROM users WHERE id = $1",
+            [mission.convoyeur_id],
+          );
+          if (retenu[0]?.kaze_driver_id) {
+            await kazeService.assignDriver(
+              kazeMissionId,
+              retenu[0].kaze_driver_id,
+            );
+          } else {
+            console.error(
+              `⚠️ Mission ${mission.id} pré-assignée à un compte sans liaison Kaze.`,
+            );
+          }
+        }
       } catch (kazeErr) {
         console.error(
           `⚠️  Erreur Kaze (mission acceptée localement, retry en queue) : ${kazeErr.message}`,
         );
       }
 
-      return { kazeMissionId };
+      return { kazeMissionId, preAssignee };
     });
 
     // 4. Annoncer la mission aux convoyeurs (asynchrone, ne bloque pas
@@ -610,39 +633,42 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
     //    un message dans le salon commun, quel que soit le nombre de
     //    convoyeurs. WhatsApp facturant chaque destinataire, il n'est
     //    conservé qu'en repli, si aucun salon Telegram n'est configuré.
+    //    Une mission déjà pourvue n'est annoncée à personne.
     try {
-      const { rows: fullMission } = await db.query(
-        "SELECT * FROM missions WHERE id = $1",
-        [req.body.missionId || req.params.id],
-      );
+      if (!result.preAssignee) {
+        const { rows: fullMission } = await db.query(
+          "SELECT * FROM missions WHERE id = $1",
+          [req.body.missionId || req.params.id],
+        );
 
-      if (fullMission[0]) {
-        const lienMission = process.env.CLIENT_URL
-          ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
-          : undefined;
+        if (fullMission[0]) {
+          const lienMission = process.env.CLIENT_URL
+            ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+            : undefined;
 
-        if (telegramService.actif) {
-          telegramService
-            .annoncerMissionDisponible(fullMission[0], lienMission)
-            .catch((err) => {
-              console.error(
-                "⚠️ Erreur lors de l'annonce Telegram :",
-                err.message,
-              );
-            });
-        } else {
-          const { rows: convoyeurs } = await db.query(
-            "SELECT id, email, full_name, phone FROM users WHERE role = 'convoyeur'",
-          );
-          if (convoyeurs.length > 0) {
-            whatsappService
-              .notifierMissionDisponible(convoyeurs, fullMission[0])
+          if (telegramService.actif) {
+            telegramService
+              .annoncerMissionDisponible(fullMission[0], lienMission)
               .catch((err) => {
                 console.error(
-                  "⚠️ Erreur lors de la notification des convoyeurs :",
+                  "⚠️ Erreur lors de l'annonce Telegram :",
                   err.message,
                 );
               });
+          } else {
+            const { rows: convoyeurs } = await db.query(
+              "SELECT id, email, full_name, phone FROM users WHERE role = 'convoyeur'",
+            );
+            if (convoyeurs.length > 0) {
+              whatsappService
+                .notifierMissionDisponible(convoyeurs, fullMission[0])
+                .catch((err) => {
+                  console.error(
+                    "⚠️ Erreur lors de la notification des convoyeurs :",
+                    err.message,
+                  );
+                });
+            }
           }
         }
       }
@@ -656,7 +682,7 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
     res.json({
       message: "Mission acceptée avec succès.",
       kazeMissionId: result.kazeMissionId,
-      status: "ACCEPTEE",
+      status: result.preAssignee ? "ASSIGNEE" : "ACCEPTEE",
     });
   } catch (err) {
     if (err.status) {

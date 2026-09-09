@@ -550,6 +550,51 @@ describe("assignDriver", () => {
   });
 });
 
+// ──────────────────────────────────────────────────────────────
+//  getDriverByEmail
+//
+//  Régression : Kaze ignore le filtre `filter[email]` et répond une
+//  liste vide même pour un compte existant. La recherche ne trouvait
+//  donc jamais personne, et le rattrapage automatique du
+//  kaze_driver_id lors d'une attribution restait sans effet.
+// ──────────────────────────────────────────────────────────────
+describe("getDriverByEmail", () => {
+  it("balaie l'annuaire quand le filtre serveur ne renvoie rien", async () => {
+    mockClient.get
+      .mockResolvedValueOnce({ data: { data: [] } })
+      .mockResolvedValueOnce({
+        data: { data: [{ id: "kz-1", email: "Paul@Exemple.fr" }] },
+      });
+
+    const trouve = await kaze.getDriverByEmail("paul@exemple.fr");
+
+    expect(trouve?.id).toBe("kz-1");
+  });
+
+  it("s'en tient au filtre serveur quand il répond", async () => {
+    // Rapatrier tout l'annuaire pour rien serait coûteux : si Kaze
+    // venait à honorer le filtre, un seul appel doit suffire.
+    mockClient.get.mockResolvedValueOnce({
+      data: { data: [{ id: "kz-2", email: "paul@exemple.fr" }] },
+    });
+
+    const trouve = await kaze.getDriverByEmail("paul@exemple.fr");
+
+    expect(trouve?.id).toBe("kz-2");
+    expect(mockClient.get).toHaveBeenCalledTimes(1);
+  });
+
+  it("renvoie null quand l'adresse est inconnue", async () => {
+    mockClient.get
+      .mockResolvedValueOnce({ data: { data: [] } })
+      .mockResolvedValueOnce({
+        data: { data: [{ id: "kz-3", email: "autre@exemple.fr" }] },
+      });
+
+    expect(await kaze.getDriverByEmail("paul@exemple.fr")).toBeNull();
+  });
+});
+
 describe("unassignDriver", () => {
   it("appelle DELETE sur l'endpoint performers", async () => {
     mockClient.delete.mockResolvedValue({ status: 204, data: null });

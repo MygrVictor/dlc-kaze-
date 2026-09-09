@@ -23,6 +23,11 @@ const UUID_REGEX =
 const KAZE_ID_REGEX =
   /^kaze-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Qui peut conduire une mission. L'administrateur convoie lui-même : le
+// restreindre au seul rôle « convoyeur » l'obligerait à se créer un second
+// compte, avec un second compte Kaze, pour un travail qu'il fait déjà.
+const ROLES_CONVOYABLES = ["convoyeur", "admin"];
+
 router.param("id", (req, res, next, value) => {
   if (!UUID_REGEX.test(value) && !KAZE_ID_REGEX.test(value))
     return res.status(400).json({ error: "Identifiant invalide." });
@@ -438,10 +443,18 @@ router.get("/users", async (req, res, next) => {
     let countQuery = `SELECT COUNT(*) FROM users`;
     const params = [];
     if (role) {
-      const where = " WHERE role = $1";
+      // Plusieurs rôles peuvent être demandés d'un coup, séparés par des
+      // virgules : l'assignation d'une mission propose ainsi les convoyeurs
+      // et l'administrateur, qui convoie lui aussi, sans mélanger ces deux
+      // rôles partout ailleurs.
+      const roles = String(role)
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+      const where = " WHERE role = ANY($1)";
       query += where;
       countQuery += where;
-      params.push(role);
+      params.push(roles);
     }
     query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
 
@@ -586,10 +599,14 @@ router.patch("/users/:id/kaze-link", async (req, res, next) => {
     ]);
     if (userRow.rows.length === 0)
       return res.status(404).json({ error: "Utilisateur introuvable." });
-    if (userRow.rows[0].role !== "convoyeur") {
-      return res
-        .status(400)
-        .json({ error: "Seuls les convoyeurs peuvent être liés à Kaze." });
+    // L'administrateur convoie lui aussi et dispose de son propre compte
+    // Kaze : le priver de liaison l'empêcherait de recevoir les missions
+    // qu'il s'attribue. Un client, en revanche, n'a rien à y faire.
+    if (!ROLES_CONVOYABLES.includes(userRow.rows[0].role)) {
+      return res.status(400).json({
+        error:
+          "Seuls les convoyeurs et l'administrateur peuvent être liés à Kaze.",
+      });
     }
 
     if (kazeDriverId) {
@@ -1003,7 +1020,7 @@ router.post("/missions", async (req, res, next) => {
 
 router.post("/missions/:id/proposer-prix", async (req, res, next) => {
   try {
-    const { price, price_convoyeur } = req.body;
+    const { price, price_convoyeur, assignerAdmin } = req.body;
     if (!price || isNaN(price) || Number(price) <= 0) {
       return res
         .status(400)
@@ -1034,10 +1051,27 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
       });
     }
 
+    // Se réserver une mission sans compte Kaze lié la ferait partir chez
+    // Kaze sans intervenant, et l'échec n'apparaîtrait qu'après l'accord du
+    // client — trop tard pour la proposer à quelqu'un d'autre.
+    if (assignerAdmin && !req.user.kaze_driver_id) {
+      return res.status(400).json({
+        error:
+          "Votre compte n'est pas lié à Kaze : impossible de vous attribuer cette mission. Renseignez votre identifiant Kaze dans Utilisateurs.",
+      });
+    }
+
     const updated = await db.query(
-      `UPDATE missions SET price = $1, price_convoyeur = $2, status = 'DEVIS_PROPOSE', updated_at = NOW()
-       WHERE id = $3 RETURNING *`,
-      [price, price_convoyeur, mission.id],
+      `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
+              status = 'DEVIS_PROPOSE', updated_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      // Cocher « je prends cette mission » retient le convoyeur dès la
+      // cotation. La mission n'est pas encore assignée — le client n'a rien
+      // accepté — mais à sa validation elle ira droit à l'administrateur
+      // sans passer par la bourse aux missions. Décocher lors d'une
+      // recotation libère la mission, sans quoi un choix ne se reprendrait
+      // plus.
+      [price, price_convoyeur, assignerAdmin ? req.user.id : null, mission.id],
     );
 
     try {
@@ -1240,8 +1274,9 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
     let convoyeur = null;
     if (convoyeurId) {
       convoyeur = await db.query(
-        "SELECT id, full_name, email, phone, kaze_driver_id FROM users WHERE id = $1 AND role = 'convoyeur'",
-        [convoyeurId],
+        `SELECT id, full_name, email, phone, kaze_driver_id FROM users
+          WHERE id = $1 AND role = ANY($2)`,
+        [convoyeurId, ROLES_CONVOYABLES],
       );
       if (convoyeur.rows.length === 0) {
         return res.status(404).json({ error: "Convoyeur introuvable." });

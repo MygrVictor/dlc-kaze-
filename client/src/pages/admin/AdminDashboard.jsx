@@ -67,6 +67,9 @@ export default function AdminDashboard() {
   const [priceModal, setPriceModal] = useState(null);
   const [priceValue, setPriceValue] = useState("");
   const [priceConvoyeurValue, setPriceConvoyeurValue] = useState("");
+  // L'administrateur convoie lui-même une partie des missions : cocher
+  // retient celle-ci pour lui dès la cotation.
+  const [prendreLaMission, setPrendreLaMission] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [syncing, setSyncing] = useState(null);
 
@@ -129,7 +132,7 @@ export default function AdminDashboard() {
   const fetchConvoyeurs = useCallback(async () => {
     try {
       const [dlcRes, kazeRes] = await Promise.all([
-        api.get("/admin/users?role=convoyeur"),
+        api.get("/admin/users?role=convoyeur,admin"),
         api.get("/admin/kaze/users").catch(() => ({ data: { data: [] } })),
       ]);
       const dlc = (dlcRes.data.users || []).map((u) => ({
@@ -187,11 +190,17 @@ export default function AdminDashboard() {
       await api.post(`/admin/missions/${priceModal.id}/proposer-prix`, {
         price: Number(priceValue),
         price_convoyeur: Number(priceConvoyeurValue),
+        assignerAdmin: prendreLaMission,
       });
-      toast.success("Devis proposé au client !");
+      toast.success(
+        prendreLaMission
+          ? "Devis proposé au client. La mission vous reviendra dès son accord."
+          : "Devis proposé au client !",
+      );
       setPriceModal(null);
       setPriceValue("");
       setPriceConvoyeurValue("");
+      setPrendreLaMission(false);
       fetchMissions();
       fetchStats();
     } catch (err) {
@@ -200,7 +209,6 @@ export default function AdminDashboard() {
       setSubmitting(false);
     }
   };
-
 
   const handleSyncKaze = async (missionId) => {
     setSyncing(missionId);
@@ -1932,6 +1940,26 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               )}
+            {/* Une mission retenue ici ne paraîtra jamais dans la bourse
+                aux missions : elle passe directement en « assignée » dès
+                que le client valide le devis. */}
+            <label className="mb-4 flex items-start gap-3 p-3 bg-dark-800/40 border border-dark-700 rounded-lg cursor-pointer">
+              <input
+                type="checkbox"
+                checked={prendreLaMission}
+                onChange={(e) => setPrendreLaMission(e.target.checked)}
+                className="mt-0.5 accent-accent-500"
+              />
+              <span>
+                <span className="block text-sm text-dark-200">
+                  Je prends cette mission
+                </span>
+                <span className="block text-xs text-dark-500 mt-0.5">
+                  Elle ne sera pas proposée aux convoyeurs et vous sera assignée
+                  d&apos;emblée à l&apos;accord du client.
+                </span>
+              </span>
+            </label>
             <div className="flex gap-3">
               <button
                 onClick={() => setPriceModal(null)}

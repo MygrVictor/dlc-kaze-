@@ -24,6 +24,7 @@ jest.mock("../db", () => ({
 jest.mock("../services/kaze.service", () => ({
   createMission: jest.fn(),
   cancelMission: jest.fn(),
+  assignDriver: jest.fn(),
   getDriverByEmail: jest.fn().mockResolvedValue(null),
 }));
 
@@ -1019,7 +1020,7 @@ describe("POST /api/missions/:id/accepter", () => {
    * Prépare `db.transaction` avec un client transactionnel simulé.
    * `missionRow` est la ligne renvoyée par le SELECT ... FOR UPDATE.
    */
-  function mockTransaction(missionRow) {
+  function mockTransaction(missionRow, gestionnaire) {
     const clientQueries = [];
     db.transaction.mockImplementation(async (callback) => {
       const trxClient = {
@@ -1027,6 +1028,8 @@ describe("POST /api/missions/:id/accepter", () => {
           clientQueries.push({ sql, params });
           if (/FOR UPDATE/i.test(sql))
             return { rows: missionRow ? [missionRow] : [] };
+          const sur_mesure = gestionnaire?.(sql, params);
+          if (sur_mesure) return sur_mesure;
           return { rows: [] };
         }),
       };
@@ -1091,10 +1094,45 @@ describe("POST /api/missions/:id/accepter", () => {
       kazeMissionId: "kaze-job-1",
     });
     expect(kazeService.createMission).toHaveBeenCalled();
-    expect(queries.some((q) => /SET status = 'ACCEPTEE'/i.test(q.sql))).toBe(
-      true,
-    );
+    const passage = queries.find((q) => /SET status = \$1/i.test(q.sql));
+    expect(passage?.params?.[0]).toBe("ACCEPTEE");
     expect(queries.some((q) => /SET kaze_mission_id/i.test(q.sql))).toBe(true);
+  });
+
+  it("va droit en ASSIGNEE quand un convoyeur a été retenu à la cotation", async () => {
+    // La mission ne doit pas passer par la bourse : elle y resterait
+    // visible le temps qu'un autre convoyeur s'en saisisse.
+    const CONVOYEUR_ID = "11111111-2222-3333-4444-555555555555";
+    mockDb(CLIENT, (sql) => {
+      if (/FROM missions WHERE id/i.test(sql)) return { rows: [] };
+      return { rows: [] };
+    });
+    const queries = mockTransaction(
+      {
+        id: MISSION_ID,
+        client_id: CLIENT.id,
+        status: "DEVIS_PROPOSE",
+        convoyeur_id: CONVOYEUR_ID,
+      },
+      (sql) => {
+        if (/kaze_driver_id FROM users/i.test(sql))
+          return { rows: [{ kaze_driver_id: "kz-paul" }] };
+      },
+    );
+    kazeService.createMission.mockResolvedValue({ id: "kaze-job-1" });
+
+    const res = await accepter();
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("ASSIGNEE");
+    const passage = queries.find((q) => /SET status = \$1/i.test(q.sql));
+    expect(passage?.params?.[0]).toBe("ASSIGNEE");
+    // Le convoyeur retenu est déclaré à Kaze, sans quoi la mission y
+    // resterait sans intervenant.
+    expect(kazeService.assignDriver).toHaveBeenCalledWith(
+      "kaze-job-1",
+      "kz-paul",
+    );
   });
 
   it("accepte la mission localement même si Kaze est indisponible", async () => {

@@ -1208,20 +1208,30 @@ const getDriver = async (driverId) => {
 
 /**
  * Recherche un driver/performer Kaze par email.
+ *
+ * Kaze ignore le filtre `filter[email]` : la requête répond une liste vide
+ * quel que soit l'email, y compris pour un compte qui existe bel et bien.
+ * On garde le filtre — s'il venait à être pris en charge, il éviterait de
+ * tout rapatrier — mais on retombe sur un balayage de l'annuaire, seule
+ * méthode qui trouve réellement quelqu'un.
  */
 const getDriverByEmail = async (email) => {
+  const cible = String(email || "").toLowerCase();
+  if (!cible) return null;
+
   return withRetry(
     async () => {
       const { data } = await kazeClient.get("/users", {
         params: { "filter[email]": email, per_page: 10 },
       });
-      if (data.data && data.data.length > 0) {
-        const found = data.data.find(
-          (u) => u.email?.toLowerCase() === email.toLowerCase(),
-        );
-        return found || null;
-      }
-      return null;
+      const filtres = data.data || [];
+      const direct = filtres.find((u) => u.email?.toLowerCase() === cible);
+      if (direct) return direct;
+
+      const tous = await fetchUsers();
+      return (
+        (tous.data || []).find((u) => u.email?.toLowerCase() === cible) || null
+      );
     },
     { label: "getDriverByEmail" },
   );

@@ -388,7 +388,11 @@ export default function AdminUsers() {
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      {u.role === "convoyeur" ? (
+                      {/* L'administrateur convoie lui aussi et doit donc
+                          pouvoir être lié à son compte Kaze : sans cette
+                          liaison, les missions qu'il s'attribue partiraient
+                          chez Kaze sans intervenant. */}
+                      {u.role === "convoyeur" || u.role === "admin" ? (
                         u.kaze_driver_id ? (
                           <button
                             onClick={() => openKazeModal(u)}
