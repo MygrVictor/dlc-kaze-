@@ -15,30 +15,11 @@ import toast from "react-hot-toast";
  * choisir son camp avant de comprendre ce qu'on attendait de lui.
  */
 
-export const EMAIL_VALIDE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/**
- * Reproduit `isValidMobile` du serveur pour éviter un aller-retour réseau
- * sur une faute de saisie évidente. Le serveur reste seul juge.
- */
-export function mobileValide(saisie) {
-  const brut = saisie.trim();
-  if (!brut) return false;
-
-  const international = brut.startsWith("+");
-  let chiffres = brut.replace(/\D/g, "");
-  if (chiffres.startsWith("00")) chiffres = chiffres.slice(2);
-
-  if (!international && chiffres.length === 10 && chiffres.startsWith("0")) {
-    // Numéro national : seuls 06 et 07 désignent des mobiles.
-    return /^0[67]\d{8}$/.test(chiffres);
-  }
-  if (chiffres.startsWith("33")) {
-    return /^[67]\d{8}$/.test(chiffres.slice(2).replace(/^0/, ""));
-  }
-  // Autres pays : on ne présume pas des plans de numérotation.
-  return chiffres.length >= 8 && chiffres.length <= 15;
-}
+// Ces règles vivent désormais dans `lib/validation` : elles servent aussi
+// bien aux pages publiques qu'au formulaire de mission, et les héberger
+// dans une page obligeait ce dernier à importer une page pour valider un
+// numéro. Les réexporter évite de toucher aux appelants existants.
+export { EMAIL_VALIDE, mobileValide } from "../lib/validation";
 
 export const labelStyle = {
   display: "block",

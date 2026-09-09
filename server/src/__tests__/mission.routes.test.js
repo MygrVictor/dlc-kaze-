@@ -207,6 +207,71 @@ describe("POST /api/missions — création", () => {
     expect(res.status).toBe(400);
   });
 
+  // Ces coordonnées servent au convoyeur pour prévenir d'un retard et à
+  // Kaze pour expédier le récapitulatif. Une saisie fautive ne se
+  // découvre alors que sur le terrain, quand plus personne n'est
+  // joignable : elle doit être refusée à la création.
+  describe("coordonnées de contact", () => {
+    const base = { departureAddress: "Paris", arrivalAddress: "Lyon" };
+
+    it.each([
+      ["departureContactEmail", "Email du contact de départ"],
+      ["arrivalContactEmail", "Email du contact d'arrivée"],
+      ["emergencyContactEmail", "Email du contact d'urgence"],
+      ["recapEmail", "Email du récapitulatif"],
+    ])("refuse une adresse invalide dans %s", async (champ) => {
+      mockDb(CLIENT);
+      const res = await creer({ ...base, [champ]: "pas-une-adresse@@" });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/adresse invalide/i);
+    });
+
+    it.each([
+      ["departureContactPhone"],
+      ["arrivalContactPhone"],
+      ["emergencyPhone"],
+    ])("refuse un numéro invalide dans %s", async (champ) => {
+      mockDb(CLIENT);
+      const res = await creer({ ...base, [champ]: "0000000000" });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/numéro invalide/i);
+    });
+
+    it("accepte un fixe : une concession n'a pas toujours de mobile", async () => {
+      mockDb(CLIENT, (sql) => {
+        if (/INSERT INTO missions/i.test(sql))
+          return { rows: [{ id: MISSION_ID }] };
+      });
+      const res = await creer({ ...base, departureContactPhone: "0240824231" });
+      expect(res.status).toBe(201);
+    });
+
+    it("accepte un numéro au format international", async () => {
+      mockDb(CLIENT, (sql) => {
+        if (/INSERT INTO missions/i.test(sql))
+          return { rows: [{ id: MISSION_ID }] };
+      });
+      const res = await creer({
+        ...base,
+        arrivalContactPhone: "+33 6 69 58 34 30",
+      });
+      expect(res.status).toBe(201);
+    });
+
+    it("laisse passer des coordonnées vides : elles sont facultatives", async () => {
+      mockDb(CLIENT, (sql) => {
+        if (/INSERT INTO missions/i.test(sql))
+          return { rows: [{ id: MISSION_ID }] };
+      });
+      const res = await creer({
+        ...base,
+        departureContactEmail: "",
+        arrivalContactPhone: "",
+      });
+      expect(res.status).toBe(201);
+    });
+  });
+
   it("crée une mission au statut EN_ATTENTE_DE_COTATION", async () => {
     mockDb(CLIENT, (sql) => {
       if (/INSERT INTO missions/i.test(sql))

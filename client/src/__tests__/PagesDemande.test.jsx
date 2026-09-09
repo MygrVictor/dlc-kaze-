@@ -166,7 +166,14 @@ describe("DevenirConvoyeurPage", () => {
     }
   };
 
-  const remplir = async ({ phone, pieces = REQUIS }) => {
+  /** Déclare la compagnie qui déverrouille le dépôt de la RC Circulation. */
+  const declarerAssureur = (compagnie = "tetris") =>
+    userEvent.selectOptions(
+      screen.getByLabelText(/assureur de votre rc circulation/i),
+      compagnie,
+    );
+
+  const remplir = async ({ phone, pieces = REQUIS, assureur = "tetris" }) => {
     await userEvent.type(screen.getByPlaceholderText("Jean"), "Marc");
     await userEvent.type(screen.getByPlaceholderText("Dupont"), "Driver");
     await userEvent.type(
@@ -177,6 +184,9 @@ describe("DevenirConvoyeurPage", () => {
       screen.getByPlaceholderText("+33 6 12 34 56 78"),
       phone,
     );
+    // Sans compagnie déclarée, le champ RC Circulation reste inerte : la
+    // déclaration précède donc le dépôt, comme dans le formulaire réel.
+    if (assureur) await declarerAssureur(assureur);
     await joindre(pieces);
   };
 
@@ -244,6 +254,9 @@ describe("DevenirConvoyeurPage", () => {
       // Le type de pièce ne se déduit pas d'un fichier : il est déclaré,
       // et c'est lui qui dit si un verso est attendu.
       typeIdentite: "cni",
+      // La compagnie accompagne l'attestation : le serveur refuse une RC
+      // Circulation dont l'assureur ne figure pas parmi ceux reconnus.
+      assureurRc: "tetris",
       // Les justificatifs voyagent avec le formulaire : le serveur
       // n'enregistre pas une candidature qu'il faudrait compléter ensuite.
       ...Object.fromEntries(REQUIS.map((nom) => [nom, `${nom}.pdf`])),
@@ -371,6 +384,26 @@ describe("DevenirConvoyeurPage", () => {
     for (const nom of ["rc_circulation", "rc_pro"]) {
       expect(champFichier(nom)).toBeInTheDocument();
     }
+  });
+
+  it("interdit de joindre la RC Circulation tant que l'assureur est inconnu", async () => {
+    // Une attestation déposée avant toute déclaration ne pourrait pas être
+    // rattachée à une compagnie reconnue : le dépôt reste donc fermé.
+    afficher(DevenirConvoyeurPage);
+    expect(champFichier("rc_circulation")).toBeDisabled();
+
+    await declarerAssureur("generali");
+    expect(champFichier("rc_circulation")).toBeEnabled();
+  });
+
+  it("referme le dépôt quand la compagnie déclarée n'est pas reconnue", async () => {
+    // « Autre » n'ouvre pas le dépôt : seules Tetris et Generali sont
+    // acceptées, et le champ doit le refléter immédiatement.
+    afficher(DevenirConvoyeurPage);
+    await declarerAssureur("tetris");
+    await declarerAssureur("autre");
+
+    expect(champFichier("rc_circulation")).toBeDisabled();
   });
 
   it("efface l'erreur dès que la saisie reprend", async () => {

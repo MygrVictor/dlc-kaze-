@@ -127,13 +127,16 @@ function isValidMobile(phone) {
   let chiffres = phone.replace(/\D/g, "");
   if (!chiffres) return false;
 
-  if (chiffres.startsWith("00")) chiffres = chiffres.slice(2);
-  else if (international) {
-    // déjà sans indicatif de sortie
-  } else if (chiffres.length === 10 && chiffres.startsWith("0")) {
+  // La forme nationale est éprouvée en premier. L'ordre inverse laissait
+  // passer « 0000000000 » : ce numéro commence par « 00 », il était donc
+  // pris pour un indicatif de sortie international, amputé de ses deux
+  // premiers chiffres, puis admis au titre de sa seule longueur.
+  if (!international && chiffres.length === 10 && chiffres.startsWith("0")) {
     // Numéro national : seuls 06 et 07 sont des mobiles.
     return /^0[67]\d{8}$/.test(chiffres);
   }
+
+  if (chiffres.startsWith("00")) chiffres = chiffres.slice(2);
 
   // Forme internationale : France = 33 suivi de 6 ou 7.
   if (chiffres.startsWith("33")) {
@@ -142,7 +145,53 @@ function isValidMobile(phone) {
     return /^[67]\d{8}$/.test(national);
   }
 
-  // Autres pays : longueur plausible, on ne présume pas des plans de numérotation.
+  // Autres pays : longueur plausible, on ne présume pas des plans de
+  // numérotation. Une suite d'un seul chiffre répété reste écartée :
+  // aucun plan ne l'attribue, et c'est la saisie de contournement la
+  // plus fréquente.
+  if (/^(\d)\1+$/.test(chiffres)) return false;
+  return chiffres.length >= 8 && chiffres.length <= 15;
+}
+
+// ─── 5 ter. Validation d'un téléphone de contact ──────────────
+/**
+ * Vérifie qu'un numéro est joignable, mobile ou fixe.
+ *
+ * Distinct d'`isValidMobile`, qui sert aux notifications WhatsApp et
+ * refuse donc les fixes. Ici le contexte est différent : le contact d'un
+ * garage, d'une concession ou d'un service logistique est le plus souvent
+ * un fixe, et l'exclure obligerait à saisir un numéro faux pour passer.
+ *
+ * Le contrôle reste volontairement souple sur la forme — points, tirets,
+ * espaces et parenthèses sont admis — et strict sur le fond : un numéro
+ * français doit compter dix chiffres et commencer par un indicatif
+ * existant. C'est ce qui écarte les saisies de test (« 0000000000 »,
+ * « 123 ») sans rejeter une écriture inhabituelle mais valable.
+ */
+function isValidPhone(phone) {
+  if (typeof phone !== "string") return false;
+
+  const international = phone.trim().startsWith("+");
+  let chiffres = phone.replace(/\D/g, "");
+  if (!chiffres) return false;
+
+  // Numéro national éprouvé en premier : 01 à 05 et 09 pour les fixes,
+  // 06 et 07 pour les mobiles. 08 est écarté, ce sont des numéros de
+  // service payants sur lesquels on ne joint personne.
+  if (!international && chiffres.length === 10 && chiffres.startsWith("0")) {
+    return /^0[1-79]\d{8}$/.test(chiffres);
+  }
+
+  if (chiffres.startsWith("00")) chiffres = chiffres.slice(2);
+
+  if (chiffres.startsWith("33")) {
+    const national = chiffres.slice(2).replace(/^0/, "");
+    return /^[1-79]\d{8}$/.test(national);
+  }
+
+  // Autres pays : longueur plausible, sans présumer du plan de
+  // numérotation, mais une suite d'un seul chiffre répété est écartée.
+  if (/^(\d)\1+$/.test(chiffres)) return false;
   return chiffres.length >= 8 && chiffres.length <= 15;
 }
 
@@ -341,6 +390,7 @@ module.exports = {
   validatePassword,
   isValidEmail,
   isValidMobile,
+  isValidPhone,
   authLimiter,
   createMissionLimiter,
   attachAuditLog,

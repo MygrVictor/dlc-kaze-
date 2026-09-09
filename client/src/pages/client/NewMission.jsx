@@ -7,6 +7,7 @@ import {
   classeDePeage,
   estUtilitaire12m3,
 } from "../../lib/vehicules";
+import { emailValide, telephoneValide } from "../../lib/validation";
 import {
   Car,
   MapPin,
@@ -227,9 +228,26 @@ export default function NewMission() {
   };
 
   // ── Validation par étape ──
-  // Volontairement permissif : une adresse mal formée est refusée par
-  // le champ email du navigateur, on ne vérifie ici que la présence.
-  const emailValide = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recapEmail.trim());
+  // Ces coordonnées ne remplissent pas un dossier : le convoyeur s'en sert
+  // pour prévenir d'un retard, et le récapitulatif Kaze part à ces
+  // adresses. Une faute de saisie ne se découvre alors que sur le terrain,
+  // quand plus personne n'est joignable.
+  //
+  // Le serveur refuse déjà ces valeurs. Les contrôler ici sert à désigner
+  // le champ fautif : une erreur renvoyée après l'envoi obligerait à
+  // relire quatre écrans pour retrouver ce qui cloche.
+  //
+  // Un champ vide reste valable : il est facultatif. C'est la valeur
+  // renseignée mais fautive qui bloque.
+  const erreurEmail = (valeur) =>
+    valeur && valeur.trim() && !emailValide(valeur) ? "Adresse invalide." : "";
+
+  const erreurTelephone = (valeur) =>
+    valeur && valeur.trim() && !telephoneValide(valeur)
+      ? "Numéro invalide."
+      : "";
+
+  const recapEmailValide = emailValide(recapEmail);
 
   const canNext = () => {
     switch (step) {
@@ -237,13 +255,26 @@ export default function NewMission() {
         // L'admin ne reçoit pas de devis : ce qui l'engage, c'est la
         // rémunération annoncée aux convoyeurs.
         if (estAdmin) return Number(priceConvoyeur) > 0;
-        return emailValide;
+        return recapEmailValide;
       case 1:
         return vehicles.every((v) => v.plate || v.vin || v.model);
       case 2:
-        return departure.address.trim() !== "";
+        return (
+          departure.address.trim() !== "" &&
+          !erreurTelephone(departure.contactPhone) &&
+          !erreurEmail(departure.contactEmail)
+        );
       case 3:
-        return arrival.address.trim() !== "";
+        return (
+          arrival.address.trim() !== "" &&
+          !erreurTelephone(arrival.contactPhone) &&
+          !erreurEmail(arrival.contactEmail)
+        );
+      case 4:
+        return (
+          !erreurTelephone(emergency.phone) &&
+          !erreurEmail(emergency.contactEmail)
+        );
       default:
         return true;
     }
@@ -487,7 +518,7 @@ export default function NewMission() {
                 onChange={(e) => setRecapEmail(e.target.value)}
                 placeholder="vous@entreprise.fr"
               />
-              {recapEmail.trim() !== "" && !emailValide && (
+              {recapEmail.trim() !== "" && !recapEmailValide && (
                 <p className="text-xs text-red-400 mt-2">
                   Adresse email invalide.
                 </p>
@@ -755,6 +786,11 @@ export default function NewMission() {
                   className="input-field"
                   placeholder="01 23 45 67 89"
                 />
+                {erreurTelephone(departure.contactPhone) && (
+                  <p className="text-xs text-red-400 mt-2">
+                    {erreurTelephone(departure.contactPhone)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -772,6 +808,11 @@ export default function NewMission() {
                 className="input-field"
                 placeholder="contact@structure.fr"
               />
+              {erreurEmail(departure.contactEmail) && (
+                <p className="text-xs text-red-400 mt-2">
+                  {erreurEmail(departure.contactEmail)}
+                </p>
+              )}
             </div>
 
             <div>
@@ -895,6 +936,11 @@ export default function NewMission() {
                   className="input-field"
                   placeholder="06 12 34 56 78"
                 />
+                {erreurTelephone(arrival.contactPhone) && (
+                  <p className="text-xs text-red-400 mt-2">
+                    {erreurTelephone(arrival.contactPhone)}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -912,6 +958,11 @@ export default function NewMission() {
                 className="input-field"
                 placeholder="contact@destinataire.fr"
               />
+              {erreurEmail(arrival.contactEmail) && (
+                <p className="text-xs text-red-400 mt-2">
+                  {erreurEmail(arrival.contactEmail)}
+                </p>
+              )}
               <p className="text-xs text-dark-500 mt-1">
                 Le récapitulatif de fin de mission sera envoyé à cette adresse.
               </p>
@@ -1138,6 +1189,11 @@ export default function NewMission() {
                     className="input-field"
                     placeholder="06 12 34 56 78"
                   />
+                  {erreurTelephone(emergency.phone) && (
+                    <p className="text-xs text-red-400 mt-2">
+                      {erreurTelephone(emergency.phone)}
+                    </p>
+                  )}
                 </div>
               </div>
               <div>
@@ -1157,6 +1213,11 @@ export default function NewMission() {
                   className="input-field"
                   placeholder="contact@entreprise.fr"
                 />
+                {erreurEmail(emergency.contactEmail) && (
+                  <p className="text-xs text-red-400 mt-2">
+                    {erreurEmail(emergency.contactEmail)}
+                  </p>
+                )}
               </div>
               <p className="text-xs text-dark-500">
                 Coordonnées de l'astreinte Drive Line Connect, proposées par

@@ -20,6 +20,8 @@ const { classeDePeage, estUtilitaire12m3 } = require("../lib/vehicules");
 const {
   createMissionLimiter,
   validateUUIDParams,
+  isValidEmail,
+  isValidPhone,
 } = require("../middleware/security.middleware");
 
 const router = express.Router();
@@ -154,6 +156,40 @@ router.post(
         if (valeur && String(valeur).length > max) {
           return res.status(400).json({
             error: `${libelle} : ${max} caractères maximum (${String(valeur).length} saisis).`,
+          });
+        }
+      }
+
+      // Ces coordonnées ne servent pas à remplir un dossier : le convoyeur
+      // s'en sert pour prévenir d'un retard et le récapitulatif Kaze part
+      // à ces adresses. Une saisie fautive ne se découvre alors que sur le
+      // terrain, quand plus personne n'est joignable.
+      //
+      // Les champs vides restent admis : ils sont facultatifs. C'est la
+      // valeur renseignée mais invalide qui est refusée.
+      const EMAILS = {
+        "Email du contact de départ": departureContactEmail,
+        "Email du contact d'arrivée": arrivalContactEmail,
+        "Email du contact d'urgence": emergencyContactEmail,
+        "Email du récapitulatif": recapEmail,
+      };
+      for (const [libelle, valeur] of Object.entries(EMAILS)) {
+        if (valeur && !isValidEmail(String(valeur).trim())) {
+          return res.status(400).json({
+            error: `${libelle} : adresse invalide.`,
+          });
+        }
+      }
+
+      const TELEPHONES = {
+        "Téléphone du contact de départ": departureContactPhone,
+        "Téléphone du contact d'arrivée": arrivalContactPhone,
+        "Téléphone du contact d'urgence": emergencyPhone,
+      };
+      for (const [libelle, valeur] of Object.entries(TELEPHONES)) {
+        if (valeur && !isValidPhone(String(valeur).trim())) {
+          return res.status(400).json({
+            error: `${libelle} : numéro invalide.`,
           });
         }
       }
