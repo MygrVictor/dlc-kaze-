@@ -40,7 +40,23 @@ pg_dump "$URL_BDD" | gzip > "$FICHIER_SQL"
 echo "→ $FICHIER_SQL ($(du -h "$FICHIER_SQL" | cut -f1))"
 
 etape "Récupération du code"
+AVANT="$(git rev-parse HEAD)"
 git pull --ff-only
+
+# Bash lit son script au fil de l'exécution, par position dans le fichier :
+# si le `git pull` vient de réécrire ce script, la suite est lue à la
+# mauvaise place et des lignes sautent en silence. Une migration a déjà été
+# oubliée ainsi, sans la moindre erreur affichée. On se relance donc dans
+# sa nouvelle version dès que ce fichier a changé.
+if [ "$AVANT" != "$(git rev-parse HEAD)" ] &&
+   ! git diff --quiet "$AVANT" HEAD -- scripts/deploy-o2switch.sh; then
+  echo "→ le script de déploiement a changé, relance dans sa nouvelle version"
+  # DEPLOIEMENT_RELANCE empêche toute boucle : au second passage le code est
+  # déjà à jour, donc la condition ci-dessus est fausse de toute façon.
+  if [ -z "${DEPLOIEMENT_RELANCE:-}" ]; then
+    DEPLOIEMENT_RELANCE=1 exec bash "$RACINE/scripts/deploy-o2switch.sh"
+  fi
+fi
 
 etape "Installation des dépendances de production"
 # --omit=dev : ni Jest ni Vite ne servent en production, et les installer
