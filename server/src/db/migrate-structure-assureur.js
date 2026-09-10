@@ -4,13 +4,16 @@
  * Deux ajouts distincts, réunis ici parce qu'ils répondent à la même
  * demande d'exploitation : cadrer des saisies jusqu'ici libres.
  *
- * 1. `missions.arrival_structure`
+ * 1. `missions.arrival_structure` et `missions.arrival_structure_name`
  *
  *    Le départ distinguait déjà professionnel et particulier ; l'arrivée
  *    ne le permettait pas. C'est pourtant la même information, et elle
  *    change le déroulé de la livraison : un particulier n'a ni horaires
  *    d'ouverture ni quai, un professionnel exige souvent une prise de
  *    rendez-vous. Le convoyeur doit le savoir avant de partir.
+ *
+ *    Deux colonnes, comme au départ : la nature de la structure, et son
+ *    nom lorsqu'il s'agit d'un professionnel.
  *
  * 2. `contact_requests.assureur_rc`
  *
@@ -37,9 +40,20 @@ const migrate = async () => {
 
   await db.query(`
     ALTER TABLE missions
-      ADD COLUMN IF NOT EXISTS arrival_structure VARCHAR(50);
+      ADD COLUMN IF NOT EXISTS arrival_structure      VARCHAR(150),
+      ADD COLUMN IF NOT EXISTS arrival_structure_name VARCHAR(150);
+  `);
+  // La première version de cette migration n'avait créé que la première
+  // des deux colonnes, en VARCHAR(50). L'INSERT en écrivait pourtant deux :
+  // toute création de mission échouait en production sur « la colonne
+  // arrival_structure_name n'existe pas ». On aligne donc aussi le type sur
+  // celui du départ, pour les bases où la colonne existe déjà.
+  await db.query(`
+    ALTER TABLE missions
+      ALTER COLUMN arrival_structure TYPE VARCHAR(150);
   `);
   console.log("  · missions.arrival_structure");
+  console.log("  · missions.arrival_structure_name");
 
   await db.query(`
     ALTER TABLE contact_requests
