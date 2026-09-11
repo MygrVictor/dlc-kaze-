@@ -381,6 +381,215 @@ describe("GET /api/admin/stats", () => {
 });
 
 // ═════════════════════════════════════════════════════════════
+describe("GET /api/admin/analyse", () => {
+  /** Réponse type d'un agrégat SQL : pg renvoie les numeric en texte. */
+  const TOTAUX = {
+    missions_total: "10",
+    missions_livrees: "4",
+    devis_en_attente: "1",
+    devis_refuses: "2",
+    annulees: "1",
+    missions_engagees: "6",
+    ca_realise: "4000.00",
+    cout_realise: "3000.00",
+    ca_engage: "6000.00",
+    cout_engage: "4500.00",
+    ca_perdu: "800.00",
+  };
+
+  /**
+   * `SQL_TOTAUX` est exécuté deux fois — période courante puis
+   * précédente. On distingue les deux par l'ordre d'appel.
+   */
+  const mockAnalyse = ({
+    precedent = TOTAUX,
+    clients = [],
+    convoyeurs = [],
+    mensuel = [],
+  } = {}) => {
+    const appels = [];
+    let totauxVus = 0;
+    mockDb(ADMIN, (sql, params) => {
+      appels.push({ sql, params });
+      if (
+        /AS missions_total,\s*$|AS ca_perdu/im.test(sql) &&
+        /WHERE created_at >= \$1/i.test(sql)
+      ) {
+        totauxVus += 1;
+        return { rows: [totauxVus === 1 ? TOTAUX : precedent] };
+      }
+      if (/JOIN missions m ON m\.client_id/i.test(sql))
+        return { rows: clients };
+      if (/JOIN missions m ON m\.convoyeur_id/i.test(sql))
+        return { rows: convoyeurs };
+      if (/date_trunc\('month'/i.test(sql)) return { rows: mensuel };
+    });
+    return appels;
+  };
+
+  const analyse = (qs = "") =>
+    auth(request(app).get(`/api/admin/analyse${qs}`));
+
+  it("calcule la marge et le taux de marge à partir du CA et du coût", async () => {
+    mockAnalyse();
+
+    const res = await analyse();
+
+    expect(res.status).toBe(200);
+    expect(res.body.totaux.ca_realise).toBe(4000);
+    expect(res.body.totaux.marge_realisee).toBe(1000);
+    expect(res.body.totaux.taux_marge).toBeCloseTo(25);
+    expect(res.body.totaux.panier_moyen).toBe(1000);
+  });
+
+  it("ne compte que les devis tranchés dans le taux de transformation", async () => {
+    mockAnalyse();
+
+    const res = await analyse();
+
+    // 6 engagés / (6 engagés + 2 refusés) — le devis encore en attente
+    // n'a pas de réponse à mesurer.
+    expect(res.body.totaux.taux_transformation).toBeCloseTo(75);
+  });
+
+  it("compare à une période antérieure de durée identique", async () => {
+    const appels = mockAnalyse();
+
+    await analyse("?debut=2026-03-01&fin=2026-03-31");
+
+    const totaux = appels.filter((a) =>
+      /WHERE created_at >= \$1/i.test(a.sql),
+    );
+    expect(totaux).toHaveLength(2);
+
+    const duree = (a) => a.params[1].getTime() - a.params[0].getTime();
+    // Tolérance d'une milliseconde : la borne haute précédente s'arrête
+    // juste avant le début de la période courante.
+    expect(Math.abs(duree(totaux[0]) - duree(totaux[1]))).toBeLessThanOrEqual(
+      1,
+    );
+  });
+
+  it("renvoie une évolution nulle quand la période précédente est vide", async () => {
+    mockAnalyse({
+      precedent: { ...TOTAUX, ca_realise: "0", cout_realise: "0" },
+    });
+
+    const res = await analyse();
+
+    // Une division par zéro produirait Infinity : on préfère n'afficher
+    // aucune comparaison plutôt qu'un pourcentage absurde.
+    expect(res.body.evolutions.ca_realise).toBeNull();
+  });
+
+  it("détaille la marge par client sans jamais diviser par zéro", async () => {
+    mockAnalyse({
+      clients: [
+        {
+          id: "c1",
+          full_name: "Client Riche",
+          email: "a@b.c",
+          company: "Equans",
+          missions_total: "5",
+          missions_livrees: "5",
+          devis_refuses: "0",
+          ca_realise: "5000.00",
+          cout_realise: "3500.00",
+          ca_engage: "5000.00",
+          derniere_mission: "2026-03-15T10:00:00Z",
+        },
+        {
+          id: "c2",
+          full_name: "Prospect",
+          email: "d@e.f",
+          company: null,
+          missions_total: "1",
+          missions_livrees: "0",
+          devis_refuses: "1",
+          ca_realise: "0",
+          cout_realise: "0",
+          ca_engage: "0",
+          derniere_mission: null,
+        },
+      ],
+    });
+
+    const res = await analyse();
+
+    const [riche, prospect] = res.body.clients;
+    expect(riche.marge).toBe(1500);
+    expect(riche.taux_marge).toBeCloseTo(30);
+    expect(riche.panier_moyen).toBe(1000);
+    // Aucune mission livrée : les ratios valent zéro, pas NaN.
+    expect(prospect.taux_marge).toBe(0);
+    expect(prospect.panier_moyen).toBe(0);
+  });
+
+  it("borne la période sur l'année en cours par défaut", async () => {
+    const appels = mockAnalyse();
+
+    await analyse();
+
+    const premier = appels.find((a) =>
+      /WHERE created_at >= \$1/i.test(a.sql),
+    );
+    expect(premier.params[0].getFullYear()).toBe(new Date().getFullYear());
+    expect(premier.params[0].getMonth()).toBe(0);
+  });
+
+  it("ignore une date invalide plutôt que de produire un intervalle NaN", async () => {
+    const appels = mockAnalyse();
+
+    const res = await analyse("?debut=pas-une-date&fin=n-importe-quoi");
+
+    expect(res.status).toBe(200);
+    const premier = appels.find((a) =>
+      /WHERE created_at >= \$1/i.test(a.sql),
+    );
+    expect(Number.isNaN(premier.params[0].getTime())).toBe(false);
+    expect(Number.isNaN(premier.params[1].getTime())).toBe(false);
+  });
+
+  it("refuse l'accès à un non-admin", async () => {
+    mockDb(CLIENT);
+    const res = await auth(request(app).get("/api/admin/analyse"), CLIENT);
+    expect(res.status).toBe(403);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+describe("GET /api/admin/analyse/export-csv", () => {
+  it("produit un CSV à décimale française avec un BOM", async () => {
+    mockDb(ADMIN, (sql) => {
+      if (/JOIN missions m ON m\.client_id/i.test(sql))
+        return {
+          rows: [
+            {
+              full_name: "Client Test",
+              email: "a@b.c",
+              company: "Equans; Nord",
+              missions_total: "3",
+              missions_livrees: "2",
+              devis_refuses: "1",
+              ca_realise: "2500.50",
+              cout_realise: "1800.00",
+            },
+          ],
+        };
+    });
+
+    const res = await auth(request(app).get("/api/admin/analyse/export-csv"));
+
+    expect(res.status).toBe(200);
+    // Sans BOM, Excel lit l'UTF-8 comme du latin-1.
+    expect(res.text.charCodeAt(0)).toBe(0xfeff);
+    expect(res.text).toContain("700,50");
+    // Le point-virgule dans la raison sociale ne doit pas casser la colonne.
+    expect(res.text).toContain('"Equans; Nord"');
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
 describe("Gestion des utilisateurs", () => {
   it("liste tous les utilisateurs sans exposer le mot de passe", async () => {
     let requete;

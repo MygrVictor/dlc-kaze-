@@ -18,6 +18,7 @@ import {
   Inbox,
   Receipt,
   History,
+  TrendingUp,
   Sun,
   Moon,
 } from "lucide-react";
@@ -54,6 +55,7 @@ const NAV_ITEMS = {
   admin: [
     { label: "Tableau de bord", path: "/admin", icon: BarChart3 },
     { label: "Missions", path: "/admin/missions", icon: FileText },
+    { label: "Analyse", path: "/admin/analyse", icon: TrendingUp },
     { label: "Carte", path: "/admin/carte", icon: MapPin },
     { label: "Utilisateurs", path: "/admin/utilisateurs", icon: Users },
     { label: "Demandes", path: "/admin/demandes", icon: Inbox },

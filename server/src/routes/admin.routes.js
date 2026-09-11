@@ -276,6 +276,321 @@ router.get("/stats", async (_req, res, next) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// Analyse — chiffre d'affaires, marge et activité par client
+//
+// Deux conventions structurent toute cette section :
+//
+// 1. Le CA est compté sur `created_at` (date de la demande), pas sur
+//    la date de livraison. Une mission créée en mars et livrée en avril
+//    reste donc rattachée à mars — c'est la convention la plus lisible
+//    pour comparer deux périodes de même longueur.
+//
+// 2. « Réalisé » = LIVREE uniquement. « Engagé » = ACCEPTEE, ASSIGNEE,
+//    EN_COURS et LIVREE. Les deux sont renvoyés séparément : mélanger
+//    du CA encaissé et du CA espéré dans un même chiffre est la
+//    meilleure façon de ne plus savoir ce qu'on lit.
+//
+// Les montants sont ceux de `missions.price` / `price_convoyeur`, sans
+// aucun croisement avec la table `factures` : deux sources pour un même
+// chiffre finiraient par diverger.
+// ══════════════════════════════════════════════════════════════
+
+/** Statuts qui engagent le client — le devis est signé. */
+const STATUTS_ENGAGES = ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"];
+
+/**
+ * Traduit les paramètres de période en bornes SQL.
+ *
+ * Sans `debut`, on remonte au 1er janvier de l'année en cours : un
+ * tableau sans borne deviendrait illisible dès la deuxième année
+ * d'exploitation.
+ */
+function bornesPeriode({ debut, fin }) {
+  const valide = (v) => v && !Number.isNaN(Date.parse(v));
+  const finBorne = valide(fin) ? new Date(fin) : new Date();
+  // La borne haute est inclusive côté utilisateur : « au 31 mars »
+  // doit contenir le 31 mars en entier.
+  finBorne.setHours(23, 59, 59, 999);
+
+  const debutBorne = valide(debut)
+    ? new Date(debut)
+    : new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
+  debutBorne.setHours(0, 0, 0, 0);
+
+  return { debutBorne, finBorne };
+}
+
+/**
+ * Période de même durée immédiatement antérieure, pour l'évolution.
+ * Comparer mars à février n'aurait aucun sens si l'un fait 28 jours
+ * et l'autre 31 : on décale d'une durée strictement identique.
+ */
+function periodePrecedente(debutBorne, finBorne) {
+  const duree = finBorne.getTime() - debutBorne.getTime();
+  return {
+    debutPrec: new Date(debutBorne.getTime() - duree),
+    finPrec: new Date(debutBorne.getTime() - 1),
+  };
+}
+
+/** Agrégats d'ensemble sur un intervalle. */
+const SQL_TOTAUX = `
+  SELECT
+    COUNT(*)                                                   AS missions_total,
+    COUNT(*) FILTER (WHERE status = 'LIVREE')                  AS missions_livrees,
+    COUNT(*) FILTER (WHERE status = 'DEVIS_PROPOSE')           AS devis_en_attente,
+    COUNT(*) FILTER (WHERE status = 'DEVIS_REFUSE')            AS devis_refuses,
+    COUNT(*) FILTER (WHERE status = 'ANNULEE')                 AS annulees,
+    COUNT(*) FILTER (WHERE status = ANY($3))                   AS missions_engagees,
+    COALESCE(SUM(price)           FILTER (WHERE status = 'LIVREE'), 0)   AS ca_realise,
+    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = 'LIVREE'), 0)   AS cout_realise,
+    COALESCE(SUM(price)           FILTER (WHERE status = ANY($3)), 0)    AS ca_engage,
+    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = ANY($3)), 0)    AS cout_engage,
+    COALESCE(SUM(price)           FILTER (WHERE status = 'DEVIS_REFUSE'), 0) AS ca_perdu
+  FROM missions
+  WHERE created_at >= $1 AND created_at <= $2
+`;
+
+/** Convertit les numeric/bigint de pg (renvoyés en texte) en nombres. */
+const nombre = (v) => Number(v || 0);
+
+function normaliserTotaux(row) {
+  const caRealise = nombre(row.ca_realise);
+  const coutRealise = nombre(row.cout_realise);
+  const caEngage = nombre(row.ca_engage);
+  const missionsLivrees = nombre(row.missions_livrees);
+  const devisRefuses = nombre(row.devis_refuses);
+  const missionsEngagees = nombre(row.missions_engagees);
+
+  // Taux de transformation : parmi les devis tranchés (acceptés ou
+  // refusés), quelle part a été signée ? Les devis encore en attente
+  // sont exclus — ils n'ont pas encore de réponse à mesurer.
+  const devisTranches = missionsEngagees + devisRefuses;
+
+  return {
+    missions_total: nombre(row.missions_total),
+    missions_livrees: missionsLivrees,
+    missions_engagees: missionsEngagees,
+    devis_en_attente: nombre(row.devis_en_attente),
+    devis_refuses: devisRefuses,
+    annulees: nombre(row.annulees),
+    ca_realise: caRealise,
+    cout_realise: coutRealise,
+    marge_realisee: caRealise - coutRealise,
+    ca_engage: caEngage,
+    cout_engage: nombre(row.cout_engage),
+    marge_engagee: caEngage - nombre(row.cout_engage),
+    ca_perdu: nombre(row.ca_perdu),
+    panier_moyen: missionsLivrees > 0 ? caRealise / missionsLivrees : 0,
+    taux_marge:
+      caRealise > 0 ? ((caRealise - coutRealise) / caRealise) * 100 : 0,
+    taux_transformation:
+      devisTranches > 0 ? (missionsEngagees / devisTranches) * 100 : 0,
+  };
+}
+
+/** Variation en pourcentage, `null` quand la référence est nulle. */
+const evolution = (actuel, precedent) =>
+  precedent > 0 ? ((actuel - precedent) / precedent) * 100 : null;
+
+router.get("/analyse", async (req, res, next) => {
+  try {
+    const { debutBorne, finBorne } = bornesPeriode(req.query);
+    const { debutPrec, finPrec } = periodePrecedente(debutBorne, finBorne);
+
+    const [totauxRes, precedentRes, clientsRes, convoyeursRes, mensuelRes] =
+      await Promise.all([
+        db.query(SQL_TOTAUX, [debutBorne, finBorne, STATUTS_ENGAGES]),
+        db.query(SQL_TOTAUX, [debutPrec, finPrec, STATUTS_ENGAGES]),
+
+        // Par client. Le regroupement se fait sur l'identifiant, jamais
+        // sur `company` : deux comptes d'une même enseigne doivent rester
+        // distincts tant que le rattachement parent/enfant n'existe pas.
+        db.query(
+          `SELECT
+             u.id, u.full_name, u.email, u.company,
+             COUNT(m.*)                                                  AS missions_total,
+             COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
+             COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
+             COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
+             COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise,
+             COALESCE(SUM(m.price)           FILTER (WHERE m.status = ANY($3)), 0)  AS ca_engage,
+             MAX(m.created_at)                                           AS derniere_mission
+           FROM users u
+           JOIN missions m ON m.client_id = u.id
+           WHERE m.created_at >= $1 AND m.created_at <= $2
+           GROUP BY u.id, u.full_name, u.email, u.company
+           ORDER BY ca_realise DESC, missions_total DESC`,
+          [debutBorne, finBorne, STATUTS_ENGAGES],
+        ),
+
+        // Par convoyeur — ce qu'on lui doit, et son volume.
+        db.query(
+          `SELECT
+             c.id, c.full_name, c.email,
+             COUNT(m.*)                                                  AS missions_total,
+             COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
+             COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE'), 0) AS montant_du,
+             COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_genere
+           FROM users c
+           JOIN missions m ON m.convoyeur_id = c.id
+           WHERE m.created_at >= $1 AND m.created_at <= $2
+           GROUP BY c.id, c.full_name, c.email
+           ORDER BY missions_livrees DESC, montant_du DESC`,
+          [debutBorne, finBorne],
+        ),
+
+        // Douze mois glissants — indépendant du filtre de période :
+        // cette courbe sert à voir la saisonnalité, la borner à la
+        // période choisie la viderait de son sens.
+        db.query(
+          `SELECT
+             to_char(date_trunc('month', created_at), 'YYYY-MM')          AS mois,
+             COUNT(*)                                                     AS missions,
+             COUNT(*) FILTER (WHERE status = 'LIVREE')                    AS livrees,
+             COALESCE(SUM(price)           FILTER (WHERE status = 'LIVREE'), 0) AS ca,
+             COALESCE(SUM(price_convoyeur) FILTER (WHERE status = 'LIVREE'), 0) AS cout
+           FROM missions
+           WHERE created_at >= date_trunc('month', NOW()) - INTERVAL '11 months'
+           GROUP BY 1
+           ORDER BY 1`,
+        ),
+      ]);
+
+    const totaux = normaliserTotaux(totauxRes.rows[0]);
+    const precedent = normaliserTotaux(precedentRes.rows[0]);
+
+    res.json({
+      periode: { debut: debutBorne, fin: finBorne },
+      totaux,
+      evolutions: {
+        ca_realise: evolution(totaux.ca_realise, precedent.ca_realise),
+        marge_realisee: evolution(
+          totaux.marge_realisee,
+          precedent.marge_realisee,
+        ),
+        missions_livrees: evolution(
+          totaux.missions_livrees,
+          precedent.missions_livrees,
+        ),
+        panier_moyen: evolution(totaux.panier_moyen, precedent.panier_moyen),
+      },
+      clients: clientsRes.rows.map((c) => {
+        const ca = nombre(c.ca_realise);
+        const cout = nombre(c.cout_realise);
+        const livrees = nombre(c.missions_livrees);
+        return {
+          id: c.id,
+          full_name: c.full_name,
+          email: c.email,
+          company: c.company,
+          missions_total: nombre(c.missions_total),
+          missions_livrees: livrees,
+          devis_refuses: nombre(c.devis_refuses),
+          ca_realise: ca,
+          cout_realise: cout,
+          ca_engage: nombre(c.ca_engage),
+          marge: ca - cout,
+          taux_marge: ca > 0 ? ((ca - cout) / ca) * 100 : 0,
+          panier_moyen: livrees > 0 ? ca / livrees : 0,
+          derniere_mission: c.derniere_mission,
+        };
+      }),
+      convoyeurs: convoyeursRes.rows.map((c) => ({
+        id: c.id,
+        full_name: c.full_name,
+        email: c.email,
+        missions_total: nombre(c.missions_total),
+        missions_livrees: nombre(c.missions_livrees),
+        montant_du: nombre(c.montant_du),
+        ca_genere: nombre(c.ca_genere),
+      })),
+      mensuel: mensuelRes.rows.map((m) => ({
+        mois: m.mois,
+        missions: nombre(m.missions),
+        livrees: nombre(m.livrees),
+        ca: nombre(m.ca),
+        cout: nombre(m.cout),
+        marge: nombre(m.ca) - nombre(m.cout),
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/analyse/export-csv", async (req, res, next) => {
+  try {
+    const { debutBorne, finBorne } = bornesPeriode(req.query);
+
+    const { rows } = await db.query(
+      `SELECT
+         u.full_name, u.email, u.company,
+         COUNT(m.*)                                                  AS missions_total,
+         COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
+         COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
+         COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
+         COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise
+       FROM users u
+       JOIN missions m ON m.client_id = u.id
+       WHERE m.created_at >= $1 AND m.created_at <= $2
+       GROUP BY u.id, u.full_name, u.email, u.company
+       ORDER BY ca_realise DESC`,
+      [debutBorne, finBorne],
+    );
+
+    const headers = [
+      "Client",
+      "Email",
+      "Entreprise",
+      "Missions",
+      "Livrees",
+      "Devis refuses",
+      "CA HT",
+      "Cout convoyeurs HT",
+      "Marge HT",
+      "Taux de marge %",
+    ];
+
+    // Les nombres sortent avec une virgule décimale : un tableur
+    // configuré en français lit « 1234.50 » comme du texte.
+    const fr = (n) => String(n.toFixed(2)).replace(".", ",");
+
+    const lignes = rows.map((r) => {
+      const ca = nombre(r.ca_realise);
+      const cout = nombre(r.cout_realise);
+      return [
+        r.full_name,
+        r.email,
+        r.company || "",
+        nombre(r.missions_total),
+        nombre(r.missions_livrees),
+        nombre(r.devis_refuses),
+        fr(ca),
+        fr(cout),
+        fr(ca - cout),
+        fr(ca > 0 ? ((ca - cout) / ca) * 100 : 0),
+      ]
+        .map(escapeCsv)
+        .join(";");
+    });
+
+    auditLog("EXPORT_ANALYSE", req.user?.id, {
+      ip: req.ip,
+      count: rows.length,
+    });
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="analyse-clients-${new Date().toISOString().slice(0, 10)}.csv"`,
+    );
+    res.send("\uFEFF" + headers.join(";") + "\n" + lignes.join("\n"));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // Demandes de mise en relation (prospects)
 //
 // Les comptes ne sont plus créés depuis le site public : ces demandes

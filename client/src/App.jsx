@@ -31,6 +31,7 @@ const ClientFactures = lazy(() => import("./pages/client/ClientFactures"));
 // Pages Admin
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminMissions = lazy(() => import("./pages/admin/AdminMissions"));
+const AdminAnalyse = lazy(() => import("./pages/admin/AdminAnalyse"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminDemandes = lazy(() => import("./pages/admin/AdminDemandes"));
 const AdminMap = lazy(() => import("./pages/admin/AdminMap"));
@@ -159,6 +160,7 @@ export default function App() {
             n'apparaissent que si le compte connecté est admin. */}
           <Route path="nouvelle-mission" element={<NewMission />} />
           <Route path="carte" element={<AdminMap />} />
+          <Route path="analyse" element={<AdminAnalyse />} />
           <Route path="utilisateurs" element={<AdminUsers />} />
           <Route path="demandes" element={<AdminDemandes />} />
           <Route path="factures" element={<AdminFactures />} />
