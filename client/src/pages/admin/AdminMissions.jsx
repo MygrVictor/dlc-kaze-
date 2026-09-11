@@ -34,6 +34,7 @@ import {
   RefreshCw,
   KeyRound,
   Trash2,
+  UserX,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -92,6 +93,7 @@ export default function AdminMissions() {
   const [convoyeurs, setConvoyeurs] = useState([]);
   const [selectedConvoyeur, setSelectedConvoyeur] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [retraitId, setRetraitId] = useState(null);
 
   const fetchKazeJobs = useCallback(() => {
     setKazeLoading(true);
@@ -279,6 +281,35 @@ export default function AdminMissions() {
       );
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // Retrait sec : on enlève le convoyeur sans en désigner un autre.
+  // La mission repasse en ACCEPTEE et réapparaît dans les missions à
+  // assigner — elle n'est ni annulée ni supprimée.
+  const handleRetirerConvoyeur = async (mission) => {
+    if (
+      !window.confirm(
+        `Retirer ${mission.convoyeur_name} de cette mission ?\n\nLa mission repassera « en attente d'assignation ».`,
+      )
+    )
+      return;
+
+    setRetraitId(mission.id);
+    try {
+      const res = await api.post(
+        `/admin/missions/${mission.id}/retirer-convoyeur`,
+      );
+      toast.success("Convoyeur retiré de la mission.");
+      if (res.data?.kazeSync?.error && res.data.kazeSync.synced === false) {
+        toast.error(`Kaze : ${res.data.kazeSync.error}`);
+      }
+      fetchMissions();
+      fetchKazeJobs();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors du retrait.");
+    } finally {
+      setRetraitId(null);
     }
   };
 
@@ -672,6 +703,19 @@ export default function AdminMissions() {
                             {m.convoyeur_name ? "Réassigner" : "Assigner"}
                           </button>
                         )}
+                        {m.source === "dlc" &&
+                          m.convoyeur_name &&
+                          !["LIVREE", "ANNULEE"].includes(m.status) && (
+                            <button
+                              onClick={() => handleRetirerConvoyeur(m)}
+                              disabled={retraitId === m.id}
+                              title="Retirer le convoyeur sans en assigner un autre"
+                              className="btn-soft-danger btn-xs"
+                            >
+                              <UserX size={14} />
+                              {retraitId === m.id ? "…" : "Retirer"}
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>

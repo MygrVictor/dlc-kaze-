@@ -28,6 +28,7 @@ jest.mock("../services/kaze.service", () => ({
   getDriverByEmail: jest.fn(),
   getDriverByPhone: jest.fn(),
   assignDriver: jest.fn(),
+  unassignDriver: jest.fn(),
   createMission: jest.fn(),
   cancelMission: jest.fn(),
 }));
@@ -109,6 +110,7 @@ beforeEach(() => {
   // `clearAllMocks` n'efface que l'historique des appels : les implémentations
   // (notamment les `mockRejectedValue`) fuiteraient d'un test à l'autre.
   kazeService.assignDriver.mockResolvedValue(undefined);
+  kazeService.unassignDriver.mockResolvedValue(undefined);
   kazeService.cancelMission.mockResolvedValue(undefined);
   kazeService.createMission.mockResolvedValue({ id: "kz-default" });
   kazeService.getDriverByEmail.mockResolvedValue(null);
@@ -1093,6 +1095,112 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
     const res = await attribuer({ convoyeurId: USER_ID });
 
     expect(res.body.kazeSync.error).toBe("Performer invalide");
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+describe("POST /api/admin/missions/:id/retirer-convoyeur", () => {
+  const CONVOYEUR_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd";
+
+  const retirer = () =>
+    auth(
+      request(app).post(`/api/admin/missions/${MISSION_ID}/retirer-convoyeur`),
+    );
+
+  /** Simule une mission assignée, avec ou sans lien Kaze. */
+  const mockMissionAssignee = (mission = {}, convoyeur = {}) => {
+    const requetes = [];
+    mockDb(ADMIN, (sql, params) => {
+      requetes.push({ sql, params });
+      if (isGetMissionById(sql))
+        return {
+          rows: [
+            {
+              id: MISSION_ID,
+              status: "ASSIGNEE",
+              convoyeur_id: CONVOYEUR_ID,
+              kaze_mission_id: "kz-job-1",
+              ...mission,
+            },
+          ],
+        };
+      if (/SELECT kaze_driver_id FROM users/i.test(sql))
+        return { rows: [{ kaze_driver_id: "kz-driver-1", ...convoyeur }] };
+      if (/SET convoyeur_id = NULL/i.test(sql))
+        return { rows: [{ id: MISSION_ID, status: "ACCEPTEE" }] };
+    });
+    return requetes;
+  };
+
+  it("retourne 404 si la mission n'existe pas", async () => {
+    mockDb(ADMIN, () => ({ rows: [] }));
+    const res = await retirer();
+    expect(res.status).toBe(404);
+  });
+
+  it("refuse si aucun convoyeur n'est assigné", async () => {
+    mockDb(ADMIN, (sql) => {
+      if (isGetMissionById(sql))
+        return {
+          rows: [{ id: MISSION_ID, status: "ACCEPTEE", convoyeur_id: null }],
+        };
+    });
+
+    const res = await retirer();
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/aucun convoyeur/i);
+  });
+
+  it.each(["LIVREE", "ANNULEE"])(
+    "refuse de toucher à un dossier clos (%s)",
+    async (status) => {
+      mockMissionAssignee({ status });
+
+      const res = await retirer();
+
+      expect(res.status).toBe(400);
+      expect(kazeService.unassignDriver).not.toHaveBeenCalled();
+    },
+  );
+
+  it("vide le convoyeur, repasse en ACCEPTEE et désassigne dans Kaze", async () => {
+    const requetes = mockMissionAssignee();
+
+    const res = await retirer();
+
+    expect(res.status).toBe(200);
+    expect(res.body.mission.status).toBe("ACCEPTEE");
+    expect(res.body.kazeSync.synced).toBe(true);
+    expect(kazeService.unassignDriver).toHaveBeenCalledWith(
+      "kz-job-1",
+      "kz-driver-1",
+    );
+    // Le retrait ne doit jamais désigner un remplaçant au passage.
+    const update = requetes.find((r) => /SET convoyeur_id = NULL/i.test(r.sql));
+    expect(update.sql).toMatch(/status = 'ACCEPTEE'/i);
+  });
+
+  it("retire quand même en local si Kaze refuse", async () => {
+    mockMissionAssignee();
+    const err = new Error("générique");
+    err.response = { data: { error: "Job verrouillé" } };
+    kazeService.unassignDriver.mockRejectedValue(err);
+
+    const res = await retirer();
+
+    expect(res.status).toBe(200);
+    expect(res.body.kazeSync.synced).toBe(false);
+    expect(res.body.kazeSync.error).toBe("Job verrouillé");
+  });
+
+  it("n'appelle pas Kaze pour une mission jamais synchronisée", async () => {
+    mockMissionAssignee({ kaze_mission_id: null });
+
+    const res = await retirer();
+
+    expect(res.status).toBe(200);
+    expect(kazeService.unassignDriver).not.toHaveBeenCalled();
   });
 });
 

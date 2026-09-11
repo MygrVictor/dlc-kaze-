@@ -1468,6 +1468,80 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
   }
 });
 
+/**
+ * Retire le convoyeur d'une mission sans en désigner un autre.
+ *
+ * La mission retourne en ACCEPTEE, convoyeur_id vidé : elle réapparaît
+ * donc dans le compteur « en attente d'assignation » du tableau de bord,
+ * exactement comme avant sa première attribution.
+ *
+ * Le retrait côté Kaze est tenté mais n'est jamais bloquant : si Kaze
+ * refuse, la base locale fait foi et l'admin voit l'avertissement.
+ */
+router.post("/missions/:id/retirer-convoyeur", async (req, res, next) => {
+  try {
+    const mission = await getMissionById(req.params.id);
+    if (!mission) {
+      return res.status(404).json({ error: "Mission introuvable." });
+    }
+
+    if (!mission.convoyeur_id) {
+      return res
+        .status(400)
+        .json({ error: "Aucun convoyeur n'est assigné à cette mission." });
+    }
+
+    // Une mission terminée ou annulée est un dossier clos : y toucher
+    // fausserait l'historique et la facturation du convoyeur.
+    if (["LIVREE", "ANNULEE"].includes(mission.status)) {
+      return res.status(400).json({
+        error: `Impossible de retirer le convoyeur : statut actuel "${mission.status}".`,
+      });
+    }
+
+    const { rows: convoyeurRows } = await db.query(
+      "SELECT kaze_driver_id FROM users WHERE id = $1",
+      [mission.convoyeur_id],
+    );
+    const ancienKazeDriverId = convoyeurRows[0]?.kaze_driver_id || null;
+
+    const updated = await db.query(
+      `UPDATE missions
+          SET convoyeur_id = NULL, status = 'ACCEPTEE', updated_at = NOW()
+        WHERE id = $1
+        RETURNING *`,
+      [mission.id],
+    );
+
+    const kazeSync = { synced: false, error: null };
+    if (mission.kaze_mission_id && ancienKazeDriverId) {
+      try {
+        await kazeService.unassignDriver(
+          mission.kaze_mission_id,
+          ancienKazeDriverId,
+        );
+        kazeSync.synced = true;
+      } catch (kazeErr) {
+        kazeSync.error =
+          kazeErr.response?.data?.message ||
+          kazeErr.response?.data?.error ||
+          kazeErr.message;
+        console.error("⚠️ Kaze : échec du retrait :", kazeSync.error);
+      }
+    } else {
+      kazeSync.error = "Aucune assignation Kaze à retirer.";
+    }
+
+    res.json({
+      mission: updated.rows[0],
+      kazeSync,
+      message: "Convoyeur retiré. La mission attend une nouvelle assignation.",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/missions/:id/annuler", async (req, res, next) => {
   try {
     const mission = await getMissionById(req.params.id);
