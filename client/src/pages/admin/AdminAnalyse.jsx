@@ -153,6 +153,176 @@ function Barre({ part }) {
   );
 }
 
+/**
+ * Classement des clients par chiffre d'affaires.
+ *
+ * Barres horizontales et non verticales : les raisons sociales sont
+ * longues, un axe vertical imposerait des libellés penchés illisibles.
+ *
+ * Chaque barre est scindée en deux teintes — la marge, puis le coût
+ * convoyeur. Un graphique qui n'afficherait que le chiffre d'affaires
+ * ferait passer pour excellent un client qui facture beaucoup en ne
+ * rapportant presque rien : c'est exactement l'erreur que cet écran
+ * doit éviter.
+ *
+ * Au-delà de huit clients, le reste est regroupé : un classement sert
+ * à distinguer les premiers, pas à tout énumérer — le tableau complet
+ * est juste en dessous.
+ */
+function ClassementClients({ clients }) {
+  const [survol, setSurvol] = useState(null);
+  const TETE = 8;
+
+  // Un client sans chiffre d'affaires n'a pas sa place dans un
+  // classement de chiffre d'affaires : il y apparaîtrait en barre vide.
+  const avecCa = clients.filter((c) => c.ca_realise > 0);
+  if (avecCa.length === 0) return null;
+
+  const tries = [...avecCa].sort((a, b) => b.ca_realise - a.ca_realise);
+  const tete = tries.slice(0, TETE);
+  const reste = tries.slice(TETE);
+
+  const lignes = tete.map((c) => ({
+    cle: c.id,
+    nom: c.company || c.full_name,
+    sousTitre: c.company ? c.full_name : null,
+    ca: c.ca_realise,
+    marge: c.marge,
+    cout: c.cout_realise,
+    missions: c.missions_livrees,
+    tauxMarge: c.taux_marge,
+  }));
+
+  if (reste.length > 0) {
+    lignes.push({
+      cle: "__reste",
+      nom: `${reste.length} autre${reste.length > 1 ? "s" : ""} client${reste.length > 1 ? "s" : ""}`,
+      sousTitre: null,
+      ca: reste.reduce((s, c) => s + c.ca_realise, 0),
+      marge: reste.reduce((s, c) => s + c.marge, 0),
+      cout: reste.reduce((s, c) => s + c.cout_realise, 0),
+      missions: reste.reduce((s, c) => s + c.missions_livrees, 0),
+      tauxMarge: null,
+      groupe: true,
+    });
+  }
+
+  const max = Math.max(...lignes.map((l) => l.ca), 1);
+  const total = avecCa.reduce((s, c) => s + c.ca_realise, 0);
+
+  return (
+    <div className="card p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+        <h2 className="text-sm font-semibold">
+          Clients par chiffre d'affaires
+        </h2>
+        <div className="flex items-center gap-3 text-xs">
+          <span className="flex items-center gap-1.5 text-dark-400">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+            Marge
+          </span>
+          <span className="flex items-center gap-1.5 text-dark-400">
+            <span className="w-2.5 h-2.5 rounded-sm bg-accent-500/50" />
+            Coût convoyeur
+          </span>
+        </div>
+      </div>
+      <p className="text-xs text-dark-500 mb-4">
+        La longueur totale est le chiffre d'affaires ; la part verte, ce qu'il
+        vous reste.
+      </p>
+
+      <div className="space-y-2.5">
+        {lignes.map((l) => {
+          const largeur = (l.ca / max) * 100;
+          // La marge peut être négative si le convoyeur a coûté plus
+          // cher que la facture : on n'affiche alors aucune part verte.
+          const partMarge = l.ca > 0 ? Math.max(0, (l.marge / l.ca) * 100) : 0;
+          const actif = survol === l.cle;
+
+          return (
+            <div
+              key={l.cle}
+              onMouseEnter={() => setSurvol(l.cle)}
+              onMouseLeave={() => setSurvol(null)}
+              className="relative"
+            >
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <p
+                  className={`text-xs truncate ${
+                    l.groupe ? "text-dark-500 italic" : "text-dark-200"
+                  }`}
+                >
+                  {l.nom}
+                  {l.sousTitre && (
+                    <span className="text-dark-500"> · {l.sousTitre}</span>
+                  )}
+                </p>
+                <p className="text-xs font-medium tabular-nums flex-shrink-0">
+                  {euros(l.ca)}
+                  <span className="text-dark-500 font-normal">
+                    {" "}
+                    · {total > 0 ? ((l.ca / total) * 100).toFixed(0) : 0} %
+                  </span>
+                </p>
+              </div>
+
+              <div className="h-5 bg-dark-800 rounded overflow-hidden">
+                <div
+                  className={`h-full flex transition-opacity ${
+                    actif ? "opacity-100" : "opacity-85"
+                  }`}
+                  style={{ width: `${largeur}%` }}
+                >
+                  <div
+                    className="h-full bg-emerald-500"
+                    style={{ width: `${partMarge}%` }}
+                  />
+                  <div className="h-full flex-1 bg-accent-500/50" />
+                </div>
+              </div>
+
+              {actif && (
+                <div className="absolute right-0 top-full mt-1 z-20 bg-dark-900 border border-dark-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
+                  <p className="font-medium mb-1">{l.nom}</p>
+                  <p className="text-dark-300">
+                    {euros(l.ca)} de CA · {l.missions} mission
+                    {l.missions > 1 ? "s" : ""} livrée
+                    {l.missions > 1 ? "s" : ""}
+                  </p>
+                  <p className="text-emerald-400">
+                    {euros(l.marge)} de marge
+                    {l.tauxMarge !== null && ` · ${l.tauxMarge.toFixed(1)} %`}
+                  </p>
+                  <p className="text-dark-400">
+                    {euros(l.cout)} versés aux convoyeurs
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {tete.length > 1 && (
+        <p className="text-xs text-dark-500 mt-4 pt-3 border-t border-dark-700/50">
+          Les {Math.min(3, tete.length)} premiers représentent{" "}
+          <span className="text-dark-300 font-medium">
+            {total > 0
+              ? (
+                  (tete.slice(0, 3).reduce((s, l) => s + l.ca, 0) / total) *
+                  100
+                ).toFixed(0)
+              : 0}{" "}
+            %
+          </span>{" "}
+          du chiffre d'affaires de la période.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function AdminAnalyse() {
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
@@ -331,6 +501,9 @@ export default function AdminAnalyse() {
           </p>
         </div>
       </div>
+
+      {/* ── Classement des clients ──────────────────── */}
+      <ClassementClients clients={clients} />
 
       {/* ── Évolution mensuelle ─────────────────────── */}
       {mensuel.length > 1 && (
