@@ -307,14 +307,32 @@ const STATUTS_ENGAGES = ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"];
  */
 function bornesPeriode({ debut, fin }) {
   const valide = (v) => v && !Number.isNaN(Date.parse(v));
-  const finBorne = valide(fin) ? new Date(fin) : new Date();
+
+  /**
+   * Construit une date locale à partir d'un `AAAA-MM-JJ`.
+   *
+   * `new Date("2026-01-01")` est interprété comme minuit UTC, pas comme
+   * minuit ici. Sur un serveur à l'ouest de Greenwich, cet instant
+   * appartient encore au 31 décembre en heure locale, et le `setHours`
+   * qui suit fige alors la borne sur le mauvais jour — le chiffre
+   * d'affaires du 31 décembre bascule d'une année sur l'autre.
+   *
+   * On découpe donc la chaîne et on laisse le constructeur à trois
+   * arguments, qui travaille en heure locale, poser la date voulue.
+   */
+  const dateLocale = (v, secours) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v || "");
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : secours();
+  };
+
+  const finBorne = valide(fin) ? dateLocale(fin, () => new Date()) : new Date();
   // La borne haute est inclusive côté utilisateur : « au 31 mars »
   // doit contenir le 31 mars en entier.
   finBorne.setHours(23, 59, 59, 999);
 
   const debutBorne = valide(debut)
-    ? new Date(debut)
-    : new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
+    ? dateLocale(debut, () => new Date(new Date().getFullYear(), 0, 1))
+    : new Date(new Date().getFullYear(), 0, 1);
   debutBorne.setHours(0, 0, 0, 0);
 
   return { debutBorne, finBorne };
@@ -1132,7 +1150,16 @@ router.get("/kaze/jobs", async (req, res, next) => {
     const filtered = status
       ? jobs.filter((job) => job.kaze_status === status)
       : jobs;
-    res.json({ meta: { total_count: filtered.length, days }, data: filtered });
+    // `raw` conserve la réponse Kaze intégrale — environ deux kilo-octets
+    // par job. Utile sur le détail d'un job, où l'on en inspecte parfois
+    // un champ non encore transposé ; inutile sur une liste, où il est
+    // multiplié par le nombre de jobs et représente les deux tiers de la
+    // charge transférée. Aucun écran ne le lit ici.
+    const allege = filtered.map(({ raw, ...job }) => job); // eslint-disable-line no-unused-vars
+    res.json({
+      meta: { total_count: allege.length, days },
+      data: allege,
+    });
   } catch (err) {
     next(err);
   }

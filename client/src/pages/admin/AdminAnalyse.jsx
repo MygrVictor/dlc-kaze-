@@ -10,7 +10,6 @@ import {
   Download,
   Users,
   Truck,
-  BarChart3,
   ArrowUpDown,
 } from "lucide-react";
 
@@ -34,7 +33,22 @@ import {
 // ── Périodes proposées ───────────────────────────────────────
 // Les bornes sont calculées à la demande : un objet figé au chargement
 // deviendrait faux si l'onglet reste ouvert au passage de minuit.
-const jour = (d) => d.toISOString().slice(0, 10);
+
+/**
+ * Formate une date en `AAAA-MM-JJ` dans le fuseau de l'utilisateur.
+ *
+ * `toISOString()` convertit d'abord en UTC : en France (UTC+1 ou +2),
+ * le 1er janvier à minuit devient le 31 décembre à 22 h, et la borne
+ * envoyée au serveur recule d'un jour. Toutes les périodes étaient
+ * décalées, si bien qu'une mission du 31 décembre était comptée dans
+ * le chiffre d'affaires de l'année suivante.
+ *
+ * On lit donc les composantes locales, sans conversion.
+ */
+const jour = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
 
 const PERIODES = {
   mois: {
@@ -108,35 +122,38 @@ const dateCourte = (v) =>
  * précédente contenait quelque chose : « +∞ % » face à un zéro
  * n'apprend rien et fait douter du reste.
  */
-function Indicateur({ icone: Icone, libelle, valeur, evolution, precision }) {
+function Indicateur({
+  icone: Icone,
+  libelle,
+  valeur,
+  evolution,
+  precision,
+  majeur,
+  negatif,
+}) {
   const hausse = evolution > 0;
   const Fleche = hausse ? TrendingUp : TrendingDown;
 
   return (
-    <div className="card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs text-dark-400 mb-1">{libelle}</p>
-          <p className="text-xl font-bold truncate">{valeur}</p>
-          {evolution !== null && evolution !== undefined && (
-            <p
-              className={`text-xs mt-1 flex items-center gap-1 ${
-                hausse ? "text-emerald-400" : "text-red-400"
-              }`}
-            >
-              <Fleche size={12} />
-              {Math.abs(evolution).toFixed(1)} %
-              <span className="text-dark-500">vs période précédente</span>
-            </p>
-          )}
-          {precision && (
-            <p className="text-xs text-dark-500 mt-1">{precision}</p>
-          )}
-        </div>
-        <div className="w-9 h-9 rounded-lg bg-accent-600/10 flex items-center justify-center flex-shrink-0">
-          <Icone size={18} className="text-accent-400" />
-        </div>
-      </div>
+    <div className={`at-kpi${majeur ? " at-kpi--majeur" : ""}`}>
+      <p className="at-kpi__lab">
+        <Icone size={12} />
+        {libelle}
+      </p>
+      <p className={`at-kpi__val${negatif ? " at-kpi__val--negatif" : ""}`}>
+        {valeur}
+      </p>
+      {precision && <p className="at-kpi__sous">{precision}</p>}
+      {evolution !== null && evolution !== undefined && (
+        <p
+          className={`at-kpi__evo ${
+            hausse ? "at-kpi__evo--hausse" : "at-kpi__evo--baisse"
+          }`}
+        >
+          <Fleche size={11} />
+          {Math.abs(evolution).toFixed(1)} %<span>vs précédent</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -144,9 +161,9 @@ function Indicateur({ icone: Icone, libelle, valeur, evolution, precision }) {
 /** Barre de proportion, plus lisible qu'un camembert au-delà de 4 lignes. */
 function Barre({ part }) {
   return (
-    <div className="w-16 h-1.5 bg-dark-700 rounded-full overflow-hidden">
+    <div className="at-jauge">
       <div
-        className="h-full bg-accent-500 rounded-full"
+        className="at-jauge__val"
         style={{ width: `${Math.min(100, Math.max(0, part))}%` }}
       />
     </div>
@@ -211,28 +228,26 @@ function ClassementClients({ clients }) {
   const total = avecCa.reduce((s, c) => s + c.ca_realise, 0);
 
   return (
-    <div className="card p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
-        <h2 className="text-sm font-semibold">
-          Clients par chiffre d'affaires
-        </h2>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="flex items-center gap-1.5 text-dark-400">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+    <div className="at-panneau">
+      <div className="at-panneau__tete">
+        <h2 className="at-panneau__titre">Clients par chiffre d'affaires</h2>
+        <div className="at-legende">
+          <span>
+            <i className="at-barre__marge" />
             Marge
           </span>
-          <span className="flex items-center gap-1.5 text-dark-400">
-            <span className="w-2.5 h-2.5 rounded-sm bg-accent-500/50" />
+          <span>
+            <i className="at-barre__cout" />
             Coût convoyeur
           </span>
         </div>
       </div>
-      <p className="text-xs text-dark-500 mb-4">
+      <p className="at-panneau__note">
         La longueur totale est le chiffre d'affaires ; la part verte, ce qu'il
         vous reste.
       </p>
 
-      <div className="space-y-2.5">
+      <div className="at-panneau__corps space-y-3">
         {lignes.map((l) => {
           const largeur = (l.ca / max) * 100;
           // La marge peut être négative si le convoyeur a coûté plus
@@ -250,53 +265,62 @@ function ClassementClients({ clients }) {
               <div className="flex items-baseline justify-between gap-3 mb-1">
                 <p
                   className={`text-xs truncate ${
-                    l.groupe ? "text-dark-500 italic" : "text-dark-200"
+                    l.groupe ? "italic opacity-60" : ""
                   }`}
+                  style={{ color: "var(--at-encre-2)" }}
                 >
                   {l.nom}
                   {l.sousTitre && (
-                    <span className="text-dark-500"> · {l.sousTitre}</span>
+                    <span style={{ color: "var(--at-encre-3)" }}>
+                      {" "}
+                      · {l.sousTitre}
+                    </span>
                   )}
                 </p>
-                <p className="text-xs font-medium tabular-nums flex-shrink-0">
+                <p
+                  className="text-xs font-medium tabular-nums flex-shrink-0"
+                  style={{ color: "var(--at-encre)" }}
+                >
                   {euros(l.ca)}
-                  <span className="text-dark-500 font-normal">
+                  <span
+                    className="font-normal"
+                    style={{ color: "var(--at-encre-3)" }}
+                  >
                     {" "}
                     · {total > 0 ? ((l.ca / total) * 100).toFixed(0) : 0} %
                   </span>
                 </p>
               </div>
 
-              <div className="h-5 bg-dark-800 rounded overflow-hidden">
+              <div className="at-barre">
                 <div
-                  className={`h-full flex transition-opacity ${
-                    actif ? "opacity-100" : "opacity-85"
-                  }`}
-                  style={{ width: `${largeur}%` }}
+                  className="at-barre__remplissage"
+                  style={{
+                    width: `${largeur}%`,
+                    opacity: actif ? 1 : 0.85,
+                  }}
                 >
                   <div
-                    className="h-full bg-emerald-500"
+                    className="at-barre__marge"
                     style={{ width: `${partMarge}%` }}
                   />
-                  <div className="h-full flex-1 bg-accent-500/50" />
+                  <div className="at-barre__cout" />
                 </div>
               </div>
 
               {actif && (
-                <div className="absolute right-0 top-full mt-1 z-20 bg-dark-900 border border-dark-600 rounded-lg px-3 py-2 text-xs shadow-xl whitespace-nowrap">
-                  <p className="font-medium mb-1">{l.nom}</p>
-                  <p className="text-dark-300">
+                <div className="absolute right-0 top-full mt-1 z-20 at-bulle">
+                  <strong>{l.nom}</strong>
+                  <p>
                     {euros(l.ca)} de CA · {l.missions} mission
                     {l.missions > 1 ? "s" : ""} livrée
                     {l.missions > 1 ? "s" : ""}
                   </p>
-                  <p className="text-emerald-400">
+                  <p style={{ color: "var(--at-positif)" }}>
                     {euros(l.marge)} de marge
                     {l.tauxMarge !== null && ` · ${l.tauxMarge.toFixed(1)} %`}
                   </p>
-                  <p className="text-dark-400">
-                    {euros(l.cout)} versés aux convoyeurs
-                  </p>
+                  <p>{euros(l.cout)} versés aux convoyeurs</p>
                 </div>
               )}
             </div>
@@ -305,9 +329,9 @@ function ClassementClients({ clients }) {
       </div>
 
       {tete.length > 1 && (
-        <p className="text-xs text-dark-500 mt-4 pt-3 border-t border-dark-700/50">
+        <p className="at-panneau__pied">
           Les {Math.min(3, tete.length)} premiers représentent{" "}
-          <span className="text-dark-300 font-medium">
+          <span className="font-semibold" style={{ color: "var(--at-encre)" }}>
             {total > 0
               ? (
                   (tete.slice(0, 3).reduce((s, l) => s + l.ca, 0) / total) *
@@ -363,7 +387,9 @@ export default function AdminAnalyse() {
       lien.href = url;
       lien.setAttribute(
         "download",
-        `analyse-clients-${new Date().toISOString().slice(0, 10)}.csv`,
+        // Même raison que pour les bornes : en soirée, `toISOString`
+        // daterait le fichier du lendemain.
+        `analyse-clients-${jour(new Date())}.csv`,
       );
       document.body.appendChild(lien);
       lien.click();
@@ -380,7 +406,13 @@ export default function AdminAnalyse() {
   if (chargement && !donnees) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-2 border-accent-500 border-t-transparent rounded-full" />
+        <div
+          className="animate-spin w-7 h-7 rounded-full"
+          style={{
+            border: "2px solid var(--at-accent)",
+            borderTopColor: "transparent",
+          }}
+        />
       </div>
     );
   }
@@ -401,13 +433,10 @@ export default function AdminAnalyse() {
   return (
     <div className="space-y-6">
       {/* ── En-tête ─────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="at-entete">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 size={24} className="text-accent-400" />
-            Analyse
-          </h1>
-          <p className="text-sm text-dark-400 mt-0.5">
+          <h1 className="at-entete__titre">Analyse</h1>
+          <p className="at-entete__sous">
             Montants hors taxes · chiffre d'affaires réalisé sur les missions
             livrées
           </p>
@@ -417,7 +446,7 @@ export default function AdminAnalyse() {
           <select
             value={periode}
             onChange={(e) => setPeriode(e.target.value)}
-            className="input py-2 text-sm"
+            className="at-select"
           >
             {Object.entries(PERIODES).map(([cle, { libelle }]) => (
               <option key={cle} value={cle}>
@@ -428,9 +457,9 @@ export default function AdminAnalyse() {
           <button
             onClick={exporter}
             disabled={exportEnCours}
-            className="btn-secondary btn-sm"
+            className="at-bouton"
           >
-            <Download size={15} />
+            <Download size={14} />
             {exportEnCours ? "Export…" : "Exporter"}
           </button>
         </div>
@@ -440,9 +469,10 @@ export default function AdminAnalyse() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Indicateur
           icone={Euro}
-          libelle="Chiffre d'affaires réalisé"
+          libelle="CA réalisé"
           valeur={euros(totaux.ca_realise)}
           evolution={evolutions.ca_realise}
+          majeur
         />
         <Indicateur
           icone={Percent}
@@ -468,38 +498,25 @@ export default function AdminAnalyse() {
 
       {/* ── Prévisionnel et devis ───────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <div className="card p-4">
-          <p className="text-xs text-dark-400 mb-1">
-            Chiffre d'affaires engagé
-          </p>
-          <p className="text-lg font-bold">{euros(totaux.ca_engage)}</p>
-          <p className="text-xs text-dark-500 mt-1">
-            {totaux.missions_engagees} devis signés, livrés ou non · marge
-            prévisionnelle {euros(totaux.marge_engagee)}
-          </p>
-        </div>
-
-        <div className="card p-4">
-          <p className="text-xs text-dark-400 mb-1">Taux de transformation</p>
-          <p className="text-lg font-bold">
-            {pourcent(totaux.taux_transformation)}
-          </p>
-          <p className="text-xs text-dark-500 mt-1">
-            des devis tranchés ont été signés · {totaux.devis_en_attente} encore
-            en attente
-          </p>
-        </div>
-
-        <div className="card p-4">
-          <p className="text-xs text-dark-400 mb-1">Chiffre d'affaires perdu</p>
-          <p className="text-lg font-bold text-red-400">
-            {euros(totaux.ca_perdu)}
-          </p>
-          <p className="text-xs text-dark-500 mt-1">
-            {totaux.devis_refuses} devis refusés · {totaux.annulees} missions
-            annulées
-          </p>
-        </div>
+        <Indicateur
+          icone={Package}
+          libelle="CA engagé"
+          valeur={euros(totaux.ca_engage)}
+          precision={`${totaux.missions_engagees} devis signés, livrés ou non · marge prévisionnelle ${euros(totaux.marge_engagee)}`}
+        />
+        <Indicateur
+          icone={Percent}
+          libelle="Taux de transformation"
+          valeur={pourcent(totaux.taux_transformation)}
+          precision={`des devis tranchés ont été signés · ${totaux.devis_en_attente} encore en attente`}
+        />
+        <Indicateur
+          icone={TrendingDown}
+          libelle="CA perdu"
+          valeur={euros(totaux.ca_perdu)}
+          negatif
+          precision={`${totaux.devis_refuses} devis refusés · ${totaux.annulees} missions annulées`}
+        />
       </div>
 
       {/* ── Classement des clients ──────────────────── */}
@@ -507,41 +524,48 @@ export default function AdminAnalyse() {
 
       {/* ── Évolution mensuelle ─────────────────────── */}
       {mensuel.length > 1 && (
-        <div className="card p-4">
-          <h2 className="text-sm font-semibold mb-1">Évolution sur 12 mois</h2>
-          <p className="text-xs text-dark-500 mb-4">
+        <div className="at-panneau">
+          <div className="at-panneau__tete">
+            <h2 className="at-panneau__titre">Évolution sur 12 mois</h2>
+          </div>
+          <p className="at-panneau__note">
             Indépendant du filtre de période — sert à lire la saisonnalité.
           </p>
-          <div className="flex items-end gap-1.5 h-32">
-            {mensuel.map((m) => (
-              <div
-                key={m.mois}
-                className="flex-1 flex flex-col items-center gap-1 group relative"
-              >
-                <div className="w-full flex flex-col justify-end h-24">
-                  <div
-                    className="w-full bg-accent-500/80 rounded-t group-hover:bg-accent-400 transition-colors"
-                    style={{
-                      height: `${Math.max(2, (m.ca / caMensuelMax) * 100)}%`,
-                    }}
-                  />
+          <div className="at-panneau__corps">
+            <div className="flex items-end gap-1.5 h-32">
+              {mensuel.map((m) => (
+                <div
+                  key={m.mois}
+                  className="flex-1 flex flex-col items-center gap-1 group relative"
+                >
+                  <div className="w-full flex flex-col justify-end h-24">
+                    <div
+                      className="at-histo"
+                      style={{
+                        height: `${Math.max(2, (m.ca / caMensuelMax) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="text-[10px]"
+                    style={{ color: "var(--at-encre-3)" }}
+                  >
+                    {m.mois.slice(5)}
+                  </span>
+                  <div className="absolute bottom-full mb-1 hidden group-hover:block at-bulle z-10">
+                    <strong>{m.mois}</strong>
+                    <p>{euros(m.ca)} de CA</p>
+                    <p>{m.livrees} livrées</p>
+                  </div>
                 </div>
-                <span className="text-[10px] text-dark-500">
-                  {m.mois.slice(5)}
-                </span>
-                <div className="absolute bottom-full mb-1 hidden group-hover:block bg-dark-900 border border-dark-600 rounded px-2 py-1 text-xs whitespace-nowrap z-10">
-                  <p className="font-medium">{m.mois}</p>
-                  <p className="text-dark-300">{euros(m.ca)} de CA</p>
-                  <p className="text-dark-400">{m.livrees} livrées</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* ── Onglets ─────────────────────────────────── */}
-      <div className="flex gap-2 border-b border-dark-700">
+      <div className="at-rail">
         {[
           { cle: "clients", libelle: "Par client", icone: Users },
           { cle: "convoyeurs", libelle: "Par convoyeur", icone: Truck },
@@ -549,13 +573,11 @@ export default function AdminAnalyse() {
           <button
             key={cle}
             onClick={() => setOnglet(cle)}
-            className={`px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors ${
-              onglet === cle
-                ? "border-accent-500 text-accent-400"
-                : "border-transparent text-dark-400 hover:text-dark-200"
+            className={`at-rail__item${
+              onglet === cle ? " at-rail__item--actif" : ""
             }`}
           >
-            <Icone size={15} />
+            <Icone size={14} />
             {libelle}
           </button>
         ))}
@@ -563,104 +585,106 @@ export default function AdminAnalyse() {
 
       {/* ── Tableau clients ─────────────────────────── */}
       {onglet === "clients" && (
-        <div className="card overflow-hidden">
+        <div className="at-panneau">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-dark-800/50 text-dark-400 text-xs">
+            <table className="at-table">
+              <thead>
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Client</th>
-                  <th className="text-right px-3 py-3 font-medium">Missions</th>
-                  <th className="text-right px-3 py-3 font-medium">
+                  <th className="text-left">Client</th>
+                  <th className="num">Missions</th>
+                  <th className="num">
                     <button
                       onClick={() => setTri("ca_realise")}
-                      className="inline-flex items-center gap-1 hover:text-dark-200"
+                      className={`at-table__tri${
+                        tri === "ca_realise" ? " at-table__tri--actif" : ""
+                      }`}
                     >
-                      CA <ArrowUpDown size={11} />
+                      CA <ArrowUpDown size={10} />
                     </button>
                   </th>
-                  <th className="text-right px-3 py-3 font-medium">Coût</th>
-                  <th className="text-right px-3 py-3 font-medium">
+                  <th className="num">Coût</th>
+                  <th className="num">
                     <button
                       onClick={() => setTri("marge")}
-                      className="inline-flex items-center gap-1 hover:text-dark-200"
+                      className={`at-table__tri${
+                        tri === "marge" ? " at-table__tri--actif" : ""
+                      }`}
                     >
-                      Marge <ArrowUpDown size={11} />
+                      Marge <ArrowUpDown size={10} />
                     </button>
                   </th>
-                  <th className="text-right px-3 py-3 font-medium">
+                  <th className="num">
                     <button
                       onClick={() => setTri("taux_marge")}
-                      className="inline-flex items-center gap-1 hover:text-dark-200"
+                      className={`at-table__tri${
+                        tri === "taux_marge" ? " at-table__tri--actif" : ""
+                      }`}
                     >
-                      Taux <ArrowUpDown size={11} />
+                      Taux <ArrowUpDown size={10} />
                     </button>
                   </th>
-                  <th className="text-right px-3 py-3 font-medium">Panier</th>
-                  <th className="text-right px-4 py-3 font-medium">Dernière</th>
+                  <th className="num">Panier</th>
+                  <th className="num">Dernière</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dark-700/50">
+              <tbody>
                 {clientsTries.map((c) => (
-                  <tr key={c.id} className="hover:bg-dark-800/30">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                  <tr key={c.id}>
+                    <td>
+                      <div className="flex items-center gap-2.5">
                         <Barre part={(c.ca_realise / caMax) * 100} />
                         <div className="min-w-0">
-                          <p className="font-medium truncate">
+                          <p className="fort truncate">
                             {c.company || c.full_name}
                           </p>
                           {c.company && (
-                            <p className="text-xs text-dark-500 truncate">
+                            <p
+                              className="text-xs truncate"
+                              style={{ color: "var(--at-encre-3)" }}
+                            >
                               {c.full_name}
                             </p>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className="font-medium">{c.missions_livrees}</span>
+                    <td className="num">
+                      <span className="fort">{c.missions_livrees}</span>
                       {c.missions_total > c.missions_livrees && (
-                        <span className="text-dark-500">
+                        <span style={{ color: "var(--at-encre-3)" }}>
                           {" "}
                           / {c.missions_total}
                         </span>
                       )}
                       {c.devis_refuses > 0 && (
-                        <p className="text-xs text-red-400/70">
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--at-negatif)" }}
+                        >
                           {c.devis_refuses} refusé
                           {c.devis_refuses > 1 ? "s" : ""}
                         </p>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-right font-medium">
-                      {eurosPrecis(c.ca_realise)}
-                    </td>
-                    <td className="px-3 py-3 text-right text-dark-400">
-                      {eurosPrecis(c.cout_realise)}
-                    </td>
-                    <td className="px-3 py-3 text-right font-medium text-emerald-400">
-                      {eurosPrecis(c.marge)}
-                    </td>
+                    <td className="num fort">{eurosPrecis(c.ca_realise)}</td>
+                    <td className="num">{eurosPrecis(c.cout_realise)}</td>
+                    <td className="num positif">{eurosPrecis(c.marge)}</td>
                     <td
-                      className={`px-3 py-3 text-right ${
-                        c.taux_marge < 15 && c.ca_realise > 0
-                          ? "text-amber-400"
-                          : "text-dark-300"
+                      className={`num${
+                        c.taux_marge < 15 && c.ca_realise > 0 ? " alerte" : ""
                       }`}
                     >
                       {c.ca_realise > 0 ? pourcent(c.taux_marge) : "—"}
                     </td>
-                    <td className="px-3 py-3 text-right text-dark-400">
-                      {eurosPrecis(c.panier_moyen)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-dark-500 text-xs">
+                    <td className="num">{eurosPrecis(c.panier_moyen)}</td>
+                    <td className="num text-xs">
                       {dateCourte(c.derniere_mission)}
                     </td>
                   </tr>
                 ))}
                 {clientsTries.length === 0 && (
                   <tr>
-                    <td colSpan="8" className="py-12 text-center text-dark-400">
+                    <td colSpan="8" className="at-vide">
                       Aucune mission sur cette période.
                     </td>
                   </tr>
@@ -668,7 +692,7 @@ export default function AdminAnalyse() {
               </tbody>
             </table>
           </div>
-          <p className="px-4 py-3 text-xs text-dark-500 border-t border-dark-700/50">
+          <p className="at-panneau__pied">
             Un taux de marge sous 15 % est signalé en orange. Le coût correspond
             à la rétribution des convoyeurs.
           </p>
@@ -677,54 +701,49 @@ export default function AdminAnalyse() {
 
       {/* ── Tableau convoyeurs ──────────────────────── */}
       {onglet === "convoyeurs" && (
-        <div className="card overflow-hidden">
+        <div className="at-panneau">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-dark-800/50 text-dark-400 text-xs">
+            <table className="at-table">
+              <thead>
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Convoyeur</th>
-                  <th className="text-right px-3 py-3 font-medium">Livrées</th>
-                  <th className="text-right px-3 py-3 font-medium">
-                    Montant dû
-                  </th>
-                  <th className="text-right px-3 py-3 font-medium">
-                    CA généré
-                  </th>
-                  <th className="text-right px-4 py-3 font-medium">
-                    Marge dégagée
-                  </th>
+                  <th className="text-left">Convoyeur</th>
+                  <th className="num">Livrées</th>
+                  <th className="num">Montant dû</th>
+                  <th className="num">CA généré</th>
+                  <th className="num">Marge dégagée</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dark-700/50">
+              <tbody>
                 {convoyeurs.map((c) => (
-                  <tr key={c.id} className="hover:bg-dark-800/30">
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{c.full_name}</p>
-                      <p className="text-xs text-dark-500">{c.email}</p>
+                  <tr key={c.id}>
+                    <td>
+                      <p className="fort">{c.full_name}</p>
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--at-encre-3)" }}
+                      >
+                        {c.email}
+                      </p>
                     </td>
-                    <td className="px-3 py-3 text-right">
-                      <span className="font-medium">{c.missions_livrees}</span>
+                    <td className="num">
+                      <span className="fort">{c.missions_livrees}</span>
                       {c.missions_total > c.missions_livrees && (
-                        <span className="text-dark-500">
+                        <span style={{ color: "var(--at-encre-3)" }}>
                           {" "}
                           / {c.missions_total}
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-right font-medium">
-                      {eurosPrecis(c.montant_du)}
-                    </td>
-                    <td className="px-3 py-3 text-right text-dark-400">
-                      {eurosPrecis(c.ca_genere)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-emerald-400">
+                    <td className="num fort">{eurosPrecis(c.montant_du)}</td>
+                    <td className="num">{eurosPrecis(c.ca_genere)}</td>
+                    <td className="num positif">
                       {eurosPrecis(c.ca_genere - c.montant_du)}
                     </td>
                   </tr>
                 ))}
                 {convoyeurs.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="py-12 text-center text-dark-400">
+                    <td colSpan="5" className="at-vide">
                       Aucune mission assignée sur cette période.
                     </td>
                   </tr>
@@ -732,7 +751,7 @@ export default function AdminAnalyse() {
               </tbody>
             </table>
           </div>
-          <p className="px-4 py-3 text-xs text-dark-500 border-t border-dark-700/50">
+          <p className="at-panneau__pied">
             Le montant dû ne remplace pas les factures : il donne un ordre de
             grandeur à partir des tarifs saisis sur les missions.
           </p>

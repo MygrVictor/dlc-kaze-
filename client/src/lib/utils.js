@@ -25,6 +25,36 @@ export const STATUS_COLORS = {
   ANNULEE: "bg-red-500/10 text-red-400 border border-red-500/20",
 };
 
+/**
+ * Classe de statut, regroupée par ce qu'elle réclame du lecteur.
+ *
+ * `STATUS_COLORS` donne une teinte propre à chacun des huit statuts.
+ * Huit couleurs de même intensité ne hiérarchisent rien : un devis à
+ * signer, qui attend une décision, s'y affiche avec le même poids
+ * qu'une mission livrée depuis des mois.
+ *
+ * Ici un seul statut est mis en avant — celui qui demande une action.
+ * Le libellé, lui, reste distinct pour les huit : on perd la couleur,
+ * pas l'information.
+ *
+ * `DEVIS_PROPOSE` est volontairement la seule « action » : c'est le
+ * seul état où la plateforme attend quelque chose du client.
+ */
+export const STATUS_TON = {
+  EN_ATTENTE_DE_COTATION: "attente",
+  DEVIS_PROPOSE: "action",
+  DEVIS_REFUSE: "echec",
+  ACCEPTEE: "marche",
+  ASSIGNEE: "marche",
+  EN_COURS: "marche",
+  LIVREE: "fini",
+  ANNULEE: "echec",
+};
+
+/** Classe CSS complète pour un statut donné. */
+export const classeStatut = (statut) =>
+  `at-statut at-statut--${STATUS_TON[statut] || "attente"}`;
+
 export const formatDate = (dateStr) => {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("fr-FR", {

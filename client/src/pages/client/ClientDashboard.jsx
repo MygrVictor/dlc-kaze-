@@ -4,18 +4,11 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../lib/api";
 import {
   STATUS_LABELS,
-  STATUS_COLORS,
+  classeStatut,
   formatDate,
   formatPrice,
 } from "../../lib/utils";
-import {
-  PlusCircle,
-  FileText,
-  ArrowRight,
-  AlertTriangle,
-  Truck,
-  Building2,
-} from "lucide-react";
+import { PlusCircle, ArrowRight, Building2 } from "lucide-react";
 
 /**
  * Regroupements proposés au client.
@@ -82,17 +75,12 @@ export default function ClientDashboard() {
 
   if (!user.is_validated) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center mb-4">
-          <AlertTriangle size={32} className="text-yellow-400" />
-        </div>
-        <h2 className="text-xl font-bold mb-2">
-          Compte en attente de validation
-        </h2>
-        <p className="text-dark-400 text-center max-w-md">
+      <div className="at-etat mt-6">
+        <p className="at-etat__titre">Compte en attente de validation</p>
+        <p className="at-etat__texte max-w-md mx-auto">
           Votre compte doit être validé par un administrateur avant de pouvoir
-          créer des missions. Vous serez notifié par email dès que votre compte
-          sera activé.
+          créer des missions. Vous serez notifié par courriel dès qu'il sera
+          activé.
         </p>
       </div>
     );
@@ -101,18 +89,15 @@ export default function ClientDashboard() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
+      <div className="at-entete mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Mes missions</h1>
-          <p className="text-dark-400 text-sm mt-1">
+          <h1 className="at-entete__titre">Mes missions</h1>
+          <p className="at-entete__sous">
             Gérez vos demandes de convoyage automobile.
           </p>
         </div>
-        <Link
-          to="/client/nouvelle-mission"
-          className="btn-primary flex items-center gap-2 mt-4 sm:mt-0"
-        >
-          <PlusCircle size={18} />
+        <Link to="/client/nouvelle-mission" className="at-action">
+          <PlusCircle size={16} />
           Nouvelle mission
         </Link>
       </div>
@@ -120,25 +105,25 @@ export default function ClientDashboard() {
       {/* Loading */}
       {loading && (
         <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
+          <div
+            className="animate-spin rounded-full h-8 w-8"
+            style={{
+              border: "2px solid var(--at-accent)",
+              borderTopColor: "transparent",
+            }}
+          />
         </div>
       )}
 
       {/* Empty */}
       {!loading && missions.length === 0 && (
-        <div className="card text-center py-16">
-          <div className="w-16 h-16 bg-dark-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Truck size={32} className="text-dark-400" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Aucune mission</h3>
-          <p className="text-dark-400 text-sm mb-6">
+        <div className="at-etat">
+          <p className="at-etat__titre">Aucune mission</p>
+          <p className="at-etat__texte">
             Vous n'avez pas encore créé de demande de convoyage.
           </p>
-          <Link
-            to="/client/nouvelle-mission"
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            <PlusCircle size={18} />
+          <Link to="/client/nouvelle-mission" className="at-action mt-5">
+            <PlusCircle size={16} />
             Créer ma première mission
           </Link>
         </div>
@@ -157,20 +142,10 @@ export default function ClientDashboard() {
               <button
                 key={f.cle}
                 onClick={() => setFiltre(f.cle)}
-                className={`shrink-0 flex items-center gap-1.5 px-3.5 min-h-[38px] rounded-lg text-sm font-medium border transition-colors ${
-                  estActif
-                    ? "bg-primary-600 border-primary-600 text-white"
-                    : "bg-dark-800 border-dark-700 text-dark-300 hover:bg-dark-700"
-                }`}
+                className={`at-puce${estActif ? " at-puce--actif" : ""}`}
               >
                 {f.label}
-                <span
-                  className={`text-xs font-bold ${
-                    estActif ? "text-white/80" : "text-dark-500"
-                  }`}
-                >
-                  {n}
-                </span>
+                <span className="at-puce__n">{n}</span>
               </button>
             );
           })}
@@ -179,63 +154,66 @@ export default function ClientDashboard() {
 
       {/* Aucun résultat pour le filtre courant */}
       {!loading && missions.length > 0 && missionsVisibles.length === 0 && (
-        <div className="card text-center py-12">
-          <p className="text-dark-400 text-sm">
-            Aucune mission dans cette catégorie.
-          </p>
+        <div className="at-etat">
+          <p className="at-etat__texte">Aucune mission dans cette catégorie.</p>
         </div>
       )}
 
       {!loading && missionsVisibles.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {missionsVisibles.map((mission) => (
             <Link
               key={mission.id}
               to={`/client/missions/${mission.id}`}
-              className="card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-primary-500/30 transition-all group"
+              className="at-carte flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group"
             >
-              <div className="flex items-start gap-4 flex-1">
-                <div className="w-10 h-10 bg-primary-600/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <FileText size={20} className="text-primary-400" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* La plaque prime sur le trajet : c'est par elle que le
+                      client désigne son véhicule au téléphone, et deux
+                      missions sur un même axe ne se distinguent que par
+                      elle. Le trajet reste juste en dessous. */}
+                  <h3 className="at-carte__titre at-plaque">
+                    {mission.vehicle_plate || "Plaque non renseignée"}
+                  </h3>
+                  <span className={classeStatut(mission.status)}>
+                    {STATUS_LABELS[mission.status]}
+                  </span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="font-semibold">
-                      {mission.departure_address} → {mission.arrival_address}
-                    </h3>
-                    <span className={`badge ${STATUS_COLORS[mission.status]}`}>
-                      {STATUS_LABELS[mission.status]}
-                    </span>
-                  </div>
-                  <p className="text-dark-400 text-sm mt-1">
-                    {mission.vehicle_brand} {mission.vehicle_model}
-                    {mission.vehicle_plate && ` • ${mission.vehicle_plate}`}
+                <p className="at-carte__meta">
+                  {mission.departure_address} → {mission.arrival_address}
+                </p>
+                <p className="at-carte__note">
+                  {mission.vehicle_brand} {mission.vehicle_model}
+                </p>
+                {/* Renseigné par le serveur pour les seuls sièges de
+                    groupe : sans ce repère, les missions des entités se
+                    mélangeraient sans qu'on puisse les distinguer. */}
+                {(mission.entite_company || mission.entite_name) && (
+                  <p
+                    className="at-carte__note flex items-center gap-1.5"
+                    style={{ color: "var(--at-accent)" }}
+                  >
+                    <Building2 size={11} />
+                    {mission.entite_company || mission.entite_name}
                   </p>
-                  {/* Renseigné par le serveur pour les seuls sièges de
-                      groupe : sans ce repère, les missions des entités se
-                      mélangeraient sans qu'on puisse les distinguer. */}
-                  {(mission.entite_company || mission.entite_name) && (
-                    <p className="text-indigo-400 text-xs mt-1 flex items-center gap-1">
-                      <Building2 size={11} />
-                      {mission.entite_company || mission.entite_name}
-                    </p>
-                  )}
-                  <p className="text-dark-500 text-xs mt-1">
-                    Créée le {formatDate(mission.created_at)}
-                    {mission.departure_date &&
-                      ` • Départ le ${formatDate(mission.departure_date)}`}
-                  </p>
-                </div>
+                )}
+                <p className="at-carte__note">
+                  Créée le {formatDate(mission.created_at)}
+                  {mission.departure_date &&
+                    ` · Départ le ${formatDate(mission.departure_date)}`}
+                </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-shrink-0">
                 {mission.price && (
-                  <span className="text-lg font-bold text-white">
+                  <span className="at-carte__montant">
                     {formatPrice(mission.price)}
                   </span>
                 )}
                 <ArrowRight
-                  size={18}
-                  className="text-dark-500 group-hover:text-primary-400 transition-colors"
+                  size={16}
+                  style={{ color: "var(--at-encre-3)" }}
+                  className="group-hover:translate-x-0.5 transition-transform"
                 />
               </div>
             </Link>

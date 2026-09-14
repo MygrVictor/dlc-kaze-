@@ -603,11 +603,27 @@ export default function AdminMissions() {
                       className="py-3 px-4 text-dark-300"
                       data-label="Véhicule"
                     >
-                      {m.vehicle_brand || m.vehicle_model
-                        ? `${m.vehicle_brand || ""} ${m.vehicle_model || ""}`.trim()
-                        : m.source === "kaze"
-                          ? "—"
-                          : ""}
+                      {/* La plaque prime sur la marque : c'est par elle
+                          qu'on désigne un véhicule au téléphone, et deux
+                          308 blanches ne se distinguent que par là. Elle
+                          n'était pas affichée du tout sur cet écran. */}
+                      {m.vehicle_plate && (
+                        <p className="font-mono text-[13px] tracking-wide text-dark-100 uppercase">
+                          {m.vehicle_plate}
+                        </p>
+                      )}
+                      {m.vehicle_brand || m.vehicle_model ? (
+                        <p
+                          className={
+                            m.vehicle_plate ? "text-xs text-dark-500" : ""
+                          }
+                        >
+                          {`${m.vehicle_brand || ""} ${m.vehicle_model || ""}`.trim()}
+                        </p>
+                      ) : (
+                        !m.vehicle_plate &&
+                        m.source === "kaze" && <span>—</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-dark-400" data-label="Date">
                       {formatDate(m.departure_date || m.created_at)}

@@ -54,6 +54,10 @@ export default function AdminDashboard() {
 
   // Missions DLC
   const [missions, setMissions] = useState([]);
+  // Nombre total de missions en base, toutes périodes confondues. Le
+  // tableau de bord n'en affiche qu'un extrait : sans ce compte, une
+  // liste tronquée paraît complète et l'on croit à tort tout voir.
+  const [missionsTotal, setMissionsTotal] = useState(null);
   const [missionsLoading, setMissionsLoading] = useState(true);
 
   // Kaze data
@@ -104,7 +108,10 @@ export default function AdminDashboard() {
     setMissionsLoading(true);
     api
       .get("/admin/missions?limit=200")
-      .then((res) => setMissions(res.data.missions || []))
+      .then((res) => {
+        setMissions(res.data.missions || []);
+        setMissionsTotal(res.data.pagination?.total ?? null);
+      })
       .catch(() => {})
       .finally(() => setMissionsLoading(false));
   }, []);
@@ -1769,6 +1776,7 @@ export default function AdminDashboard() {
       {activeTab === "missions" && (
         <MissionsTab
           missions={missions}
+          missionsTotal={missionsTotal}
           kazeJobs={kazeJobs}
           loading={missionsLoading}
           kazeLoading={kazeLoading}
@@ -1988,6 +1996,7 @@ export default function AdminDashboard() {
 // ══════════════════════════════════════════════════════════════
 function MissionsTab({
   missions,
+  missionsTotal,
   kazeJobs,
   loading,
   kazeLoading,
@@ -2295,14 +2304,26 @@ function MissionsTab({
                     </td>
                     {/* Véhicule */}
                     <td className="py-3 px-3 text-dark-300">
-                      {m.vehicle_brand ? (
+                      {m.vehicle_plate || m.vehicle_brand ? (
                         <>
-                          <p>
-                            {m.vehicle_brand} {m.vehicle_model}
-                          </p>
-                          {m.vehicle_plate && (
-                            <p className="text-xs text-dark-500 font-mono">
+                          {/* La plaque prime sur la marque : c'est par
+                              elle qu'on désigne un véhicule au téléphone,
+                              et deux 308 blanches ne se distinguent que
+                              par là. La chasse fixe aligne les caractères
+                              d'une ligne à l'autre, ce qui rend la
+                              colonne balayable du regard. */}
+                          {m.vehicle_plate ? (
+                            <p className="font-mono text-[13px] tracking-wide text-dark-100 uppercase">
                               {m.vehicle_plate}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-dark-600 italic">
+                              sans plaque
+                            </p>
+                          )}
+                          {m.vehicle_brand && (
+                            <p className="text-xs text-dark-500">
+                              {m.vehicle_brand} {m.vehicle_model}
                             </p>
                           )}
                         </>
@@ -2457,7 +2478,7 @@ function MissionsTab({
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-2 bg-dark-800/30 text-xs text-dark-500 border-t border-dark-700 flex items-center gap-4">
+          <div className="px-4 py-2 bg-dark-800/30 text-xs text-dark-500 border-t border-dark-700 flex items-center gap-4 flex-wrap">
             <span>{filtered.length} mission(s) affichée(s)</span>
             <span>•</span>
             <span className="flex items-center gap-1">
@@ -2468,6 +2489,26 @@ function MissionsTab({
               <Zap size={10} className="text-orange-400" />
               {kazeOnlyCount} Kaze uniquement
             </span>
+            {/* Le tableau de bord ne demande que les deux cents missions
+                les plus récentes. Au-delà, la liste reste complète en
+                apparence alors qu'il en manque : on le dit, et on indique
+                où consulter le reste. Rien n'est perdu, seulement hors
+                de cet écran. */}
+            {missionsTotal > missions.length && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-1.5 text-amber-400">
+                  <AlertTriangle size={11} />
+                  {missions.length} plus récentes sur {missionsTotal} —{" "}
+                  <Link
+                    to="/admin/missions"
+                    className="underline hover:text-amber-300"
+                  >
+                    tout l'historique
+                  </Link>
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -468,6 +468,33 @@ describe("GET /api/admin/analyse", () => {
     );
   });
 
+  it("interprète les bornes dans le fuseau local, pas en UTC", async () => {
+    // `new Date("2026-01-01")` désigne minuit UTC. Sur un serveur situé
+    // à l'ouest de Greenwich, cet instant appartient encore au 31
+    // décembre en heure locale : la borne basculait alors sur l'année
+    // précédente, et le chiffre d'affaires du 31 décembre se retrouvait
+    // compté dans l'exercice suivant.
+    const appels = mockAnalyse();
+
+    await analyse("?debut=2026-01-01&fin=2026-12-31");
+
+    const [courant] = appels.filter((a) =>
+      /WHERE created_at >= \$1/i.test(a.sql),
+    );
+    const [debut, fin] = courant.params;
+
+    expect(debut.getFullYear()).toBe(2026);
+    expect(debut.getMonth()).toBe(0);
+    expect(debut.getDate()).toBe(1);
+    expect(debut.getHours()).toBe(0);
+
+    // La borne haute doit contenir le 31 décembre en entier.
+    expect(fin.getFullYear()).toBe(2026);
+    expect(fin.getMonth()).toBe(11);
+    expect(fin.getDate()).toBe(31);
+    expect(fin.getHours()).toBe(23);
+  });
+
   it("renvoie une évolution nulle quand la période précédente est vide", async () => {
     mockAnalyse({
       precedent: { ...TOTAUX, ca_realise: "0", cout_realise: "0" },
@@ -1898,6 +1925,27 @@ describe("Proxy Kaze", () => {
 
     expect(kazeService.fetchRecentJobs).toHaveBeenCalledWith(15);
     expect(res.body.data).toEqual([{ kaze_status: "done" }]);
+  });
+
+  it("n'expose pas la réponse Kaze brute dans la liste", async () => {
+    // `raw` pèse environ deux kilo-octets par job et n'est lu par aucun
+    // écran. Sur cent cinquante jobs il représentait plus de la moitié
+    // de la charge transférée à chaque ouverture du tableau de bord.
+    // Il reste disponible sur le détail d'un job.
+    mockDb(ADMIN);
+    kazeService.fetchRecentJobs.mockResolvedValue([{ id: "kz-1" }]);
+    kazeService.kazeJobToLocal.mockReturnValue({
+      kaze_status: "waiting",
+      steps: [{ name: "Départ" }],
+      raw: { charge: "volumineuse" },
+    });
+
+    const res = await auth(request(app).get("/api/admin/kaze/jobs"));
+
+    expect(res.body.data[0]).not.toHaveProperty("raw");
+    // Les autres champs, eux, doivent survivre au filtrage.
+    expect(res.body.data[0].steps).toEqual([{ name: "Départ" }]);
+    expect(res.body.data[0].kaze_status).toBe("waiting");
   });
 
   it("tolère une réponse Kaze vide", async () => {
