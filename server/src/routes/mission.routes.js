@@ -410,11 +410,56 @@ router.post(
 );
 
 // ═════════════════════════════════════════════════════════════
+// Client : Entités de son périmètre
+// ═════════════════════════════════════════════════════════════
+/**
+ * Comptes que l'appelant est en droit de consulter, pour alimenter le
+ * filtre par entité du tableau de bord.
+ *
+ * Cette liste est volontairement servie par le serveur plutôt que
+ * déduite des missions déjà chargées : une filiale sans mission
+ * disparaîtrait du menu, et son absence serait indiscernable d'un
+ * oubli. Un siège doit pouvoir constater qu'une entité n'a rien
+ * commandé — c'est précisément le genre d'information qu'il cherche.
+ *
+ * Un compte seul reçoit un tableau vide : il n'a rien à filtrer, et
+ * renvoyer sa propre ligne obligerait l'interface à la reconnaître
+ * pour ne pas afficher un menu à un seul choix.
+ */
+router.get("/mes-entites", authorize("client"), async (req, res, next) => {
+  try {
+    const perimetre = await perimetreClient(req.user);
+    if (perimetre.length <= 1) return res.json({ entites: [] });
+
+    const { rows } = await db.query(
+      `SELECT u.id, u.full_name, u.company,
+              (u.id = $2) AS est_soi,
+              (SELECT COUNT(*) FROM missions m WHERE m.client_id = u.id) AS nb
+         FROM users u
+        WHERE u.id = ANY($1)
+        ORDER BY (u.id = $2) DESC, u.company NULLS LAST, u.full_name`,
+      [perimetre, req.user.id],
+    );
+
+    res.json({
+      entites: rows.map((r) => ({
+        id: r.id,
+        nom: r.company || r.full_name,
+        estSoi: r.est_soi,
+        nb: parseInt(r.nb, 10),
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═════════════════════════════════════════════════════════════
 // Client : Lister ses missions
 // ═════════════════════════════════════════════════════════════
 router.get("/mes-missions", authorize("client"), async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status } = req.query;
+    const { page = 1, limit = 20, status, entite } = req.query;
     const offset = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
     const safeLimit = Math.min(100, Math.max(1, parseInt(limit)));
 
@@ -428,6 +473,18 @@ router.get("/mes-missions", authorize("client"), async (req, res, next) => {
     // ligne, et la jointure serait payée pour rien.
     const estSiege = perimetre.length > 1;
 
+    // `entite` restreint le périmètre, il ne le remplace jamais : on
+    // filtre la liste déjà autorisée au lieu d'interroger la valeur
+    // reçue. Un identifiant hors périmètre est refusé plutôt qu'ignoré,
+    // car retomber sur « tout afficher » donnerait une liste juste en
+    // apparence mais sans rapport avec ce qui a été demandé.
+    if (entite && !perimetre.includes(entite)) {
+      return res
+        .status(403)
+        .json({ message: "Entité hors de votre périmètre" });
+    }
+    const cible = entite ? [entite] : perimetre;
+
     let query = estSiege
       ? `SELECT m.*, u.company AS entite_company, u.full_name AS entite_name
            FROM missions m
@@ -437,7 +494,7 @@ router.get("/mes-missions", authorize("client"), async (req, res, next) => {
     let countQuery = estSiege
       ? "SELECT COUNT(*) FROM missions m WHERE m.client_id = ANY($1)"
       : "SELECT COUNT(*) FROM missions WHERE client_id = ANY($1)";
-    const params = [perimetre];
+    const params = [cible];
     let paramIdx = 2;
 
     if (status) {

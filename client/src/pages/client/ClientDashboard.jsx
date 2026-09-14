@@ -45,19 +45,42 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filtre, setFiltre] = useState("TOUTES");
+  const [entites, setEntites] = useState([]);
+  const [entite, setEntite] = useState("");
 
+  // Le serveur renvoie une liste vide pour un compte sans entité
+  // rattachée : le menu ne s'affiche donc que là où il a un sens,
+  // sans que l'interface ait à connaître la notion de siège.
   useEffect(() => {
+    api
+      .get("/missions/mes-entites")
+      .then((res) => setEntites(res.data.entites))
+      .catch(() => setEntites([]));
+  }, []);
+
+  // Le filtre par entité est appliqué par le serveur, contrairement à
+  // celui par statut : le tri en mémoire porterait sur une liste déjà
+  // tronquée à cent lignes, et afficherait pour une filiale un sous-
+  // ensemble de ses missions sans le signaler.
+  useEffect(() => {
+    setLoading(true);
     // Le siège d'un groupe agrège les missions de ses entités : la
     // valeur par défaut de vingt tronquerait sa liste sans rien dire.
     api
-      .get("/missions/mes-missions?limit=100")
-      .then((res) => setMissions(res.data.missions))
+      .get(
+        "/missions/mes-missions?limit=100" +
+          (entite ? `&entite=${entite}` : ""),
+      )
+      .then((res) => {
+        setMissions(res.data.missions);
+        setError(null);
+      })
       .catch((err) => {
         console.error(err);
         setError("Impossible de charger vos missions.");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [entite]);
 
   // Le filtrage se fait en mémoire : le client a rarement plus de quelques
   // dizaines de missions, un aller-retour serveur par onglet serait un coût
@@ -96,10 +119,29 @@ export default function ClientDashboard() {
             Gérez vos demandes de convoyage automobile.
           </p>
         </div>
-        <Link to="/client/nouvelle-mission" className="at-action">
-          <PlusCircle size={16} />
-          Nouvelle mission
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Absent pour un compte seul : le serveur ne renvoie des
+              entités qu'aux sièges de groupe. */}
+          {entites.length > 0 && (
+            <select
+              className="at-select"
+              value={entite}
+              onChange={(e) => setEntite(e.target.value)}
+              aria-label="Filtrer par entité"
+            >
+              <option value="">Toutes les entités</option>
+              {entites.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.estSoi ? `${e.nom} (siège)` : e.nom} — {e.nb}
+                </option>
+              ))}
+            </select>
+          )}
+          <Link to="/client/nouvelle-mission" className="at-action">
+            <PlusCircle size={16} />
+            Nouvelle mission
+          </Link>
+        </div>
       </div>
 
       {/* Loading */}
@@ -115,8 +157,27 @@ export default function ClientDashboard() {
         </div>
       )}
 
+      {/* Une erreur de chargement laissait jusqu'ici l'écran afficher
+          « Aucune mission » : le client concluait que ses commandes
+          avaient disparu, alors que seul l'appel avait échoué. */}
+      {!loading && error && (
+        <div className="at-etat">
+          <p className="at-etat__titre">Chargement impossible</p>
+          <p className="at-etat__texte">{error}</p>
+        </div>
+      )}
+
       {/* Empty */}
-      {!loading && missions.length === 0 && (
+      {!loading && !error && missions.length === 0 && entite && (
+        <div className="at-etat">
+          <p className="at-etat__titre">Aucune mission pour cette entité</p>
+          <p className="at-etat__texte">
+            Ce compte rattaché n'a encore commandé aucun convoyage.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && missions.length === 0 && !entite && (
         <div className="at-etat">
           <p className="at-etat__titre">Aucune mission</p>
           <p className="at-etat__texte">
