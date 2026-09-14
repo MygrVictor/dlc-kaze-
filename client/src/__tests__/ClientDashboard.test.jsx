@@ -93,10 +93,12 @@ describe("ClientDashboard — compte validé", () => {
     });
   });
 
-  it("appelle /missions/mes-missions au chargement", async () => {
+  it("demande assez de missions pour un siège multi-entités", async () => {
     renderClientDashboard();
+    // Un siège agrège les missions de ses entités : la valeur par
+    // défaut de vingt tronquerait sa liste sans le signaler.
     await waitFor(() =>
-      expect(api.get).toHaveBeenCalledWith("/missions/mes-missions"),
+      expect(api.get).toHaveBeenCalledWith("/missions/mes-missions?limit=100"),
     );
   });
 
