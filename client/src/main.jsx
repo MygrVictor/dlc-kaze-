@@ -5,10 +5,6 @@ import { Toaster } from "react-hot-toast";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
-// Chargé après index.css : le vocabulaire du back-office s'appuie sur
-// les variables de la charte et doit pouvoir passer devant les règles
-// génériques sans recourir à `!important`.
-import "./styles-atelier.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

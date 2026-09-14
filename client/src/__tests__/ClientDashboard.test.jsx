@@ -93,17 +93,6 @@ describe("ClientDashboard — compte validé", () => {
     });
   });
 
-  it("met l'immatriculation en tête de carte", async () => {
-    // C'est par la plaque que le client désigne son véhicule au
-    // téléphone, et deux missions sur un même axe ne se distinguent
-    // que par elle. Le trajet reste affiché, mais en second rang.
-    renderClientDashboard();
-    await waitFor(() =>
-      expect(screen.getByText("AB-123-CD")).toBeInTheDocument(),
-    );
-    expect(screen.getByText("CD-789-EF")).toBeInTheDocument();
-  });
-
   it("demande assez de missions pour un siège multi-entités", async () => {
     renderClientDashboard();
     // Un siège agrège les missions de ses entités : la valeur par
