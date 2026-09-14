@@ -257,21 +257,87 @@ describe("GET /api/auth/me", () => {
       process.env.JWT_SECRET,
       { expiresIn: "1h" },
     );
-    db.query.mockResolvedValueOnce({
-      rows: [
-        {
-          id: "uuid-1",
-          email: "user@test.com",
-          full_name: "Test User",
-          role: "client",
-          is_validated: true,
-        },
-      ],
-    });
+    db.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "uuid-1",
+            email: "user@test.com",
+            full_name: "Test User",
+            role: "client",
+            is_validated: true,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ count: "0" }] });
     const res = await request(app)
       .get("/api/auth/me")
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.user.email).toBe("user@test.com");
+  });
+
+  it("ne révèle jamais à une entité qu'elle est rattachée à un siège", async () => {
+    const jwt = require("jsonwebtoken");
+    const token = jwt.sign(
+      { userId: "filiale-1", role: "client" },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" },
+    );
+    db.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "filiale-1",
+            email: "nord@equans.fr",
+            full_name: "Equans Nord",
+            role: "client",
+            is_validated: true,
+            password_hash: "secret",
+            parent_id: "siege-equans",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ count: "0" }] });
+
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    // Le rattachement est une information interne : une filiale n'a pas
+    // à découvrir que sa maison mère consulte son activité.
+    expect(res.body.user.parent_id).toBeUndefined();
+    // Et la réponse reste une liste blanche : rien ne fuite par ajout
+    // ultérieur d'une colonne au SELECT du middleware.
+    expect(res.body.user.password_hash).toBeUndefined();
+  });
+
+  it("annonce au siège le nombre d'entités qu'il supervise", async () => {
+    const jwt = require("jsonwebtoken");
+    const token = jwt.sign(
+      { userId: "siege-equans", role: "client" },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" },
+    );
+    db.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "siege-equans",
+            email: "siege@equans.fr",
+            full_name: "Equans",
+            role: "client",
+            is_validated: true,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ count: "3" }] });
+
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.body.user.rattachements).toBe(3);
   });
 });

@@ -754,8 +754,16 @@ router.get("/users", async (req, res, next) => {
   try {
     const { role, limit = 100 } = req.query;
     const safeLimit = Math.min(500, Math.max(1, parseInt(limit, 10) || 100));
-    let query = `SELECT id, email, full_name, phone, company, role, is_validated, kaze_driver_id, created_at FROM users`;
-    let countQuery = `SELECT COUNT(*) FROM users`;
+    let query = `SELECT u.id, u.email, u.full_name, u.phone, u.company, u.role,
+                        u.is_validated, u.kaze_driver_id, u.created_at,
+                        u.parent_id, p.full_name AS parent_name,
+                        p.company AS parent_company,
+                        -- Nombre d'entités rattachées : permet d'avertir
+                        -- avant de détacher ou de supprimer un siège.
+                        (SELECT COUNT(*) FROM users e WHERE e.parent_id = u.id) AS rattachements
+                   FROM users u
+                   LEFT JOIN users p ON p.id = u.parent_id`;
+    let countQuery = `SELECT COUNT(*) FROM users u`;
     const params = [];
     if (role) {
       // Plusieurs rôles peuvent être demandés d'un coup, séparés par des
@@ -766,12 +774,12 @@ router.get("/users", async (req, res, next) => {
         .split(",")
         .map((r) => r.trim())
         .filter(Boolean);
-      const where = " WHERE role = ANY($1)";
+      const where = " WHERE u.role = ANY($1)";
       query += where;
       countQuery += where;
       params.push(roles);
     }
-    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
+    query += ` ORDER BY u.created_at DESC LIMIT $${params.length + 1}`;
 
     const [{ rows }, { rows: countRows }] = await Promise.all([
       db.query(query, [...params, safeLimit]),
@@ -946,6 +954,105 @@ router.patch("/users/:id/kaze-link", async (req, res, next) => {
     res.json({
       user: updated.rows[0],
       message: kazeDriverId ? "Compte Kaze lié." : "Liaison Kaze supprimée.",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Rattache un compte client au siège de son groupe, ou l'en détache.
+ *
+ * Le siège consultera les missions et les factures de ses entités, et
+ * pourra valider leurs devis ; il ne pourra pas annuler leurs missions.
+ * Côté entité, rien ne change et rien n'apparaît : le rattachement
+ * n'est pas visible depuis son espace.
+ *
+ * Quatre refus délibtérés, chacun fermant une incohérence :
+ * un compte ne peut être son propre parent ; seuls des clients sont
+ * concernés ; un siège ne peut pas être lui-même rattaché ailleurs, et
+ * une entité déjà parente ne peut pas être rattachée — ces deux
+ * derniers points maintiennent la hiérarchie à un seul niveau, seule
+ * profondeur où la question « qui voit quoi » reste vérifiable de tête.
+ */
+router.patch("/users/:id/parent", async (req, res, next) => {
+  try {
+    const { parentId } = req.body;
+
+    const { rows: cible } = await db.query(
+      "SELECT id, role, full_name FROM users WHERE id = $1",
+      [req.params.id],
+    );
+    if (cible.length === 0)
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+    if (cible[0].role !== "client") {
+      return res.status(400).json({
+        error: "Seuls les comptes clients peuvent être rattachés à un siège.",
+      });
+    }
+
+    // Détachement : aucune vérification n'est nécessaire.
+    if (!parentId) {
+      const { rows } = await db.query(
+        `UPDATE users SET parent_id = NULL, updated_at = NOW()
+          WHERE id = $1 RETURNING id, full_name, parent_id`,
+        [req.params.id],
+      );
+      auditLog("DETACHEMENT_COMPTE", req.user?.id, {
+        ip: req.ip,
+        cible: req.params.id,
+      });
+      return res.json({ user: rows[0], message: "Compte détaché." });
+    }
+
+    if (parentId === req.params.id) {
+      return res
+        .status(400)
+        .json({ error: "Un compte ne peut pas être son propre siège." });
+    }
+
+    const { rows: parent } = await db.query(
+      "SELECT id, role, full_name, parent_id FROM users WHERE id = $1",
+      [parentId],
+    );
+    if (parent.length === 0)
+      return res.status(404).json({ error: "Siège introuvable." });
+    if (parent[0].role !== "client") {
+      return res
+        .status(400)
+        .json({ error: "Le siège doit être un compte client." });
+    }
+    if (parent[0].parent_id) {
+      return res.status(400).json({
+        error: `${parent[0].full_name} est déjà rattaché à un siège : les rattachements se limitent à un niveau.`,
+      });
+    }
+
+    const { rows: enfants } = await db.query(
+      "SELECT COUNT(*) FROM users WHERE parent_id = $1",
+      [req.params.id],
+    );
+    if (parseInt(enfants[0].count, 10) > 0) {
+      return res.status(400).json({
+        error: `${cible[0].full_name} est déjà le siège d'autres comptes : les rattachements se limitent à un niveau.`,
+      });
+    }
+
+    const { rows } = await db.query(
+      `UPDATE users SET parent_id = $1, updated_at = NOW()
+        WHERE id = $2 RETURNING id, full_name, parent_id`,
+      [parentId, req.params.id],
+    );
+
+    auditLog("RATTACHEMENT_COMPTE", req.user?.id, {
+      ip: req.ip,
+      cible: req.params.id,
+      parent: parentId,
+    });
+
+    res.json({
+      user: rows[0],
+      message: `Compte rattaché à ${parent[0].full_name}.`,
     });
   } catch (err) {
     next(err);

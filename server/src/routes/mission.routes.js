@@ -16,6 +16,11 @@ const {
   generateDevisGroupePDF,
 } = require("../services/devis.service");
 const { lundiDeLaSemaine } = require("../lib/dates");
+const {
+  perimetreClient,
+  peutConsulter,
+  estTitulaire,
+} = require("../db/perimetre");
 const { classeDePeage, estUtilitaire12m3 } = require("../lib/vehicules");
 const {
   createMissionLimiter,
@@ -413,19 +418,39 @@ router.get("/mes-missions", authorize("client"), async (req, res, next) => {
     const offset = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
     const safeLimit = Math.min(100, Math.max(1, parseInt(limit)));
 
-    let query = "SELECT * FROM missions WHERE client_id = $1";
-    let countQuery = "SELECT COUNT(*) FROM missions WHERE client_id = $1";
-    const params = [req.user.id];
+    // Le périmètre est déduit du compte authentifié, jamais d'un
+    // paramètre de requête : c'est ce qui empêche un client de se
+    // déclarer parent d'un autre en forgeant son appel.
+    const perimetre = await perimetreClient(req.user);
+
+    // Le nom de l'entité n'est joint que pour un siège : un compte seul
+    // n'a que faire d'une colonne qui répéterait son propre nom à chaque
+    // ligne, et la jointure serait payée pour rien.
+    const estSiege = perimetre.length > 1;
+
+    let query = estSiege
+      ? `SELECT m.*, u.company AS entite_company, u.full_name AS entite_name
+           FROM missions m
+           LEFT JOIN users u ON u.id = m.client_id
+          WHERE m.client_id = ANY($1)`
+      : "SELECT * FROM missions WHERE client_id = ANY($1)";
+    let countQuery = estSiege
+      ? "SELECT COUNT(*) FROM missions m WHERE m.client_id = ANY($1)"
+      : "SELECT COUNT(*) FROM missions WHERE client_id = ANY($1)";
+    const params = [perimetre];
     let paramIdx = 2;
 
     if (status) {
-      query += ` AND status = $${paramIdx}`;
-      countQuery += ` AND status = $${paramIdx}`;
+      const colonne = estSiege ? "m.status" : "status";
+      query += ` AND ${colonne} = $${paramIdx}`;
+      countQuery += ` AND ${colonne} = $${paramIdx}`;
       params.push(status);
       paramIdx++;
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+    query += estSiege
+      ? ` ORDER BY m.created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`
+      : ` ORDER BY created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
     const queryParams = [...params, safeLimit, offset];
 
     const [{ rows }, { rows: countRows }] = await Promise.all([
@@ -459,8 +484,12 @@ router.get("/:id", authorize("client", "admin"), async (req, res, next) => {
       return res.status(404).json({ error: "Mission introuvable." });
 
     const mission = rows[0];
-    // Un client ne peut voir que ses propres missions
-    if (req.user.role === "client" && mission.client_id !== req.user.id) {
+    // Un client voit ses missions et, s'il est le siège d'un groupe,
+    // celles de ses entités rattachées.
+    if (
+      req.user.role === "client" &&
+      !(await peutConsulter(req.user, mission.client_id))
+    ) {
       return res.status(403).json({ error: "Accès interdit." });
     }
 
@@ -489,7 +518,10 @@ router.get(
       const mission = mRows[0];
 
       // Vérifier l'accès
-      if (req.user.role === "client" && mission.client_id !== req.user.id) {
+      if (
+        req.user.role === "client" &&
+        !(await peutConsulter(req.user, mission.client_id))
+      ) {
         return res.status(403).json({ error: "Accès interdit." });
       }
 
@@ -565,7 +597,10 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
 
       const mission = rows[0];
 
-      if (mission.client_id !== req.user.id) {
+      // Valider un devis engage financièrement, et c'est précisément
+      // ce que le siège d'un groupe est légitime à faire pour ses
+      // entités : le budget se tranche souvent au niveau central.
+      if (!(await peutConsulter(req.user, mission.client_id))) {
         throw Object.assign(
           new Error("Cette mission ne vous appartient pas."),
           { status: 403 },
@@ -719,7 +754,9 @@ router.post("/:id/refuser", authorize("client"), async (req, res, next) => {
 
     const mission = rows[0];
 
-    if (mission.client_id !== req.user.id) {
+    // Même logique que l'acceptation : qui peut valider un budget peut
+    // le refuser.
+    if (!(await peutConsulter(req.user, mission.client_id))) {
       return res
         .status(403)
         .json({ error: "Cette mission ne vous appartient pas." });
@@ -773,7 +810,11 @@ router.post("/:id/annuler", authorize("client"), async (req, res, next) => {
 
     const mission = rows[0];
 
-    if (mission.client_id !== req.user.id) {
+    // Annuler reste au seul titulaire, même pour un siège : consulter
+    // l'activité d'une entité est une chose, défaire une opération
+    // qu'elle a engagée — avec un convoyeur peut-être déjà en route —
+    // en est une autre. La demande passe par l'entité ou par nous.
+    if (!estTitulaire(req.user, mission.client_id)) {
       return res
         .status(403)
         .json({ error: "Cette mission ne vous appartient pas." });

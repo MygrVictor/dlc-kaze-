@@ -905,8 +905,43 @@ router.post("/reset-password", authLimiter, async (req, res, next) => {
 });
 
 // ── Profil courant ───────────────────────────────────────────
-router.get("/me", authenticate, (req, res) => {
-  res.json({ user: req.user });
+//
+// Les champs sont énumérés un à un, et non renvoyés en bloc : le
+// rattachement d'une entité à son siège est une information interne.
+// Une filiale n'a pas à découvrir, en lisant son propre profil, que
+// sa maison mère consulte son activité — et un `req.user` élargi un
+// jour par une autre évolution ne doit pas fuiter par cette route.
+//
+// `rattachements` compte les entités visibles : c'est ce qui permet à
+// l'interface d'afficher ou non le sélecteur d'entité, sans rien
+// révéler à ceux qui n'ont rien à voir.
+router.get("/me", authenticate, async (req, res, next) => {
+  try {
+    let rattachements = 0;
+    if (req.user.role === "client") {
+      const { rows } = await db.query(
+        "SELECT COUNT(*) FROM users WHERE parent_id = $1 AND role = 'client'",
+        [req.user.id],
+      );
+      rattachements = parseInt(rows[0].count, 10);
+    }
+
+    res.json({
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        full_name: req.user.full_name,
+        phone: req.user.phone,
+        company: req.user.company,
+        role: req.user.role,
+        is_validated: req.user.is_validated,
+        kaze_driver_id: req.user.kaze_driver_id,
+        rattachements,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

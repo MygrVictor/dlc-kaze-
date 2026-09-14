@@ -29,6 +29,8 @@ import {
   Home,
   KeyRound,
   Loader2,
+  Building2,
+  Network,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -49,6 +51,11 @@ export default function AdminUsers() {
   const [kazeModal, setKazeModal] = useState(null); // user obj
   const [kazeIdInput, setKazeIdInput] = useState("");
   const [kazeSaving, setKazeSaving] = useState(false);
+
+  // ── Modal rattachement à un siège ──────────────────────
+  const [parentModal, setParentModal] = useState(null); // user obj
+  const [parentChoisi, setParentChoisi] = useState("");
+  const [parentSaving, setParentSaving] = useState(false);
 
   // ── Modal documents convoyeur ───────────────────────────────
   const [docsModal, setDocsModal] = useState(null); // user obj
@@ -154,6 +161,28 @@ export default function AdminUsers() {
   const openKazeModal = (u) => {
     setKazeModal(u);
     setKazeIdInput(u.kaze_driver_id || "");
+  };
+
+  const openParentModal = (u) => {
+    setParentModal(u);
+    setParentChoisi(u.parent_id || "");
+  };
+
+  const handleParentLink = async () => {
+    setParentSaving(true);
+    try {
+      const { data } = await api.patch(
+        `/admin/users/${parentModal.id}/parent`,
+        { parentId: parentChoisi || null },
+      );
+      toast.success(data.message);
+      setParentModal(null);
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur.");
+    } finally {
+      setParentSaving(false);
+    }
   };
 
   const openDocsModal = (u) => {
@@ -333,6 +362,9 @@ export default function AdminUsers() {
                   Statut
                 </th>
                 <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  Groupe
+                </th>
+                <th className="text-left py-3 px-4 text-dark-400 font-medium">
                   Kaze
                 </th>
                 <th className="text-right py-3 px-4 text-dark-400 font-medium">
@@ -385,6 +417,43 @@ export default function AdminUsers() {
                           <Clock size={12} className="mr-1" />
                           En attente
                         </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {/* Rattachement de groupe : réservé aux clients.
+                          Un siège consulte l'activité de ses entités ;
+                          l'entité, elle, ignore que ce lien existe. */}
+                      {u.role === "client" ? (
+                        u.parent_id ? (
+                          <button
+                            onClick={() => openParentModal(u)}
+                            title={`Rattaché à ${u.parent_company || u.parent_name}`}
+                            className="badge bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 cursor-pointer hover:bg-indigo-500/20 transition-colors max-w-[11rem]"
+                          >
+                            <Building2 size={12} className="mr-1 shrink-0" />
+                            <span className="truncate">
+                              {u.parent_company || u.parent_name}
+                            </span>
+                          </button>
+                        ) : Number(u.rattachements) > 0 ? (
+                          <button
+                            onClick={() => openParentModal(u)}
+                            title="Ce compte est le siège d'un groupe"
+                            className="badge bg-violet-500/10 text-violet-400 border border-violet-500/20 cursor-pointer hover:bg-violet-500/20 transition-colors"
+                          >
+                            <Network size={12} className="mr-1" />
+                            Siège · {u.rattachements}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => openParentModal(u)}
+                            className="badge bg-dark-700 text-dark-400 border border-dark-600 cursor-pointer hover:bg-dark-600 hover:text-dark-300 transition-colors"
+                          >
+                            Indépendant
+                          </button>
+                        )
+                      ) : (
+                        <span className="text-dark-600">—</span>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -466,7 +535,7 @@ export default function AdminUsers() {
               })}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-dark-400">
+                  <td colSpan="9" className="py-12 text-center text-dark-400">
                     Aucun utilisateur trouvé.
                   </td>
                 </tr>
@@ -534,6 +603,97 @@ export default function AdminUsers() {
                 className="btn-secondary"
               >
                 Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal rattachement à un siège */}
+      {parentModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Groupe — {parentModal.full_name}
+              </h3>
+              <button
+                onClick={() => setParentModal(null)}
+                className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {Number(parentModal.rattachements) > 0 ? (
+              // Un siège ne peut pas être rattaché ailleurs : le serveur
+              // le refuse, autant ne pas proposer l'action.
+              <div className="text-sm text-dark-300 space-y-3">
+                <p>
+                  Ce compte est le siège de{" "}
+                  <span className="font-medium text-violet-400">
+                    {parentModal.rattachements} entité
+                    {Number(parentModal.rattachements) > 1 ? "s" : ""}
+                  </span>
+                  . Il consulte leurs missions et leurs factures, et peut
+                  valider leurs devis.
+                </p>
+                <p className="text-xs text-dark-500">
+                  Pour le rattacher lui-même à un autre compte, détachez d'abord
+                  ses entités : les groupes se limitent à un niveau.
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-dark-400 mb-4">
+                  Rattacher ce compte au siège de son groupe. Le siège verra ses
+                  missions et ses factures ; ce compte, lui, ne verra aucun
+                  changement.
+                </p>
+
+                <select
+                  value={parentChoisi}
+                  onChange={(e) => setParentChoisi(e.target.value)}
+                  className="input-field mb-4"
+                >
+                  <option value="">Compte indépendant</option>
+                  {users
+                    .filter(
+                      (c) =>
+                        c.role === "client" &&
+                        c.id !== parentModal.id &&
+                        !c.parent_id,
+                    )
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.company ? `${c.company} — ` : ""}
+                        {c.full_name}
+                      </option>
+                    ))}
+                </select>
+              </>
+            )}
+
+            <div className="flex gap-3 mt-4">
+              {Number(parentModal.rattachements) === 0 && (
+                <button
+                  onClick={handleParentLink}
+                  disabled={parentSaving}
+                  className="btn-primary flex-1 flex items-center justify-center gap-2"
+                >
+                  <Building2 size={16} />
+                  {parentSaving
+                    ? "Enregistrement…"
+                    : parentChoisi
+                      ? "Rattacher"
+                      : "Détacher"}
+                </button>
+              )}
+              <button
+                onClick={() => setParentModal(null)}
+                className="btn-secondary flex-1"
+              >
+                Fermer
               </button>
             </div>
           </div>

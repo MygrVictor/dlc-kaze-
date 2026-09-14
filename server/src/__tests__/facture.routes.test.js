@@ -81,6 +81,7 @@ describe("Cloisonnement des factures", () => {
   ])("ne rend au %s que ses propres factures", async (_role, utilisateur) => {
     let parametres = null;
     mockDb(utilisateur, (sql, params) => {
+      if (/parent_id = \$1/i.test(sql)) return { rows: [] };
       if (/FROM factures/i.test(sql)) {
         parametres = params;
         return { rows: [{ id: FACTURE_ID, numero: "F-001" }] };
@@ -95,7 +96,48 @@ describe("Cloisonnement des factures", () => {
     expect(res.status).toBe(200);
     // L'identifiant provient du jeton : c'est ce qui rend impossible la
     // lecture des factures d'un tiers en manipulant l'URL.
-    expect(parametres).toEqual([utilisateur.id]);
+    expect(parametres).toEqual([[utilisateur.id]]);
+  });
+
+  it("n'élargit jamais le périmètre d'un convoyeur", async () => {
+    const requetes = [];
+    mockDb(CONVOYEUR, (sql, params) => {
+      requetes.push(sql);
+      // Si la route interrogeait les rattachements pour un convoyeur,
+      // ce mock lui répondrait — et le test échouerait ci-dessous.
+      if (/parent_id = \$1/i.test(sql))
+        return { rows: [{ id: "un-autre-convoyeur" }] };
+      if (/FROM factures/i.test(sql)) {
+        expect(params).toEqual([[CONVOYEUR.id]]);
+        return { rows: [] };
+      }
+    });
+
+    const res = await auth(
+      request(app).get("/api/factures/mes-factures"),
+      CONVOYEUR,
+    );
+
+    expect(res.status).toBe(200);
+    // La route sert les deux rôles : les rattachements ne concernent
+    // que les clients, ils ne doivent pas être consultés ici.
+    expect(requetes.some((s) => /parent_id = \$1/i.test(s))).toBe(false);
+  });
+
+  it("rend au siège les factures de ses entités rattachées", async () => {
+    let parametres = null;
+    mockDb(CLIENT, (sql, params) => {
+      if (/parent_id = \$1/i.test(sql))
+        return { rows: [{ id: "filiale-1" }, { id: "filiale-2" }] };
+      if (/FROM factures/i.test(sql)) {
+        parametres = params;
+        return { rows: [] };
+      }
+    });
+
+    await auth(request(app).get("/api/factures/mes-factures"), CLIENT);
+
+    expect(parametres).toEqual([[CLIENT.id, "filiale-1", "filiale-2"]]);
   });
 
   it.each([

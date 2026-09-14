@@ -777,13 +777,16 @@ describe("GET /api/missions/mes-missions", () => {
     const appels = [];
     mockDb(CLIENT, (sql, params) => {
       appels.push({ sql, params });
+      if (/parent_id = \$1/i.test(sql)) return { rows: [] };
       if (/COUNT/i.test(sql)) return { rows: [{ count: "1" }] };
       return { rows: [] };
     });
 
     await lister("?status=LIVREE");
 
-    const requeteListe = appels.find((a) => !/COUNT/i.test(a.sql));
+    const requeteListe = appels.find(
+      (a) => /FROM missions/i.test(a.sql) && !/COUNT/i.test(a.sql),
+    );
     expect(requeteListe.sql).toMatch(/AND status = \$2/);
     expect(requeteListe.params).toContain("LIVREE");
   });
@@ -791,6 +794,7 @@ describe("GET /api/missions/mes-missions", () => {
   it("plafonne la limite à 100 résultats", async () => {
     let params;
     mockDb(CLIENT, (sql, p) => {
+      if (/parent_id = \$1/i.test(sql)) return { rows: [] };
       if (/COUNT/i.test(sql)) return { rows: [{ count: "0" }] };
       params = p;
       return { rows: [] };
@@ -804,6 +808,7 @@ describe("GET /api/missions/mes-missions", () => {
   it("calcule correctement l'offset de pagination", async () => {
     let params;
     mockDb(CLIENT, (sql, p) => {
+      if (/parent_id = \$1/i.test(sql)) return { rows: [] };
       if (/COUNT/i.test(sql)) return { rows: [{ count: "0" }] };
       params = p;
       return { rows: [] };
@@ -814,9 +819,10 @@ describe("GET /api/missions/mes-missions", () => {
     expect(params[params.length - 1]).toBe(20);
   });
 
-  it("cloisonne la requête sur le client authentifié", async () => {
+  it("cloisonne la requête sur le périmètre du client authentifié", async () => {
     let params;
     mockDb(CLIENT, (sql, p) => {
+      if (/parent_id = \$1/i.test(sql)) return { rows: [] };
       if (/COUNT/i.test(sql)) return { rows: [{ count: "0" }] };
       params = p;
       return { rows: [] };
@@ -824,7 +830,40 @@ describe("GET /api/missions/mes-missions", () => {
 
     await lister();
 
-    expect(params[0]).toBe(CLIENT.id);
+    // Un client sans entité rattachée ne doit voir que lui-même : le
+    // périmètre ne s'élargit jamais tout seul.
+    expect(params[0]).toEqual([CLIENT.id]);
+  });
+
+  it("élargit le périmètre aux entités rattachées d'un siège", async () => {
+    let params;
+    mockDb(CLIENT, (sql, p) => {
+      if (/parent_id = \$1/i.test(sql))
+        return { rows: [{ id: "filiale-1" }, { id: "filiale-2" }] };
+      if (/COUNT/i.test(sql)) return { rows: [{ count: "0" }] };
+      params = p;
+      return { rows: [] };
+    });
+
+    await lister();
+
+    expect(params[0]).toEqual([CLIENT.id, "filiale-1", "filiale-2"]);
+  });
+
+  it("ne laisse pas un client élargir son périmètre par l'URL", async () => {
+    let params;
+    mockDb(CLIENT, (sql, p) => {
+      if (/parent_id = \$1/i.test(sql)) return { rows: [] };
+      if (/COUNT/i.test(sql)) return { rows: [{ count: "0" }] };
+      params = p;
+      return { rows: [] };
+    });
+
+    // Le périmètre se déduit du jeton : aucun paramètre de requête ne
+    // doit pouvoir y ajouter le compte d'un tiers.
+    await lister("?client_id=victime&clientId=victime&parent_id=victime");
+
+    expect(params[0]).toEqual([CLIENT.id]);
   });
 });
 

@@ -457,9 +457,7 @@ describe("GET /api/admin/analyse", () => {
 
     await analyse("?debut=2026-03-01&fin=2026-03-31");
 
-    const totaux = appels.filter((a) =>
-      /WHERE created_at >= \$1/i.test(a.sql),
-    );
+    const totaux = appels.filter((a) => /WHERE created_at >= \$1/i.test(a.sql));
     expect(totaux).toHaveLength(2);
 
     const duree = (a) => a.params[1].getTime() - a.params[0].getTime();
@@ -530,9 +528,7 @@ describe("GET /api/admin/analyse", () => {
 
     await analyse();
 
-    const premier = appels.find((a) =>
-      /WHERE created_at >= \$1/i.test(a.sql),
-    );
+    const premier = appels.find((a) => /WHERE created_at >= \$1/i.test(a.sql));
     expect(premier.params[0].getFullYear()).toBe(new Date().getFullYear());
     expect(premier.params[0].getMonth()).toBe(0);
   });
@@ -543,9 +539,7 @@ describe("GET /api/admin/analyse", () => {
     const res = await analyse("?debut=pas-une-date&fin=n-importe-quoi");
 
     expect(res.status).toBe(200);
-    const premier = appels.find((a) =>
-      /WHERE created_at >= \$1/i.test(a.sql),
-    );
+    const premier = appels.find((a) => /WHERE created_at >= \$1/i.test(a.sql));
     expect(Number.isNaN(premier.params[0].getTime())).toBe(false);
     expect(Number.isNaN(premier.params[1].getTime())).toBe(false);
   });
@@ -804,6 +798,152 @@ describe("POST /api/admin/users/:id/reset-password", () => {
 
     expect(res.status).toBe(502);
     expect(res.body.error).toMatch(/email n'est pas parti/i);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+describe("PATCH /api/admin/users/:id/parent", () => {
+  const SIEGE_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
+
+  const rattacher = (body) =>
+    auth(request(app).patch(`/api/admin/users/${USER_ID}/parent`)).send(body);
+
+  /**
+   * Trois lectures successives : le compte cible, le siège visé, puis
+   * le décompte des entités déjà rattachées à la cible.
+   */
+  const mockComptes = ({ cible, parent, enfantsDeLaCible = "0" } = {}) => {
+    let vues = 0;
+    mockDb(ADMIN, (sql) => {
+      if (/SELECT id, role, full_name FROM users/i.test(sql))
+        return { rows: cible === null ? [] : [cible] };
+      if (/SELECT id, role, full_name, parent_id FROM users/i.test(sql))
+        return { rows: parent === null ? [] : [parent] };
+      if (/SELECT COUNT\(\*\) FROM users WHERE parent_id/i.test(sql))
+        return { rows: [{ count: enfantsDeLaCible }] };
+      if (/SET parent_id/i.test(sql)) {
+        vues += 1;
+        return { rows: [{ id: USER_ID, parent_id: SIEGE_ID }] };
+      }
+    });
+    return () => vues;
+  };
+
+  const CLIENT_ROW = { id: USER_ID, role: "client", full_name: "Equans Nord" };
+  const SIEGE_ROW = {
+    id: SIEGE_ID,
+    role: "client",
+    full_name: "Equans",
+    parent_id: null,
+  };
+
+  it("rattache un client à un siège", async () => {
+    mockComptes({ cible: CLIENT_ROW, parent: SIEGE_ROW });
+
+    const res = await rattacher({ parentId: SIEGE_ID });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/Equans/);
+  });
+
+  it("détache sans exiger de siège", async () => {
+    mockComptes({ cible: CLIENT_ROW });
+
+    const res = await rattacher({ parentId: null });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/détaché/i);
+  });
+
+  it("retourne 404 si le compte n'existe pas", async () => {
+    mockComptes({ cible: null });
+
+    const res = await rattacher({ parentId: SIEGE_ID });
+
+    expect(res.status).toBe(404);
+  });
+
+  it.each([
+    ["convoyeur", "convoyeur"],
+    ["administrateur", "admin"],
+  ])("refuse de rattacher un %s", async (_nom, role) => {
+    mockComptes({ cible: { ...CLIENT_ROW, role } });
+
+    const res = await rattacher({ parentId: SIEGE_ID });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/clients/i);
+  });
+
+  it("refuse qu'un compte soit son propre siège", async () => {
+    mockComptes({ cible: CLIENT_ROW });
+
+    // Un compte parent de lui-même ferait apparaître ses propres
+    // missions en double dans son périmètre.
+    const res = await rattacher({ parentId: USER_ID });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/lui-même|propre/i);
+  });
+
+  it("refuse un siège qui n'est pas un client", async () => {
+    mockComptes({
+      cible: CLIENT_ROW,
+      parent: { ...SIEGE_ROW, role: "convoyeur" },
+    });
+
+    const res = await rattacher({ parentId: SIEGE_ID });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("refuse un siège lui-même rattaché ailleurs", async () => {
+    mockComptes({
+      cible: CLIENT_ROW,
+      parent: { ...SIEGE_ROW, parent_id: "un-grand-pere" },
+    });
+
+    const res = await rattacher({ parentId: SIEGE_ID });
+
+    // La hiérarchie reste à un niveau : au-delà, la question « qui voit
+    // quoi » cesse d'être vérifiable de tête.
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/un niveau/i);
+  });
+
+  it("refuse de rattacher un compte qui est déjà un siège", async () => {
+    mockComptes({
+      cible: CLIENT_ROW,
+      parent: SIEGE_ROW,
+      enfantsDeLaCible: "2",
+    });
+
+    const res = await rattacher({ parentId: SIEGE_ID });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/un niveau/i);
+  });
+
+  it("n'écrit rien quand le rattachement est refusé", async () => {
+    const ecritures = mockComptes({
+      cible: CLIENT_ROW,
+      parent: { ...SIEGE_ROW, parent_id: "un-grand-pere" },
+    });
+
+    await rattacher({ parentId: SIEGE_ID });
+
+    expect(ecritures()).toBe(0);
+  });
+
+  it("refuse l'accès à un non-admin", async () => {
+    mockDb(CLIENT);
+    const res = await auth(
+      request(app).patch(`/api/admin/users/${USER_ID}/parent`),
+      CLIENT,
+    ).send({ parentId: SIEGE_ID });
+
+    expect(res.status).toBe(403);
   });
 });
 

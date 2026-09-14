@@ -26,6 +26,7 @@ const multer = require("multer");
 const db = require("../db");
 const { authenticate, authorize } = require("../middleware/auth.middleware");
 const { auditLog } = require("../middleware/security.middleware");
+const { perimetreClient } = require("../db/perimetre");
 
 const UPLOAD_DIR = require("../lib/uploads").dossier("factures");
 
@@ -117,14 +118,21 @@ router.get(
   authorize("client", "convoyeur"),
   async (req, res, next) => {
     try {
+      // `perimetreClient` ne renvoie les comptes rattachés que pour le
+      // rôle client : un convoyeur n'obtient jamais que son propre
+      // identifiant. Cette route servant les deux rôles, la garde est
+      // essentielle — l'élargir sans distinction ouvrirait les relevés
+      // des convoyeurs les uns aux autres.
+      const perimetre = await perimetreClient(req.user);
+
       const { rows } = await db.query(
         `SELECT id, numero, libelle, montant_ttc, periode,
                 date_emission, date_echeance, statut,
                 original_name, file_path, created_at
            FROM factures
-          WHERE destinataire_id = $1
+          WHERE destinataire_id = ANY($1)
           ORDER BY date_emission DESC, created_at DESC`,
-        [req.user.id],
+        [perimetre],
       );
       res.json(rows);
     } catch (err) {

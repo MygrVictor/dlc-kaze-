@@ -14,6 +14,7 @@ import {
   ArrowRight,
   AlertTriangle,
   Truck,
+  Building2,
 } from "lucide-react";
 
 /**
@@ -53,8 +54,10 @@ export default function ClientDashboard() {
   const [filtre, setFiltre] = useState("TOUTES");
 
   useEffect(() => {
+    // Le siège d'un groupe agrège les missions de ses entités : la
+    // valeur par défaut de vingt tronquerait sa liste sans rien dire.
     api
-      .get("/missions/mes-missions")
+      .get("/missions/mes-missions?limit=100")
       .then((res) => setMissions(res.data.missions))
       .catch((err) => {
         console.error(err);
@@ -208,6 +211,15 @@ export default function ClientDashboard() {
                     {mission.vehicle_brand} {mission.vehicle_model}
                     {mission.vehicle_plate && ` • ${mission.vehicle_plate}`}
                   </p>
+                  {/* Renseigné par le serveur pour les seuls sièges de
+                      groupe : sans ce repère, les missions des entités se
+                      mélangeraient sans qu'on puisse les distinguer. */}
+                  {(mission.entite_company || mission.entite_name) && (
+                    <p className="text-indigo-400 text-xs mt-1 flex items-center gap-1">
+                      <Building2 size={11} />
+                      {mission.entite_company || mission.entite_name}
+                    </p>
+                  )}
                   <p className="text-dark-500 text-xs mt-1">
                     Créée le {formatDate(mission.created_at)}
                     {mission.departure_date &&
