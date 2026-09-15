@@ -369,7 +369,10 @@ const SQL_TOTAUX = `
     COALESCE(SUM(price_convoyeur) FILTER (WHERE status = ANY($3) AND (c.role IS NULL OR c.role != 'admin')), 0)    AS cout_engage,
     COALESCE(SUM(price)           FILTER (WHERE status = 'DEVIS_REFUSE'), 0) AS ca_perdu
   FROM missions
-  LEFT JOIN users c ON c.id = convoyeur_id
+  -- La jointure ne remonte que l'identifiant et le rôle : ramener toute la
+  -- table des comptes ferait entrer un second created_at dans la portée et
+  -- rendrait la clause WHERE ambiguë.
+  LEFT JOIN (SELECT id, role FROM users) c ON c.id = convoyeur_id
   WHERE created_at >= $1 AND created_at <= $2
 `;
 
