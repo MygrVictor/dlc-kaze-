@@ -361,11 +361,15 @@ const SQL_TOTAUX = `
     COUNT(*) FILTER (WHERE status = 'ANNULEE')                 AS annulees,
     COUNT(*) FILTER (WHERE status = ANY($3))                   AS missions_engagees,
     COALESCE(SUM(price)           FILTER (WHERE status = 'LIVREE'), 0)   AS ca_realise,
-    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = 'LIVREE'), 0)   AS cout_realise,
+    -- Ne compter le coût convoyeur que si le convoyeur n'est pas un
+    -- administrateur : quand l'admin conduit, il s'agit d'une
+    -- prestation interne sans coût convoyeur externe.
+    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = 'LIVREE' AND (c.role IS NULL OR c.role != 'admin')), 0)   AS cout_realise,
     COALESCE(SUM(price)           FILTER (WHERE status = ANY($3)), 0)    AS ca_engage,
-    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = ANY($3)), 0)    AS cout_engage,
+    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = ANY($3) AND (c.role IS NULL OR c.role != 'admin')), 0)    AS cout_engage,
     COALESCE(SUM(price)           FILTER (WHERE status = 'DEVIS_REFUSE'), 0) AS ca_perdu
   FROM missions
+  LEFT JOIN users c ON c.id = convoyeur_id
   WHERE created_at >= $1 AND created_at <= $2
 `;
 
@@ -431,11 +435,13 @@ router.get("/analyse", async (req, res, next) => {
              COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
              COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
              COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
-             COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise,
+             -- Exclure le coût convoyeur si le convoyeur est un admin
+             COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE' AND (conv.role IS NULL OR conv.role != 'admin')), 0) AS cout_realise,
              COALESCE(SUM(m.price)           FILTER (WHERE m.status = ANY($3)), 0)  AS ca_engage,
              MAX(m.created_at)                                           AS derniere_mission
            FROM users u
            JOIN missions m ON m.client_id = u.id
+           LEFT JOIN users conv ON conv.id = m.convoyeur_id
            WHERE m.created_at >= $1 AND m.created_at <= $2
            GROUP BY u.id, u.full_name, u.email, u.company
            ORDER BY ca_realise DESC, missions_total DESC`,
@@ -548,9 +554,10 @@ router.get("/analyse/export-csv", async (req, res, next) => {
          COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
          COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
          COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
-         COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise
+         COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE' AND (conv.role IS NULL OR conv.role != 'admin')), 0) AS cout_realise
        FROM users u
        JOIN missions m ON m.client_id = u.id
+       LEFT JOIN users conv ON conv.id = m.convoyeur_id
        WHERE m.created_at >= $1 AND m.created_at <= $2
        GROUP BY u.id, u.full_name, u.email, u.company
        ORDER BY ca_realise DESC`,
