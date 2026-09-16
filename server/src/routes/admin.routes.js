@@ -7,6 +7,7 @@ const emailService = require("../services/email.service");
 const geocodingService = require("../services/geocoding.service");
 const { auditLog } = require("../middleware/security.middleware");
 const { creerLienReinitialisation } = require("../lib/password-reset");
+const { isDemoMission } = require("../lib/demo-mission");
 const fs = require("fs");
 const path = require("path");
 
@@ -411,7 +412,9 @@ const SQL_TOTAUX = `
   -- table des comptes ferait entrer un second created_at dans la portée et
   -- rendrait la clause WHERE ambiguë.
   LEFT JOIN (SELECT id, role FROM users) c ON c.id = convoyeur_id
-  WHERE created_at >= $1 AND created_at <= $2
+  LEFT JOIN (SELECT id, email FROM users) u ON u.id = client_id
+  WHERE missions.created_at >= $1 AND missions.created_at <= $2
+  ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
 `;
 
 /** Convertit les numeric/bigint de pg (renvoyés en texte) en nombres. */
@@ -484,6 +487,7 @@ router.get("/analyse", async (req, res, next) => {
            JOIN missions m ON m.client_id = u.id
            LEFT JOIN users conv ON conv.id = m.convoyeur_id
            WHERE m.created_at >= $1 AND m.created_at <= $2
+             ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
            GROUP BY u.id, u.full_name, u.email, u.company
            ORDER BY ca_realise DESC, missions_total DESC`,
           [debutBorne, finBorne, STATUTS_ENGAGES],
@@ -499,7 +503,9 @@ router.get("/analyse", async (req, res, next) => {
              COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_genere
            FROM users c
            JOIN missions m ON m.convoyeur_id = c.id
+           LEFT JOIN users u ON u.id = m.client_id
            WHERE m.created_at >= $1 AND m.created_at <= $2
+           ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
            GROUP BY c.id, c.full_name, c.email
            ORDER BY missions_livrees DESC, montant_du DESC`,
           [debutBorne, finBorne],
@@ -516,7 +522,9 @@ router.get("/analyse", async (req, res, next) => {
              COALESCE(SUM(price)           FILTER (WHERE status = 'LIVREE'), 0) AS ca,
              COALESCE(SUM(price_convoyeur) FILTER (WHERE status = 'LIVREE'), 0) AS cout
            FROM missions
+              LEFT JOIN users u ON u.id = missions.client_id
            WHERE created_at >= date_trunc('month', NOW()) - INTERVAL '11 months'
+              ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
            GROUP BY 1
            ORDER BY 1`,
         ),
@@ -600,6 +608,7 @@ router.get("/analyse/export-csv", async (req, res, next) => {
        JOIN missions m ON m.client_id = u.id
        LEFT JOIN users conv ON conv.id = m.convoyeur_id
        WHERE m.created_at >= $1 AND m.created_at <= $2
+      ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
        GROUP BY u.id, u.full_name, u.email, u.company
        ORDER BY ca_realise DESC`,
       [debutBorne, finBorne],
@@ -1618,7 +1627,7 @@ router.delete("/missions/:id", async (req, res, next) => {
       });
     }
 
-    if (mission.kaze_mission_id) {
+    if (mission.kaze_mission_id && !(await isDemoMission(db, mission))) {
       try {
         await kazeService.cancelMission(mission.kaze_mission_id);
       } catch (kazeErr) {
@@ -1940,8 +1949,11 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
       console.error("⚠️ Email assignation non envoyé :", emailErr.message);
     }
 
+    const missionDemo = await isDemoMission(db, mission);
     const kazeSync = { synced: false, error: null };
-    if (assignedKazeDriverId) {
+    if (missionDemo) {
+      kazeSync.synced = true;
+    } else if (assignedKazeDriverId) {
       try {
         const kazeMissionId = await syncService.ensureKazeMission(mission);
         if (kazeMissionId) {
@@ -2012,7 +2024,11 @@ router.post("/missions/:id/retirer-convoyeur", async (req, res, next) => {
     );
 
     const kazeSync = { synced: false, error: null };
-    if (mission.kaze_mission_id && ancienKazeDriverId) {
+    if (
+      mission.kaze_mission_id &&
+      ancienKazeDriverId &&
+      !(await isDemoMission(db, mission))
+    ) {
       try {
         await kazeService.unassignDriver(
           mission.kaze_mission_id,
@@ -2056,7 +2072,7 @@ router.post("/missions/:id/annuler", async (req, res, next) => {
       [mission.id],
     );
 
-    if (mission.kaze_mission_id) {
+    if (mission.kaze_mission_id && !(await isDemoMission(db, mission))) {
       try {
         await kazeService.cancelMission(mission.kaze_mission_id);
       } catch (kazeErr) {
@@ -2081,6 +2097,16 @@ router.post("/missions/:id/sync-kaze", async (req, res, next) => {
       return res.status(404).json({ error: "Mission introuvable." });
 
     const mission = rows[0];
+    if (await isDemoMission(db, mission)) {
+      return res.json({
+        message:
+          "Mission de démonstration : synchronisation Kaze désactivée (aucune interaction externe).",
+        kaze_mission_id: mission.kaze_mission_id || null,
+        just_created: false,
+        driver_assigned: false,
+        assign_error: null,
+      });
+    }
     let kazeMissionId = mission.kaze_mission_id;
     let justCreated = false;
 

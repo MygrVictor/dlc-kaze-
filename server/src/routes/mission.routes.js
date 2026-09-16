@@ -28,6 +28,7 @@ const {
   isValidEmail,
   isValidPhone,
 } = require("../middleware/security.middleware");
+const { isDemoMission, isDemoMissionPayload } = require("../lib/demo-mission");
 
 const router = express.Router();
 
@@ -111,15 +112,17 @@ router.post(
       const clientId = estAdmin ? req.body.clientId || null : req.user.id;
       const priceConvoyeur = estAdmin ? req.body.priceConvoyeur || null : null;
       const priceClient = estAdmin ? req.body.priceClient || null : null;
+      let clientEmail = estAdmin ? null : req.user.email || null;
 
       if (estAdmin && clientId) {
         const { rows: compte } = await db.query(
-          "SELECT id FROM users WHERE id = $1 AND role = 'client'",
+          "SELECT id, email FROM users WHERE id = $1 AND role = 'client'",
           [clientId],
         );
         if (compte.length === 0) {
           return res.status(404).json({ error: "Client introuvable." });
         }
+        clientEmail = compte[0].email || null;
       }
 
       // Une mission diffusée sans rémunération ne trouvera pas preneur :
@@ -334,6 +337,9 @@ router.post(
         // un échec Kaze ne fait pas échouer la mission, la
         // synchronisation périodique rattrape.
         for (const mission of createdMissions) {
+          if (isDemoMissionPayload(mission, clientEmail)) {
+            continue;
+          }
           try {
             const reponseKaze = await kazeService.createMission(mission);
             const idKaze = reponseKaze.id || reponseKaze.mission_id;
@@ -628,30 +634,32 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
       // 3. Envoyer la mission à l'API Kaze
       let kazeMissionId = null;
       try {
-        const kazeResponse = await kazeService.createMission(mission);
-        kazeMissionId = kazeResponse.id || kazeResponse.mission_id;
+        if (!(await isDemoMission(db, mission))) {
+          const kazeResponse = await kazeService.createMission(mission);
+          kazeMissionId = kazeResponse.id || kazeResponse.mission_id;
 
-        await client.query(
-          `UPDATE missions SET kaze_mission_id = $1, updated_at = NOW() WHERE id = $2`,
-          [kazeMissionId, mission.id],
-        );
-
-        // Le convoyeur retenu est déclaré à Kaze dans la foulée : sans quoi
-        // la mission y resterait sans intervenant, et lui ne la verrait pas.
-        if (preAssignee && kazeMissionId) {
-          const { rows: retenu } = await client.query(
-            "SELECT kaze_driver_id FROM users WHERE id = $1",
-            [mission.convoyeur_id],
+          await client.query(
+            `UPDATE missions SET kaze_mission_id = $1, updated_at = NOW() WHERE id = $2`,
+            [kazeMissionId, mission.id],
           );
-          if (retenu[0]?.kaze_driver_id) {
-            await kazeService.assignDriver(
-              kazeMissionId,
-              retenu[0].kaze_driver_id,
+
+          // Le convoyeur retenu est déclaré à Kaze dans la foulée : sans quoi
+          // la mission y resterait sans intervenant, et lui ne la verrait pas.
+          if (preAssignee && kazeMissionId) {
+            const { rows: retenu } = await client.query(
+              "SELECT kaze_driver_id FROM users WHERE id = $1",
+              [mission.convoyeur_id],
             );
-          } else {
-            console.error(
-              `⚠️ Mission ${mission.id} pré-assignée à un compte sans liaison Kaze.`,
-            );
+            if (retenu[0]?.kaze_driver_id) {
+              await kazeService.assignDriver(
+                kazeMissionId,
+                retenu[0].kaze_driver_id,
+              );
+            } else {
+              console.error(
+                `⚠️ Mission ${mission.id} pré-assignée à un compte sans liaison Kaze.`,
+              );
+            }
           }
         }
       } catch (kazeErr) {
@@ -840,7 +848,7 @@ router.post("/:id/annuler", authorize("client"), async (req, res, next) => {
     );
 
     // ── Synchroniser avec Kaze ────────────────────────────────
-    if (mission.kaze_mission_id) {
+    if (mission.kaze_mission_id && !(await isDemoMission(db, mission))) {
       try {
         await kazeService.cancelMission(mission.kaze_mission_id);
         console.log(

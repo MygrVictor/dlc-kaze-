@@ -15,6 +15,12 @@ const {
   auditLog,
   isValidMobile,
 } = require("../middleware/security.middleware");
+const {
+  isDemoEmail,
+  isFakeKazeDriverId,
+  isDemoMission,
+  isDemoMissionPayload,
+} = require("../lib/demo-mission");
 
 // ── Configuration Multer ─────────────────────────────────────
 const { dossier, cheminDisque } = require("../lib/uploads");
@@ -57,11 +63,6 @@ const MODE_DEMO = process.env.MODE_DEMO === "true";
 
 // Un compte peut être « lié » pour la démonstration sans jamais parler à
 // Kaze. On le reconnaît via un identifiant explicitement factice.
-const isFakeKazeDriverId = (id) =>
-  typeof id === "string" && /^demo[-_]/i.test(id.trim());
-const isDemoEmail = (email) =>
-  typeof email === "string" && /@demo\.local$/i.test(email.trim());
-
 const DOCUMENTS_REQUIS = [
   "permis",
   "carte_identite",
@@ -719,12 +720,19 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
     }
 
     const updatedMission = updated.rows[0];
+    const missionDemo =
+      isDemoMissionPayload(updatedMission) ||
+      (await isDemoMission(db, updatedMission));
 
     // ── Synchroniser avec Kaze : créer la mission si besoin, puis assigner ──
     // (filet de rattrapage si la création Kaze avait échoué silencieusement
     // à l'étape « client accepte le devis »)
     const kazeSync = { synced: false, error: null };
-    if (MODE_DEMO || isFakeKazeDriverId(req.user.kaze_driver_id)) {
+    if (
+      missionDemo ||
+      MODE_DEMO ||
+      isFakeKazeDriverId(req.user.kaze_driver_id)
+    ) {
       // La mission bascule dans le planning comme en conditions réelles ;
       // seul l'appel sortant vers Kaze est omis.
       kazeSync.synced = true;

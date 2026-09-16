@@ -14,6 +14,7 @@
 
 const db = require("../db");
 const kazeService = require("./kaze.service");
+const { isDemoMission, isDemoMissionPayload } = require("../lib/demo-mission");
 
 // Mapping simplifié : on ne gère que démarrage et fin
 const SYNC_STATUS_MAP = {
@@ -175,10 +176,19 @@ async function syncKazeStatusesInterne() {
     // 1. Récupérer toutes les missions DLC qui ont un kaze_mission_id
     //    et qui ne sont pas déjà terminées (LIVREE, ANNULEE)
     const { rows: linkedMissions } = await db.query(
-      `SELECT id, kaze_mission_id, status 
+      `SELECT m.id, m.kaze_mission_id, m.status, m.client_id, m.vehicle_plate, m.comments, u.email AS client_email
        FROM missions 
+       LEFT JOIN users u ON u.id = m.client_id
        WHERE kaze_mission_id IS NOT NULL 
-         AND status NOT IN ('LIVREE', 'ANNULEE')`,
+         AND status NOT IN ('LIVREE', 'ANNULEE')
+         AND NOT (
+           COALESCE(u.email, '') ILIKE '%@demo.local'
+           OR COALESCE(m.vehicle_plate, '') LIKE 'DM-%'
+           OR COALESCE(m.vehicle_plate, '') LIKE 'DC-%'
+           OR COALESCE(m.vehicle_plate, '') LIKE 'PD-%'
+           OR COALESCE(m.comments, '') ILIKE 'DEMO-%'
+           OR COALESCE(m.comments, '') ILIKE 'PROD-DEMO%'
+         )`,
     );
 
     if (linkedMissions.length === 0) {
@@ -303,6 +313,15 @@ async function syncKazeStatusesInterne() {
  */
 async function ensureKazeMission(mission) {
   if (mission.kaze_mission_id) return mission.kaze_mission_id;
+  if (
+    isDemoMissionPayload(mission, mission.client_email || null) ||
+    (await isDemoMission(db, mission))
+  ) {
+    console.log(
+      `ℹ️ Sync Kaze : mission démo ${mission.id} conservée en local (aucune création Kaze).`,
+    );
+    return null;
+  }
 
   try {
     const kazeResponse = await kazeService.createMission(mission);
