@@ -59,6 +59,8 @@ const MODE_DEMO = process.env.MODE_DEMO === "true";
 // Kaze. On le reconnaît via un identifiant explicitement factice.
 const isFakeKazeDriverId = (id) =>
   typeof id === "string" && /^demo[-_]/i.test(id.trim());
+const isDemoEmail = (email) =>
+  typeof email === "string" && /@demo\.local$/i.test(email.trim());
 
 const DOCUMENTS_REQUIS = [
   "permis",
@@ -472,9 +474,29 @@ router.get("/historique", async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 router.get("/missions-disponibles-count", async (req, res, next) => {
   try {
-    // Compter les missions avec statut ACCEPTEE (disponibles pour prendre)
+    // Le badge doit refléter exactement la liste « missions disponibles » :
+    // seules les missions encore non attribuées et en statut ACCEPTEE.
+    const masquerDemoPourCeCompte =
+      process.env.NODE_ENV === "production" && !isDemoEmail(req.user?.email);
+
     const { rows } = await db.query(
-      `SELECT COUNT(*) as count FROM missions WHERE status = 'ACCEPTEE'`,
+      `SELECT COUNT(*) as count
+         FROM missions m
+         LEFT JOIN users u ON u.id = m.client_id
+        WHERE m.status = 'ACCEPTEE'
+          AND m.convoyeur_id IS NULL
+          ${
+            masquerDemoPourCeCompte
+              ? `AND NOT (
+          COALESCE(u.email, '') ILIKE '%@demo.local'
+          OR COALESCE(m.vehicle_plate, '') LIKE 'DM-%'
+          OR COALESCE(m.vehicle_plate, '') LIKE 'DC-%'
+          OR COALESCE(m.vehicle_plate, '') LIKE 'PD-%'
+          OR COALESCE(m.comments, '') ILIKE 'DEMO-%'
+          OR COALESCE(m.comments, '') ILIKE 'PROD-DEMO%'
+          )`
+              : ""
+          }`,
     );
     const count = parseInt(rows[0].count, 10);
     res.json({ count });
@@ -488,6 +510,9 @@ router.get("/missions-disponibles-count", async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 router.get("/missions-disponibles", async (req, res, next) => {
   try {
+    const masquerDemoPourCeCompte =
+      process.env.NODE_ENV === "production" && !isDemoEmail(req.user?.email);
+
     // ── 1. Missions DLC ──────────────────────────────────────
     //
     // Cette liste est visible par TOUS les convoyeurs, y compris ceux
@@ -503,7 +528,20 @@ router.get("/missions-disponibles", async (req, res, next) => {
               m.price_convoyeur AS price, m.status, m.kaze_mission_id,
               m.created_at
        FROM missions m
+       LEFT JOIN users u ON u.id = m.client_id
        WHERE m.convoyeur_id IS NULL AND m.status = 'ACCEPTEE'
+         ${
+           masquerDemoPourCeCompte
+             ? `AND NOT (
+         COALESCE(u.email, '') ILIKE '%@demo.local'
+         OR COALESCE(m.vehicle_plate, '') LIKE 'DM-%'
+         OR COALESCE(m.vehicle_plate, '') LIKE 'DC-%'
+         OR COALESCE(m.vehicle_plate, '') LIKE 'PD-%'
+         OR COALESCE(m.comments, '') ILIKE 'DEMO-%'
+         OR COALESCE(m.comments, '') ILIKE 'PROD-DEMO%'
+         )`
+             : ""
+         }
        ORDER BY m.departure_date ASC NULLS LAST, m.created_at DESC`,
     );
     const dlcMissions = rows.map((m) => ({ ...m, source: "dlc" }));

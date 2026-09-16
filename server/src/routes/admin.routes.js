@@ -28,6 +28,19 @@ const KAZE_ID_REGEX =
 // compte, avec un second compte Kaze, pour un travail qu'il fait déjà.
 const ROLES_CONVOYABLES = ["convoyeur", "admin"];
 
+// En production, les jeux de démonstration (comptes @demo.local,
+// plaques dédiées et commentaires préfixés) ne doivent jamais polluer
+// les listes métiers.
+const MASQUER_MISSIONS_DEMO = process.env.NODE_ENV === "production";
+const conditionMissionDemo = (missionAlias = "m", clientAlias = "u") => `(
+  COALESCE(${clientAlias}.email, '') ILIKE '%@demo.local'
+  OR COALESCE(${missionAlias}.vehicle_plate, '') LIKE 'DM-%'
+  OR COALESCE(${missionAlias}.vehicle_plate, '') LIKE 'DC-%'
+  OR COALESCE(${missionAlias}.vehicle_plate, '') LIKE 'PD-%'
+  OR COALESCE(${missionAlias}.comments, '') ILIKE 'DEMO-%'
+  OR COALESCE(${missionAlias}.comments, '') ILIKE 'PROD-DEMO%'
+)`;
+
 router.param("id", (req, res, next, value) => {
   if (!UUID_REGEX.test(value) && !KAZE_ID_REGEX.test(value))
     return res.status(400).json({ error: "Identifiant invalide." });
@@ -155,6 +168,10 @@ router.get("/missions", async (req, res, next) => {
       paramIdx += 1;
     }
 
+    if (MASQUER_MISSIONS_DEMO) {
+      conditions.push(`NOT ${conditionMissionDemo("m", "u")}`);
+    }
+
     if (conditions.length > 0) {
       const where = ` WHERE ${conditions.join(" AND ")}`;
       query += where;
@@ -192,17 +209,18 @@ router.get("/missions/search-plate", async (req, res, next) => {
         .json({ error: "Veuillez saisir au moins 2 caractères de plaque." });
     }
 
-    const { rows } = await db.query(
-      `SELECT m.*, u.full_name AS client_name, u.email AS client_email, u.company AS client_company,
-              c.full_name AS convoyeur_name
-       FROM missions m
-       LEFT JOIN users u ON u.id = m.client_id
-       LEFT JOIN users c ON c.id = m.convoyeur_id
-       WHERE REPLACE(UPPER(m.vehicle_plate), '-', '') ILIKE '%' || REPLACE(UPPER($1), '-', '') || '%'
-       ORDER BY m.updated_at DESC
-       LIMIT 50`,
-      [plate.trim()],
-    );
+    let query = `SELECT m.*, u.full_name AS client_name, u.email AS client_email, u.company AS client_company,
+                        c.full_name AS convoyeur_name
+                 FROM missions m
+                 LEFT JOIN users u ON u.id = m.client_id
+                 LEFT JOIN users c ON c.id = m.convoyeur_id
+                 WHERE REPLACE(UPPER(m.vehicle_plate), '-', '') ILIKE '%' || REPLACE(UPPER($1), '-', '') || '%'`;
+    if (MASQUER_MISSIONS_DEMO) {
+      query += ` AND NOT ${conditionMissionDemo("m", "u")}`;
+    }
+    query += ` ORDER BY m.updated_at DESC LIMIT 50`;
+
+    const { rows } = await db.query(query, [plate.trim()]);
 
     res.json({ missions: rows, total: rows.length });
   } catch (err) {
@@ -221,9 +239,16 @@ router.get("/missions/export-csv", async (req, res, next) => {
       LEFT JOIN users c ON c.id = m.convoyeur_id
     `;
     const params = [];
+    const conditions = [];
     if (status) {
-      query += " WHERE m.status = $1";
+      conditions.push(`m.status = $${params.length + 1}`);
       params.push(status);
+    }
+    if (MASQUER_MISSIONS_DEMO) {
+      conditions.push(`NOT ${conditionMissionDemo("m", "u")}`);
+    }
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(" AND ")}`;
     }
     query += " ORDER BY m.created_at DESC";
 
@@ -248,18 +273,31 @@ router.get("/missions/export-csv", async (req, res, next) => {
 
 router.get("/stats", async (_req, res, next) => {
   try {
-    const stats = await db.query(`
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'EN_ATTENTE_DE_COTATION') AS en_attente,
-        COUNT(*) FILTER (WHERE status = 'DEVIS_PROPOSE') AS devis_proposes,
-        COUNT(*) FILTER (WHERE status = 'ACCEPTEE') AS acceptees,
-        COUNT(*) FILTER (WHERE status = 'ACCEPTEE' AND convoyeur_id IS NULL) AS en_attente_assignation,
-        COUNT(*) FILTER (WHERE status = 'ASSIGNEE') AS assignees,
-        COUNT(*) FILTER (WHERE status = 'EN_COURS') AS en_cours,
-        COUNT(*) FILTER (WHERE status = 'LIVREE') AS livrees,
-        COUNT(*) AS total
-      FROM missions
-    `);
+    const statsQuery = MASQUER_MISSIONS_DEMO
+      ? `SELECT
+           COUNT(*) FILTER (WHERE m.status = 'EN_ATTENTE_DE_COTATION') AS en_attente,
+           COUNT(*) FILTER (WHERE m.status = 'DEVIS_PROPOSE') AS devis_proposes,
+           COUNT(*) FILTER (WHERE m.status = 'ACCEPTEE') AS acceptees,
+           COUNT(*) FILTER (WHERE m.status = 'ACCEPTEE' AND m.convoyeur_id IS NULL) AS en_attente_assignation,
+           COUNT(*) FILTER (WHERE m.status = 'ASSIGNEE') AS assignees,
+           COUNT(*) FILTER (WHERE m.status = 'EN_COURS') AS en_cours,
+           COUNT(*) FILTER (WHERE m.status = 'LIVREE') AS livrees,
+           COUNT(*) AS total
+         FROM missions m
+         LEFT JOIN users u ON u.id = m.client_id
+         WHERE NOT ${conditionMissionDemo("m", "u")}`
+      : `SELECT
+           COUNT(*) FILTER (WHERE status = 'EN_ATTENTE_DE_COTATION') AS en_attente,
+           COUNT(*) FILTER (WHERE status = 'DEVIS_PROPOSE') AS devis_proposes,
+           COUNT(*) FILTER (WHERE status = 'ACCEPTEE') AS acceptees,
+           COUNT(*) FILTER (WHERE status = 'ACCEPTEE' AND convoyeur_id IS NULL) AS en_attente_assignation,
+           COUNT(*) FILTER (WHERE status = 'ASSIGNEE') AS assignees,
+           COUNT(*) FILTER (WHERE status = 'EN_COURS') AS en_cours,
+           COUNT(*) FILTER (WHERE status = 'LIVREE') AS livrees,
+           COUNT(*) AS total
+         FROM missions`;
+
+    const stats = await db.query(statsQuery);
 
     const userStats = await db.query(`
       SELECT
@@ -1241,6 +1279,7 @@ router.get("/missions/map", async (req, res, next) => {
        LEFT JOIN users u ON u.id = m.client_id
        LEFT JOIN users c ON c.id = m.convoyeur_id
        WHERE m.status IN (${placeholders})
+         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
        ORDER BY m.created_at DESC
        LIMIT ${PLAFOND_MISSIONS}`,
       filterStatuses,
