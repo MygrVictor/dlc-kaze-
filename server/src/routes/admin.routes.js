@@ -516,14 +516,14 @@ router.get("/analyse", async (req, res, next) => {
         // période choisie la viderait de son sens.
         db.query(
           `SELECT
-             to_char(date_trunc('month', created_at), 'YYYY-MM')          AS mois,
+             to_char(date_trunc('month', missions.created_at), 'YYYY-MM') AS mois,
              COUNT(*)                                                     AS missions,
-             COUNT(*) FILTER (WHERE status = 'LIVREE')                    AS livrees,
-             COALESCE(SUM(price)           FILTER (WHERE status = 'LIVREE'), 0) AS ca,
-             COALESCE(SUM(price_convoyeur) FILTER (WHERE status = 'LIVREE'), 0) AS cout
+             COUNT(*) FILTER (WHERE missions.status = 'LIVREE')           AS livrees,
+             COALESCE(SUM(missions.price) FILTER (WHERE missions.status = 'LIVREE'), 0) AS ca,
+             COALESCE(SUM(missions.price_convoyeur) FILTER (WHERE missions.status = 'LIVREE'), 0) AS cout
            FROM missions
               LEFT JOIN users u ON u.id = missions.client_id
-           WHERE created_at >= date_trunc('month', NOW()) - INTERVAL '11 months'
+            WHERE missions.created_at >= date_trunc('month', NOW()) - INTERVAL '11 months'
               ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
            GROUP BY 1
            ORDER BY 1`,
