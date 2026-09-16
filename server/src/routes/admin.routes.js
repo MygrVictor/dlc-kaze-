@@ -413,7 +413,7 @@ const SQL_TOTAUX = `
   -- rendrait la clause WHERE ambiguë.
   LEFT JOIN (SELECT id, role FROM users) c ON c.id = convoyeur_id
   LEFT JOIN (SELECT id, email FROM users) u ON u.id = client_id
-  WHERE missions.created_at >= $1 AND missions.created_at <= $2
+  WHERE created_at >= $1 AND created_at <= $2
   ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
 `;
 
