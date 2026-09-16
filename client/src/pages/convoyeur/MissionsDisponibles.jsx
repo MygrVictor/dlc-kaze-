@@ -74,12 +74,6 @@ export default function MissionsDisponibles() {
         toast.success(
           "Mission prise avec succès ! Elle apparaît dans votre planning.",
         );
-        if (data.kazeSync?.error) {
-          toast.error(
-            `⚠️ Mission prise, mais non synchronisée avec Kaze : ${data.kazeSync.error}. Contactez un administrateur.`,
-            { duration: 10000 },
-          );
-        }
       }
       // Retirer la mission de la liste
       setMissions((prev) => prev.filter((m) => m.id !== mission.id));

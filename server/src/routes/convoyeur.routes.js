@@ -55,6 +55,11 @@ const ALLOWED_TYPES = [
 // production, il vaut false partout ailleurs.
 const MODE_DEMO = process.env.MODE_DEMO === "true";
 
+// Un compte peut être « lié » pour la démonstration sans jamais parler à
+// Kaze. On le reconnaît via un identifiant explicitement factice.
+const isFakeKazeDriverId = (id) =>
+  typeof id === "string" && /^demo[-_]/i.test(id.trim());
+
 const DOCUMENTS_REQUIS = [
   "permis",
   "carte_identite",
@@ -161,9 +166,10 @@ router.get("/profil", async (req, res, next) => {
         // En présentation, l'identifiant est fictif : l'interroger ferait
         // partir une requête vers app.kaze.so et ralentirait l'affichage
         // pour rien. On se contente de l'état « lié ».
-        kazeDriverInfo = MODE_DEMO
-          ? { id: user.kaze_driver_id }
-          : await kazeService.getDriver(user.kaze_driver_id);
+        kazeDriverInfo =
+          MODE_DEMO || isFakeKazeDriverId(user.kaze_driver_id)
+            ? { id: user.kaze_driver_id }
+            : await kazeService.getDriver(user.kaze_driver_id);
       } catch {
         // Kaze indisponible, on retourne quand même le profil
         kazeDriverInfo = { id: user.kaze_driver_id };
@@ -306,9 +312,11 @@ router.use(requirePhone);
 router.get("/missions", async (req, res, next) => {
   try {
     const { kaze_driver_id } = req.user;
+    const kazeDesactivePourCeCompte =
+      MODE_DEMO || isFakeKazeDriverId(kaze_driver_id);
 
     // Si le convoyeur a un ID Kaze, on récupère directement depuis Kaze
-    if (kaze_driver_id && !MODE_DEMO) {
+    if (kaze_driver_id && !kazeDesactivePourCeCompte) {
       try {
         const kazeData = await kazeService.getMissionsByDriver(kaze_driver_id);
         const kazeMissions = kazeData.missions || kazeData;
@@ -506,7 +514,7 @@ router.get("/missions-disponibles", async (req, res, next) => {
     // références clients dans la vidéo.
     let kazeMissions = [];
     try {
-      if (MODE_DEMO) {
+      if (MODE_DEMO || isFakeKazeDriverId(req.user.kaze_driver_id)) {
         return res.json({ missions: dlcMissions });
       }
       const rawJobs = await kazeService.fetchRecentJobs(60);
@@ -572,6 +580,12 @@ router.post("/kaze-missions/:kazeJobId/prendre", async (req, res, next) => {
       return res.status(400).json({
         error:
           "Votre compte n'est pas lié à Kaze. Rendez-vous dans Mon profil pour vous lier.",
+      });
+    }
+    if (isFakeKazeDriverId(req.user.kaze_driver_id)) {
+      return res.status(403).json({
+        error:
+          "Compte de démonstration : la prise directe de missions Kaze est désactivée.",
       });
     }
 
@@ -672,7 +686,7 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
     // (filet de rattrapage si la création Kaze avait échoué silencieusement
     // à l'étape « client accepte le devis »)
     const kazeSync = { synced: false, error: null };
-    if (MODE_DEMO) {
+    if (MODE_DEMO || isFakeKazeDriverId(req.user.kaze_driver_id)) {
       // La mission bascule dans le planning comme en conditions réelles ;
       // seul l'appel sortant vers Kaze est omis.
       kazeSync.synced = true;

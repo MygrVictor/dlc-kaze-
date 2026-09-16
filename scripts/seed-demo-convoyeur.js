@@ -143,9 +143,7 @@ const creer = async () => {
        SET password_hash = EXCLUDED.password_hash,
            kaze_driver_id = EXCLUDED.kaze_driver_id
      RETURNING id`,
-    // Identifiant volontairement fictif : il suffit à faire disparaître le
-    // bandeau « compte non lié » à l'écran, et MODE_DEMO empêche de toute
-    // façon le moindre appel vers Kaze.
+    // Identifiant fictif pour afficher l'état « lié » en démonstration.
     [EMAIL_CONVOYEUR, hash, "demo-driver-0000"],
   );
   const convoyeurId = convoyeurRows[0].id;

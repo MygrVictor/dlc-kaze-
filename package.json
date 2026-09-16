@@ -28,7 +28,9 @@
     "test": "npm run test --workspace=server && npm run test --workspace=client",
     "test:server": "npm run test --workspace=server",
     "test:client": "npm run test --workspace=client",
-    "test:coverage": "npm run test:coverage --workspace=server && npm run test:coverage --workspace=client"
+    "test:coverage": "npm run test:coverage --workspace=server && npm run test:coverage --workspace=client",
+    "seed:demo-client:prod": "cross-env NODE_ENV=production ALLOW_PROD_DEMO_SEED=true CONFIRM_PROD_DEMO_SEED=YES node scripts/seed-demo-client-prod.js",
+    "seed:demo-client:prod:clean": "cross-env NODE_ENV=production ALLOW_PROD_DEMO_SEED=true CONFIRM_PROD_DEMO_SEED=YES node scripts/seed-demo-client-prod.js --nettoyer"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

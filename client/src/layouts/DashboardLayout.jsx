@@ -219,20 +219,26 @@ export default function DashboardLayout() {
             <p className="text-xs text-slate-500 truncate">{user?.email}</p>
           </div>
         </div>
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="w-full flex items-center gap-2 px-3 py-2 mb-1 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-        >
-          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          {theme === "dark" ? "Mode clair" : "Mode sombre"}
-        </button>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-        >
-          <LogOut size={16} />
-          Déconnexion
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+            title={theme === "dark" ? "Mode clair" : "Mode sombre"}
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            <span className="hidden sm:inline text-xs">
+              {theme === "dark" ? "Clair" : "Sombre"}
+            </span>
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all"
+            title="Déconnexion"
+          >
+            <LogOut size={16} />
+            <span className="hidden sm:inline text-xs">Sortir</span>
+          </button>
+        </div>
       </div>
     </div>
   );
