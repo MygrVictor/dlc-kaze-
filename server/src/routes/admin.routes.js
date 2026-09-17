@@ -464,16 +464,149 @@ router.get("/analyse", async (req, res, next) => {
     const { debutBorne, finBorne } = bornesPeriode(req.query);
     const { debutPrec, finPrec } = periodePrecedente(debutBorne, finBorne);
 
-    const [totauxRes, precedentRes, clientsRes, convoyeursRes, mensuelRes] =
-      await Promise.all([
-        db.query(SQL_TOTAUX, [debutBorne, finBorne, STATUTS_ENGAGES]),
-        db.query(SQL_TOTAUX, [debutPrec, finPrec, STATUTS_ENGAGES]),
+    const SQL_LIVRAISONS_PAR_JOUR = `
+      SELECT
+        to_char(date_trunc('day', missions.updated_at), 'YYYY-MM-DD') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY 1
+      ORDER BY 1
+    `;
 
-        // Par client. Le regroupement se fait sur l'identifiant, jamais
-        // sur `company` : deux comptes d'une même enseigne doivent rester
-        // distincts tant que le rattachement parent/enfant n'existe pas.
-        db.query(
-          `SELECT
+    const SQL_LIVRAISONS_PAR_SEMAINE = `
+      SELECT
+        to_char(date_trunc('week', missions.updated_at), 'IYYY-"S"IW') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY 1
+      ORDER BY 1
+    `;
+
+    const SQL_LIVRAISONS_PAR_MOIS = `
+      SELECT
+        to_char(date_trunc('month', missions.updated_at), 'YYYY-MM') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY 1
+      ORDER BY 1
+    `;
+
+    const SQL_LIVRAISONS_PAR_AN = `
+      SELECT
+        to_char(date_trunc('year', missions.updated_at), 'YYYY') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY 1
+      ORDER BY 1
+    `;
+
+    const SQL_LIVRAISONS_CLIENT_PAR_JOUR = `
+      SELECT
+        missions.client_id,
+        COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
+        to_char(date_trunc('day', missions.updated_at), 'YYYY-MM-DD') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY missions.client_id, client_label, periode
+      ORDER BY client_label, periode
+    `;
+
+    const SQL_LIVRAISONS_CLIENT_PAR_SEMAINE = `
+      SELECT
+        missions.client_id,
+        COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
+        to_char(date_trunc('week', missions.updated_at), 'IYYY-"S"IW') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY missions.client_id, client_label, periode
+      ORDER BY client_label, periode
+    `;
+
+    const SQL_LIVRAISONS_CLIENT_PAR_MOIS = `
+      SELECT
+        missions.client_id,
+        COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
+        to_char(date_trunc('month', missions.updated_at), 'YYYY-MM') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY missions.client_id, client_label, periode
+      ORDER BY client_label, periode
+    `;
+
+    const SQL_LIVRAISONS_CLIENT_PAR_AN = `
+      SELECT
+        missions.client_id,
+        COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
+        to_char(date_trunc('year', missions.updated_at), 'YYYY') AS periode,
+        COUNT(*) AS livrees
+      FROM missions
+      LEFT JOIN users u ON u.id = missions.client_id
+      WHERE missions.status = 'LIVREE'
+        AND missions.updated_at >= $1
+        AND missions.updated_at <= $2
+        ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
+      GROUP BY missions.client_id, client_label, periode
+      ORDER BY client_label, periode
+    `;
+
+    const [
+      totauxRes,
+      precedentRes,
+      clientsRes,
+      convoyeursRes,
+      mensuelRes,
+      livraisonsJourRes,
+      livraisonsSemaineRes,
+      livraisonsMoisRes,
+      livraisonsAnRes,
+      livraisonsClientJourRes,
+      livraisonsClientSemaineRes,
+      livraisonsClientMoisRes,
+      livraisonsClientAnRes,
+    ] = await Promise.all([
+      db.query(SQL_TOTAUX, [debutBorne, finBorne, STATUTS_ENGAGES]),
+      db.query(SQL_TOTAUX, [debutPrec, finPrec, STATUTS_ENGAGES]),
+
+      // Par client. Le regroupement se fait sur l'identifiant, jamais
+      // sur `company` : deux comptes d'une même enseigne doivent rester
+      // distincts tant que le rattachement parent/enfant n'existe pas.
+      db.query(
+        `SELECT
              u.id, u.full_name, u.email, u.company,
              COUNT(m.*)                                                  AS missions_total,
              COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
@@ -490,12 +623,12 @@ router.get("/analyse", async (req, res, next) => {
              ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
            GROUP BY u.id, u.full_name, u.email, u.company
            ORDER BY ca_realise DESC, missions_total DESC`,
-          [debutBorne, finBorne, STATUTS_ENGAGES],
-        ),
+        [debutBorne, finBorne, STATUTS_ENGAGES],
+      ),
 
-        // Par convoyeur — ce qu'on lui doit, et son volume.
-        db.query(
-          `SELECT
+      // Par convoyeur — ce qu'on lui doit, et son volume.
+      db.query(
+        `SELECT
              c.id, c.full_name, c.email,
              COUNT(m.*)                                                  AS missions_total,
              COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
@@ -508,14 +641,14 @@ router.get("/analyse", async (req, res, next) => {
            ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
            GROUP BY c.id, c.full_name, c.email
            ORDER BY missions_livrees DESC, montant_du DESC`,
-          [debutBorne, finBorne],
-        ),
+        [debutBorne, finBorne],
+      ),
 
-        // Douze mois glissants — indépendant du filtre de période :
-        // cette courbe sert à voir la saisonnalité, la borner à la
-        // période choisie la viderait de son sens.
-        db.query(
-          `SELECT
+      // Douze mois glissants — indépendant du filtre de période :
+      // cette courbe sert à voir la saisonnalité, la borner à la
+      // période choisie la viderait de son sens.
+      db.query(
+        `SELECT
              to_char(date_trunc('month', missions.created_at), 'YYYY-MM') AS mois,
              COUNT(*)                                                     AS missions,
              COUNT(*) FILTER (WHERE missions.status = 'LIVREE')           AS livrees,
@@ -527,8 +660,20 @@ router.get("/analyse", async (req, res, next) => {
               ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
            GROUP BY 1
            ORDER BY 1`,
-        ),
-      ]);
+      ),
+
+      // Volumes de convoyages livrés, ventilés par granularité.
+      db.query(SQL_LIVRAISONS_PAR_JOUR, [debutBorne, finBorne]),
+      db.query(SQL_LIVRAISONS_PAR_SEMAINE, [debutBorne, finBorne]),
+      db.query(SQL_LIVRAISONS_PAR_MOIS, [debutBorne, finBorne]),
+      db.query(SQL_LIVRAISONS_PAR_AN, [debutBorne, finBorne]),
+
+      // Même ventilation, mais détaillée par client.
+      db.query(SQL_LIVRAISONS_CLIENT_PAR_JOUR, [debutBorne, finBorne]),
+      db.query(SQL_LIVRAISONS_CLIENT_PAR_SEMAINE, [debutBorne, finBorne]),
+      db.query(SQL_LIVRAISONS_CLIENT_PAR_MOIS, [debutBorne, finBorne]),
+      db.query(SQL_LIVRAISONS_CLIENT_PAR_AN, [debutBorne, finBorne]),
+    ]);
 
     const totaux = normaliserTotaux(totauxRes.rows[0]);
     const precedent = normaliserTotaux(precedentRes.rows[0]);
@@ -586,6 +731,50 @@ router.get("/analyse", async (req, res, next) => {
         cout: nombre(m.cout),
         marge: nombre(m.ca) - nombre(m.cout),
       })),
+      livraisons: {
+        jour: livraisonsJourRes.rows.map((r) => ({
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+        semaine: livraisonsSemaineRes.rows.map((r) => ({
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+        mois: livraisonsMoisRes.rows.map((r) => ({
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+        an: livraisonsAnRes.rows.map((r) => ({
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+      },
+      livraisons_par_client: {
+        jour: livraisonsClientJourRes.rows.map((r) => ({
+          client_id: r.client_id,
+          client_label: r.client_label,
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+        semaine: livraisonsClientSemaineRes.rows.map((r) => ({
+          client_id: r.client_id,
+          client_label: r.client_label,
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+        mois: livraisonsClientMoisRes.rows.map((r) => ({
+          client_id: r.client_id,
+          client_label: r.client_label,
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+        an: livraisonsClientAnRes.rows.map((r) => ({
+          client_id: r.client_id,
+          client_label: r.client_label,
+          periode: r.periode,
+          livrees: nombre(r.livrees),
+        })),
+      },
     });
   } catch (err) {
     next(err);

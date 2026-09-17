@@ -229,26 +229,29 @@ export default function AdminUsers() {
     if (method === "phone" && !kazePhoneInput.trim()) {
       return toast.error("Veuillez saisir le téléphone Kaze.");
     }
-    if (method === "id" && !kazeIdInput.trim()) {
-      return toast.error("Laissez le champ vide pour supprimer la liaison.");
-    }
 
     setKazeSaving(true);
     try {
       const payload =
         method === "email"
           ? { kazeEmail: kazeEmailInput.trim() }
-          : method === "phone"
-            ? { kazePhone: kazePhoneInput.trim() }
-            : { kazeDriverId: kazeIdInput.trim() || null };
+          : { kazePhone: kazePhoneInput.trim() };
 
       const { data } = await api.patch(
         `/admin/users/${kazeModal.id}/kaze-link`,
         payload,
       );
-      if (data.user?.kaze_driver_id) {
-        setKazeIdInput(data.user.kaze_driver_id);
+
+      const idRetrouve =
+        data.user?.kaze_driver_id ||
+        data.kazeDriver?.id ||
+        data.kazeDriverId ||
+        "";
+
+      if (idRetrouve) {
+        setKazeIdInput(idRetrouve);
       }
+
       toast.success(data.message || "Compte Kaze lié.");
       setKazeModal(null);
       fetchUsers();
@@ -597,8 +600,7 @@ export default function AdminUsers() {
 
             <p className="text-sm text-dark-400 mb-4">
               Entrez l'email ou le téléphone utilisé sur Kaze. Le UUID exact est
-              trouvé automatiquement. Si le compte est bien identifié, l'ID Kaze
-              apparaît ci-dessous.
+              récupéré automatiquement depuis Kaze, puis affiché ici.
             </p>
 
             <div className="flex gap-1 p-1 bg-dark-800 rounded-xl border border-dark-700 mb-4">
@@ -658,25 +660,12 @@ export default function AdminUsers() {
 
             {kazeIdInput && (
               <div className="mb-4 p-3 rounded-xl border border-green-500/20 bg-green-500/5">
-                <p className="text-xs text-dark-400 mb-1">ID Kaze trouvé</p>
+                <p className="text-xs text-dark-400 mb-1">ID Kaze retrouvé</p>
                 <p className="font-mono text-sm text-green-300 break-all">
                   {kazeIdInput}
                 </p>
               </div>
             )}
-
-            <div className="border-t border-dark-700 pt-4">
-              <label className="block text-xs text-dark-400 mb-1">
-                UUID Kaze manuel (fallback) — laisser vide pour délier
-              </label>
-              <input
-                type="text"
-                value={kazeIdInput}
-                onChange={(e) => setKazeIdInput(e.target.value)}
-                className="input-field mb-4 font-mono text-sm"
-                placeholder="79e92f95-e135-4479-a56f-86e12306fc18"
-              />
-            </div>
 
             <div className="flex gap-3">
               <button
@@ -685,11 +674,7 @@ export default function AdminUsers() {
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
                 <Link2 size={16} />
-                {kazeSaving
-                  ? "Enregistrement…"
-                  : kazeIdInput.trim()
-                    ? "Lier"
-                    : "Lier via email/téléphone"}
+                {kazeSaving ? "Enregistrement…" : "Lier le compte Kaze"}
               </button>
               <button
                 onClick={() => setKazeModal(null)}

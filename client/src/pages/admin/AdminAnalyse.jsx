@@ -329,6 +329,9 @@ export default function AdminAnalyse() {
   const [periode, setPeriode] = useState("annee");
   const [tri, setTri] = useState("ca_realise");
   const [onglet, setOnglet] = useState("clients");
+  const [granulariteLivraisons, setGranulariteLivraisons] = useState("semaine");
+  const [clientLivraisonsFiltre, setClientLivraisonsFiltre] =
+    useState("__tous__");
   const [exportEnCours, setExportEnCours] = useState(false);
 
   const bornes = PERIODES[periode].bornes();
@@ -387,7 +390,15 @@ export default function AdminAnalyse() {
 
   if (!donnees) return null;
 
-  const { totaux, evolutions, clients, convoyeurs, mensuel } = donnees;
+  const {
+    totaux,
+    evolutions,
+    clients,
+    convoyeurs,
+    mensuel,
+    livraisons,
+    livraisons_par_client: livraisonsParClient,
+  } = donnees;
 
   const clientsTries = [...clients].sort((a, b) => {
     if (tri === "nom")
@@ -397,6 +408,48 @@ export default function AdminAnalyse() {
 
   const caMax = Math.max(...clients.map((c) => c.ca_realise), 1);
   const caMensuelMax = Math.max(...mensuel.map((m) => m.ca), 1);
+  const livraisonsSerieGlobale = Array.isArray(
+    livraisons?.[granulariteLivraisons],
+  )
+    ? livraisons[granulariteLivraisons]
+    : [];
+  const livraisonsSerieClient = Array.isArray(
+    livraisonsParClient?.[granulariteLivraisons],
+  )
+    ? livraisonsParClient[granulariteLivraisons].filter(
+        (p) => p.client_id === clientLivraisonsFiltre,
+      )
+    : [];
+  const livraisonsSerie =
+    clientLivraisonsFiltre === "__tous__"
+      ? livraisonsSerieGlobale
+      : livraisonsSerieClient;
+  const livraisonsMax = Math.max(...livraisonsSerie.map((p) => p.livrees), 1);
+  const optionsClientsLivraisons = [...clients]
+    .filter((c) => Number(c.missions_livrees) > 0)
+    .sort((a, b) =>
+      (a.company || a.full_name).localeCompare(b.company || b.full_name),
+    );
+
+  const formatterPeriodeLivraison = (periodeTexte, granularite) => {
+    if (!periodeTexte) return "—";
+    if (granularite === "jour") {
+      const d = new Date(`${periodeTexte}T00:00:00`);
+      return Number.isNaN(d.getTime())
+        ? periodeTexte
+        : d.toLocaleDateString("fr-FR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          });
+    }
+    if (granularite === "mois") {
+      const [an, mois] = String(periodeTexte).split("-");
+      return an && mois ? `${mois}/${an.slice(2)}` : periodeTexte;
+    }
+    if (granularite === "an") return String(periodeTexte);
+    return String(periodeTexte).replace("-S", " S");
+  };
 
   return (
     <div className="space-y-6">
@@ -539,6 +592,91 @@ export default function AdminAnalyse() {
           </div>
         </div>
       )}
+
+      {/* ── Volumes livrés par granularité ─────────── */}
+      <div className="card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <h2 className="text-sm font-semibold">Convoyages livrés</h2>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <select
+              value={clientLivraisonsFiltre}
+              onChange={(e) => setClientLivraisonsFiltre(e.target.value)}
+              className="input py-1.5 text-xs min-w-44"
+              title="Filtrer par client"
+            >
+              <option value="__tous__">Tous les clients</option>
+              {optionsClientsLivraisons.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.company || c.full_name}
+                </option>
+              ))}
+            </select>
+            {[
+              { cle: "jour", libelle: "Jour" },
+              { cle: "semaine", libelle: "Semaine" },
+              { cle: "mois", libelle: "Mois" },
+              { cle: "an", libelle: "Année" },
+            ].map(({ cle, libelle }) => (
+              <button
+                key={cle}
+                onClick={() => setGranulariteLivraisons(cle)}
+                className={`px-2.5 py-1 rounded text-xs border transition-colors ${
+                  granulariteLivraisons === cle
+                    ? "border-accent-500/40 bg-accent-500/10 text-accent-300"
+                    : "border-dark-600 text-dark-400 hover:text-dark-200"
+                }`}
+              >
+                {libelle}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-dark-500 mb-4">
+          Comptage uniquement des missions au statut LIVREE, regroupées par
+          période sur l'intervalle sélectionné
+          {clientLivraisonsFiltre === "__tous__"
+            ? "."
+            : " pour le client sélectionné."}
+        </p>
+
+        {livraisonsSerie.length === 0 ? (
+          <p className="text-sm text-dark-400 py-6 text-center">
+            Aucune livraison sur cette période.
+          </p>
+        ) : (
+          <div className="flex items-end gap-1.5 h-32">
+            {livraisonsSerie.map((p) => (
+              <div
+                key={`${granulariteLivraisons}-${p.periode}`}
+                className="flex-1 flex flex-col items-center gap-1 group relative"
+              >
+                <div className="w-full flex flex-col justify-end h-24">
+                  <div
+                    className="w-full bg-emerald-500/80 rounded-t group-hover:bg-emerald-400 transition-colors"
+                    style={{
+                      height: `${Math.max(2, (p.livrees / livraisonsMax) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] text-dark-500">
+                  {formatterPeriodeLivraison(p.periode, granulariteLivraisons)}
+                </span>
+                <div className="absolute bottom-full mb-1 hidden group-hover:block bg-dark-900 border border-dark-600 rounded px-2 py-1 text-xs whitespace-nowrap z-10">
+                  <p className="font-medium">
+                    {formatterPeriodeLivraison(
+                      p.periode,
+                      granulariteLivraisons,
+                    )}
+                  </p>
+                  <p className="text-dark-300">
+                    {p.livrees} livrée{p.livrees > 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ── Onglets ─────────────────────────────────── */}
       <div className="flex gap-2 border-b border-dark-700">

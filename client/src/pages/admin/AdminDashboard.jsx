@@ -1199,28 +1199,30 @@ export default function AdminDashboard() {
                             {allMissions.map((m) => (
                               <tr
                                 key={`${m.source}-${m.id}`}
-                                className="hover:bg-dark-700/30 transition-colors cursor-pointer group/row"
+                                className="hover:bg-dark-700/30 transition-colors cursor-pointer"
                                 onClick={() => setDetailModal(m)}
                               >
                                 <td className="py-2.5 pr-3">
                                   {m.source === "kaze" ? (
-                                    <span className="badge text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                                      Kaze
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded">
+                                      <Zap size={10} /> Kaze
                                     </span>
                                   ) : (
-                                    <span className="badge text-xs bg-primary-500/10 text-primary-400 border border-primary-500/20">
-                                      DLC
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20 px-1.5 py-0.5 rounded">
+                                      <FileText size={10} /> DLC
                                     </span>
                                   )}
                                 </td>
-                                <td className="py-2.5 pr-3 max-w-[200px] truncate font-medium text-dark-100 group-hover/row:text-primary-400 transition-colors">
+                                <td className="py-2.5 pr-3 max-w-[180px] truncate font-medium text-dark-100">
                                   {m.source === "kaze" ? (
-                                    <span title={m.departure_address}>
-                                      {m.kaze_reference
-                                        ? `#${m.kaze_reference} — `
-                                        : ""}
+                                    <>
+                                      {m.kaze_reference && (
+                                        <span className="font-mono text-[10px] text-orange-400 mr-1">
+                                          #{m.kaze_reference}
+                                        </span>
+                                      )}
                                       {m.departure_address || "Mission Kaze"}
-                                    </span>
+                                    </>
                                   ) : (
                                     <>
                                       {m.departure_address?.split(",")[0]} →{" "}
@@ -1228,76 +1230,65 @@ export default function AdminDashboard() {
                                     </>
                                   )}
                                 </td>
-                                <td className="py-2.5 pr-3 text-dark-300 text-xs">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span
-                                      className="flex items-center gap-1"
-                                      title="Date de création"
-                                    >
-                                      <Calendar
-                                        size={10}
-                                        className="text-dark-500"
-                                      />
-                                      {formatDate(m.created_at)}
-                                    </span>
-                                    {m.departure_date && (
-                                      <span
-                                        className="flex items-center gap-1 text-primary-400/70"
-                                        title="Date d'enlèvement"
-                                      >
-                                        <Truck size={10} />
-                                        {formatDate(m.departure_date)}
-                                      </span>
-                                    )}
-                                  </div>
+                                <td
+                                  className="py-2.5 pr-3 text-dark-300 text-xs"
+                                  data-label="Client"
+                                >
+                                  {m.client_name}
                                 </td>
-                                <td className="py-2.5 pr-3 text-dark-300 text-xs">
-                                  {m.source === "kaze"
-                                    ? m.performer_name || m.client_name
-                                    : m.client_name}
-                                </td>
-                                <td className="py-2.5 pr-3 font-semibold">
-                                  {m.price ? (
-                                    <div className="flex flex-col">
-                                      <span>{formatPrice(m.price)}</span>
-                                      {m.price_convoyeur && (
-                                        <span className="text-[10px] font-normal text-accent-400">
-                                          Conv. {formatPrice(m.price_convoyeur)}
+                                <td
+                                  className="py-2.5 pr-3 text-dark-300 text-xs"
+                                  data-label="Véhicule"
+                                >
+                                  {m.vehicle_brand || m.vehicle_model ? (
+                                    <>
+                                      {m.vehicle_brand} {m.vehicle_model}
+                                      {m.vehicle_plate && (
+                                        <span className="ml-1 font-mono text-dark-500">
+                                          {m.vehicle_plate}
                                         </span>
                                       )}
-                                    </div>
+                                    </>
                                   ) : (
-                                    <span className="text-dark-500">—</span>
+                                    <span className="text-dark-600">—</span>
+                                  )}
+                                </td>
+                                <td
+                                  className="py-2.5 pr-3 text-dark-300 text-xs"
+                                  data-label="Date"
+                                >
+                                  {formatDate(m.departure_date || m.created_at)}
+                                </td>
+                                <td
+                                  className="py-2.5 pr-3 font-semibold"
+                                  data-label="Prix"
+                                >
+                                  {m.price ? formatPrice(m.price) : "—"}
+                                </td>
+                                <td className="py-2.5 pr-3" data-label="Statut">
+                                  {m.source === "kaze" ? (
+                                    <span
+                                      className={`badge text-xs ${KAZE_STATUS_COLORS[m.kaze_status] || STATUS_COLORS[m.status] || "bg-dark-700 text-dark-300"}`}
+                                    >
+                                      {KAZE_STATUS_LABELS[m.kaze_status] ||
+                                        m.status_name ||
+                                        m.status}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={`badge text-xs ${STATUS_COLORS[m.status]}`}
+                                    >
+                                      {STATUS_LABELS[m.status]}
+                                    </span>
                                   )}
                                 </td>
                                 <td className="py-2.5 pr-3">
-                                  <span
-                                    className={`badge text-xs ${STATUS_COLORS[m.status] || "bg-orange-500/10 text-orange-400 border border-orange-500/20"}`}
-                                  >
-                                    {STATUS_LABELS[m.status] || m.status}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 pr-3">
-                                  {m.kaze_mission_id ? (
-                                    <span className="text-green-400 flex items-center gap-1 text-xs">
-                                      <Cloud size={12} /> Sync
-                                    </span>
-                                  ) : m.source === "kaze" ? (
-                                    <span className="text-orange-400 flex items-center gap-1 text-xs">
-                                      <Cloud size={12} /> Kaze only
-                                    </span>
-                                  ) : [
-                                      "ACCEPTEE",
-                                      "ASSIGNEE",
-                                      "EN_COURS",
-                                    ].includes(m.status) ? (
-                                    <span className="text-yellow-400 flex items-center gap-1 text-xs">
-                                      <CloudOff size={12} /> Non sync
+                                  {m.convoyeur_name ? (
+                                    <span className="flex items-center gap-1.5 text-accent-400 text-xs font-medium">
+                                      <Truck size={12} /> {m.convoyeur_name}
                                     </span>
                                   ) : (
-                                    <span className="text-dark-500 text-xs">
-                                      —
-                                    </span>
+                                    <span className="text-dark-500">—</span>
                                   )}
                                 </td>
                                 <td
@@ -1356,9 +1347,7 @@ export default function AdminDashboard() {
                                             "EN_COURS",
                                           ].includes(m.status) && (
                                             <button
-                                              onClick={() =>
-                                                handleSyncKaze(m.id)
-                                              }
+                                              onClick={() => onSyncKaze(m.id)}
                                               disabled={syncing === m.id}
                                               className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-2 py-1 rounded flex items-center gap-1 disabled:opacity-50"
                                             >
@@ -2409,7 +2398,7 @@ function MissionsTab({
                           <Truck size={12} /> {m.convoyeur_name}
                         </span>
                       ) : (
-                        <span className="text-dark-500 text-xs">—</span>
+                        <span className="text-dark-500">—</span>
                       )}
                     </td>
                     {/* Actions */}
@@ -2471,24 +2460,6 @@ function MissionsTab({
                                   }
                                 />
                                 Sync
-                              </button>
-                            )}
-                          {!!m.kaze_mission_id &&
-                            !!m.convoyeur_id &&
-                            ["ASSIGNEE", "EN_COURS"].includes(m.status) && (
-                              <button
-                                onClick={() => onSyncKaze(m.id)}
-                                disabled={syncing === m.id}
-                                title="Forcer la ré-assignation du convoyeur dans Kaze"
-                                className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-2 py-1 rounded flex items-center gap-1 disabled:opacity-50"
-                              >
-                                <RotateCcw
-                                  size={11}
-                                  className={
-                                    syncing === m.id ? "animate-spin" : ""
-                                  }
-                                />
-                                Ré-assigner
                               </button>
                             )}
                           {!["LIVREE", "ANNULEE"].includes(m.status) && (
@@ -3036,30 +3007,72 @@ function UpcomingMissionsTab({
                             <button
                               onClick={() => onSyncKaze(m.id)}
                               disabled={syncing === m.id}
-                              className="text-[10px] px-2 py-1 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded hover:bg-orange-500/20 transition-colors disabled:opacity-50"
+                              title="Créer la mission dans Kaze"
+                              className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-2 py-1 rounded flex items-center gap-1 disabled:opacity-50"
                             >
-                              {syncing === m.id ? "…" : "Sync"}
+                              <RotateCcw
+                                size={11}
+                                className={
+                                  syncing === m.id ? "animate-spin" : ""
+                                }
+                              />
+                              Sync
                             </button>
                           )}
-                        {m.source === "dlc" &&
-                          m.kaze_mission_id &&
-                          m.convoyeur_id &&
-                          ["ASSIGNEE", "EN_COURS"].includes(m.status) && (
-                            <button
-                              onClick={() => onSyncKaze(m.id)}
-                              disabled={syncing === m.id}
-                              title="Forcer la ré-assignation du convoyeur dans Kaze"
-                              className="text-[10px] px-2 py-1 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded hover:bg-orange-500/20 transition-colors disabled:opacity-50"
-                            >
-                              {syncing === m.id ? "…" : "Ré-assigner"}
-                            </button>
-                          )}
+                        {!["LIVREE", "ANNULEE"].includes(m.status) && (
+                          <button
+                            onClick={() => onAnnuler(m.id)}
+                            title="Annuler la mission"
+                            className="btn-soft-warning btn-xs"
+                          >
+                            <X size={11} /> Annuler
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan="9" className="py-12 text-center text-dark-400">
+                      Aucune mission trouvée.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 py-2 bg-dark-800/30 text-xs text-dark-500 border-t border-dark-700 flex items-center gap-4 flex-wrap">
+            <span>{filtered.length} mission(s) affichée(s)</span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <FileText size={10} className="text-primary-400" />
+              {dlcCount} DLC
+            </span>
+            <span className="flex items-center gap-1">
+              <Zap size={10} className="text-orange-400" />
+              {kazeOnlyCount} Kaze uniquement
+            </span>
+            {/* Le tableau de bord ne demande que les deux cents missions
+                les plus récentes. Au-delà, la liste reste complète en
+                apparence alors qu'il en manque : on le dit, et on indique
+                où consulter le reste. Rien n'est perdu, seulement hors
+                de cet écran. */}
+            {missionsTotal > missions.length && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-1.5 text-amber-400">
+                  <AlertTriangle size={11} />
+                  {missions.length} plus récentes sur {missionsTotal} —{" "}
+                  <Link
+                    to="/admin/missions"
+                    className="underline hover:text-amber-300"
+                  >
+                    tout l'historique
+                  </Link>
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}

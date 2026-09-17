@@ -17,6 +17,11 @@ const FROM =
   process.env.SMTP_FROM ||
   "Drive Line Connect <onboarding@resend.dev>";
 
+const URL_APP = (process.env.CLIENT_URL || "").replace(/\/+$/, "");
+const URL_LOGO_EMAIL =
+  (process.env.EMAIL_LOGO_URL || "").trim() ||
+  (URL_APP ? `${URL_APP}/logo.png` : "");
+
 // ── Configuration du transporteur ────────────────────────────
 let transporter;
 
@@ -153,6 +158,10 @@ transporter = {
 // ── Templates d'emails ───────────────────────────────────────
 
 function baseTemplate(content) {
+  const logoBloc = URL_LOGO_EMAIL
+    ? `<img src="${URL_LOGO_EMAIL}" alt="Drive Line Connect" class="logo" />`
+    : `<h1>Drive Line Connect</h1>`;
+
   return `
 <!DOCTYPE html>
 <html>
@@ -160,30 +169,31 @@ function baseTemplate(content) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f6f3ec; color: #2b2e36; margin: 0; padding: 0; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 30px 20px; text-align: center; border-radius: 12px 12px 0 0; }
+    .header { background: linear-gradient(180deg, #0b1d3a, #081428); padding: 26px 20px; text-align: center; border-radius: 12px 12px 0 0; border: 1px solid rgba(255, 209, 26, 0.25); border-bottom: 0; }
+    .logo { display: inline-block; width: auto; max-width: 260px; height: 56px; object-fit: contain; }
     .header h1 { color: #fff; margin: 0; font-size: 24px; }
-    .body { background: #1e293b; padding: 30px 20px; border-radius: 0 0 12px 12px; }
-    .body h2 { color: #f1f5f9; margin-top: 0; }
-    .body p { color: #94a3b8; line-height: 1.6; }
-    .info-box { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin: 16px 0; }
-    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e293b; }
-    .info-label { color: #64748b; font-size: 13px; }
-    .info-value { color: #f1f5f9; font-weight: 600; font-size: 13px; }
-    .btn { display: inline-block; background: #6366f1; color: #fff !important; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 600; margin-top: 16px; }
-    .footer { text-align: center; padding: 20px; color: #475569; font-size: 12px; }
+    .body { background: #ffffff; padding: 30px 20px; border-radius: 0 0 12px 12px; border: 1px solid rgba(11, 29, 58, 0.12); border-top: 0; }
+    .body h2 { color: #0b1d3a; margin-top: 0; }
+    .body p { color: #4f535d; line-height: 1.6; }
+    .info-box { background: #fbfaf7; border: 1px solid rgba(11, 29, 58, 0.14); border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(11, 29, 58, 0.08); }
+    .info-label { color: #4f535d; font-size: 13px; }
+    .info-value { color: #0b1d3a; font-weight: 600; font-size: 13px; }
+    .btn { display: inline-block; background: #ffd11a; color: #0b1d3a !important; text-decoration: none; padding: 12px 32px; border-radius: 8px; font-weight: 700; margin-top: 16px; border: 1px solid #e6b800; }
+    .footer { text-align: center; padding: 20px; color: #4f535d; font-size: 12px; }
     .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .badge-info { background: #312e81; color: #a5b4fc; }
-    .badge-success { background: #14532d; color: #86efac; }
-    .badge-warning { background: #713f12; color: #fde68a; }
-    .price { font-size: 28px; font-weight: 700; color: #6366f1; }
+    .badge-info { background: rgba(11, 92, 115, 0.12); color: #0b5c73; }
+    .badge-success { background: rgba(22, 101, 52, 0.12); color: #166534; }
+    .badge-warning { background: rgba(180, 83, 9, 0.12); color: #b45309; }
+    .price { font-size: 28px; font-weight: 700; color: #0b1d3a; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Drive Line Connect</h1>
+      ${logoBloc}
     </div>
     <div class="body">
       ${content}
