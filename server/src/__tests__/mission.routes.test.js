@@ -37,12 +37,9 @@ jest.mock("../services/email.service", () => ({
 
 jest.mock("../services/sync.service", () => ({ startSync: jest.fn() }));
 
-jest.mock("../services/whatsapp.service", () => ({
-  estActif: jest.fn(() => true),
-  normaliserNumero: jest.fn((n) => (n ? String(n).replace(/\D/g, "") : null)),
-  notifierMissionDisponible: jest
-    .fn()
-    .mockResolvedValue({ envoyes: 0, ignores: 0, echecs: 0 }),
+jest.mock("../services/telegram.service", () => ({
+  actif: true,
+  annoncerMissionDisponible: jest.fn().mockResolvedValue({ publie: true }),
 }));
 
 jest.mock("../services/devis.service", () => ({
@@ -60,7 +57,7 @@ jest.mock("../services/geocoding.service", () => ({
 const db = require("../db");
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
-const whatsappService = require("../services/whatsapp.service");
+const telegramService = require("../services/telegram.service");
 const {
   generateDevisPDF,
   generateDevisGroupePDF,
@@ -129,11 +126,7 @@ beforeEach(() => {
   kazeService.createMission.mockResolvedValue({ id: "kz-default" });
   kazeService.cancelMission.mockResolvedValue(undefined);
   emailService.notifyMissionDisponible.mockResolvedValue(undefined);
-  whatsappService.notifierMissionDisponible.mockResolvedValue({
-    envoyes: 0,
-    ignores: 0,
-    echecs: 0,
-  });
+  telegramService.annoncerMissionDisponible.mockResolvedValue({ publie: true });
 
   consoleSpies = [
     jest.spyOn(console, "log").mockImplementation(() => {}),
@@ -1115,7 +1108,6 @@ describe("POST /api/missions/:id/accepter", () => {
 
   it("passe la mission en ACCEPTEE et crée le job Kaze", async () => {
     mockDb(CLIENT, (sql) => {
-      if (/role = 'convoyeur'/i.test(sql)) return { rows: [] };
       if (/FROM missions WHERE id/i.test(sql)) return { rows: [] };
     });
     const queries = mockTransaction({
@@ -1190,14 +1182,9 @@ describe("POST /api/missions/:id/accepter", () => {
     expect(res.body.kazeMissionId).toBeNull();
   });
 
-  it("notifie tous les convoyeurs de la mission disponible", async () => {
+  it("publie la mission disponible sur Telegram", async () => {
     const mission = { id: MISSION_ID, vehicle_plate: "AA-123-BB" };
-    const convoyeurs = [
-      { id: "c1", email: "c1@test.com", full_name: "C1", phone: "0612345678" },
-      { id: "c2", email: "c2@test.com", full_name: "C2", phone: "0698765432" },
-    ];
     mockDb(CLIENT, (sql) => {
-      if (/role = 'convoyeur'/i.test(sql)) return { rows: convoyeurs };
       if (/FROM missions WHERE id/i.test(sql)) return { rows: [mission] };
     });
     mockTransaction({
@@ -1210,19 +1197,18 @@ describe("POST /api/missions/:id/accepter", () => {
     await accepter();
     await flushBackgroundTasks();
 
-    expect(whatsappService.notifierMissionDisponible).toHaveBeenCalledWith(
-      convoyeurs,
+    expect(telegramService.annoncerMissionDisponible).toHaveBeenCalledWith(
       mission,
+      undefined,
     );
   });
 
-  it("récupère le téléphone des convoyeurs à notifier", async () => {
+  it("ne charge plus la liste des convoyeurs pour diffuser une mission", async () => {
     mockDb(CLIENT, (sql) => {
       // La mission doit exister : sans elle, il n'y a rien à annoncer
-      // et les convoyeurs ne sont plus interrogés inutilement.
+      // sur Telegram.
       if (/FROM missions WHERE id/i.test(sql))
         return { rows: [{ id: MISSION_ID }] };
-      if (/role = 'convoyeur'/i.test(sql)) return { rows: [] };
     });
     mockTransaction({
       id: MISSION_ID,
@@ -1236,13 +1222,11 @@ describe("POST /api/missions/:id/accepter", () => {
     const requete = db.query.mock.calls.find(([sql]) =>
       /role = 'convoyeur'/i.test(sql),
     );
-    expect(requete[0]).toMatch(/phone/i);
+    expect(requete).toBeUndefined();
   });
 
-  it("n'envoie aucune notification s'il n'y a pas de convoyeur", async () => {
-    mockDb(CLIENT, (sql) => {
-      if (/role = 'convoyeur'/i.test(sql)) return { rows: [] };
-    });
+  it("n'envoie aucune annonce si la mission n'est pas retrouvée", async () => {
+    mockDb(CLIENT, () => ({ rows: [] }));
     mockTransaction({
       id: MISSION_ID,
       client_id: CLIENT.id,
@@ -1253,13 +1237,11 @@ describe("POST /api/missions/:id/accepter", () => {
     await accepter();
     await flushBackgroundTasks();
 
-    expect(whatsappService.notifierMissionDisponible).not.toHaveBeenCalled();
+    expect(telegramService.annoncerMissionDisponible).not.toHaveBeenCalled();
   });
 
   it("répond 200 même si la notification échoue", async () => {
     mockDb(CLIENT, (sql) => {
-      if (/role = 'convoyeur'/i.test(sql))
-        return { rows: [{ id: "c1", phone: "0612345678" }] };
       if (/FROM missions WHERE id/i.test(sql))
         return { rows: [{ id: MISSION_ID }] };
     });
@@ -1269,15 +1251,15 @@ describe("POST /api/missions/:id/accepter", () => {
       status: "DEVIS_PROPOSE",
     });
     kazeService.createMission.mockResolvedValue({ id: "kaze-job-1" });
-    whatsappService.notifierMissionDisponible.mockRejectedValue(
-      new Error("WhatsApp indisponible"),
+    telegramService.annoncerMissionDisponible.mockRejectedValue(
+      new Error("Telegram indisponible"),
     );
 
     const res = await accepter();
     await flushBackgroundTasks();
 
     expect(res.status).toBe(200);
-    expect(whatsappService.notifierMissionDisponible).toHaveBeenCalled();
+    expect(telegramService.annoncerMissionDisponible).toHaveBeenCalled();
   });
 });
 

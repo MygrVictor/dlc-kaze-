@@ -303,13 +303,13 @@ router.post(
       const allowedRoles = ["client", "convoyeur"];
       const userRole = allowedRoles.includes(role) ? role : "client";
 
-      // Les convoyeurs sont alertés des missions par WhatsApp :
+      // Les convoyeurs sont alertés des missions par Telegram :
       // un mobile joignable est indispensable.
       if (userRole === "convoyeur") {
         if (!phone) {
           return res.status(400).json({
             error:
-              "Le numéro de mobile est obligatoire pour un convoyeur (notifications WhatsApp).",
+              "Le numéro de mobile est obligatoire pour un convoyeur (notifications Telegram).",
           });
         }
         if (!isValidMobile(phone)) {
@@ -515,7 +515,7 @@ router.post(
 
       // Champs de qualification, propres aux candidatures convoyeur.
       if (type === "convoyeur") {
-        // Un convoyeur est alerté des missions par WhatsApp : sans mobile
+        // Un convoyeur est alerté des missions par Telegram : sans mobile
         // valide, la mise en relation n'aboutira pas.
         if (!firstName || !lastName) {
           return refuser("Nom et prénom obligatoires.");

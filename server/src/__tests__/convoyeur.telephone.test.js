@@ -1,9 +1,9 @@
 /**
- * Tests d'intégration — Obligation du mobile pour les convoyeurs
+ * Tests d'intégration — Téléphone convoyeur
  *
- * Les missions disponibles étant annoncées par WhatsApp, un convoyeur sans
- * mobile valide ne peut pas accéder aux missions. Une seule route reste
- * ouverte : celle qui permet de renseigner le numéro.
+ * Le mobile reste obligatoire à l'inscription et modifiable via
+ * /convoyeur/telephone, mais l'accès au portail convoyeur n'est plus bloqué
+ * par un écran dédié quand le numéro manque.
  */
 const request = require("supertest");
 
@@ -65,67 +65,17 @@ beforeEach(() => {
 });
 
 // ──────────────────────────────────────────────────────────────
-//  Blocage des routes de missions
+//  Accès aux routes convoyeur sans blocage PHONE_REQUIRED
 // ──────────────────────────────────────────────────────────────
-describe("Convoyeur sans mobile — accès aux missions", () => {
-  const ROUTES = [
-    "/api/convoyeur/missions",
-    "/api/convoyeur/missions-disponibles",
-    "/api/convoyeur/missions-disponibles-count",
-    "/api/convoyeur/documents",
-  ];
-
-  it.each(ROUTES)("refuse %s sans téléphone (403)", async (route) => {
-    mockDb(sansMobile(null));
-    const res = await avecAuth(request(app).get(route));
-    expect(res.status).toBe(403);
-    expect(res.body.code).toBe("PHONE_REQUIRED");
-  });
-
-  it("refuse un téléphone vide", async () => {
-    mockDb(sansMobile(""));
-    const res = await avecAuth(request(app).get("/api/convoyeur/missions"));
-    expect(res.status).toBe(403);
-  });
-
-  it("refuse un fixe français", async () => {
-    mockDb(sansMobile("0145678901"));
-    const res = await avecAuth(request(app).get("/api/convoyeur/missions"));
-    expect(res.status).toBe(403);
-  });
-
-  it("explique la raison du blocage", async () => {
-    mockDb(sansMobile(null));
-    const res = await avecAuth(request(app).get("/api/convoyeur/missions"));
-    expect(res.body.error).toMatch(/whatsapp/i);
-  });
-
-  it("n'interroge pas la base des missions quand le mobile manque", async () => {
-    mockDb(sansMobile(null));
-    await avecAuth(request(app).get("/api/convoyeur/missions"));
-    const requetes = db.query.mock.calls.filter(([sql]) =>
-      /FROM missions/i.test(sql),
-    );
-    expect(requetes).toHaveLength(0);
-  });
-
-  it("laisse passer un mobile valide", async () => {
-    mockDb(CONVOYEUR, (sql) => {
-      if (/FROM missions/i.test(sql)) return { rows: [] };
+describe("Convoyeur sans mobile — accès au portail", () => {
+  it("accède au profil même sans téléphone", async () => {
+    mockDb(sansMobile(null), (sql) => {
+      if (/FROM users WHERE id = \$1/i.test(sql)) {
+        return { rows: [sansMobile(null)] };
+      }
       return { rows: [] };
     });
-    const res = await avecAuth(request(app).get("/api/convoyeur/missions"));
-    expect(res.status).toBe(200);
-  });
 
-  it("laisse passer un mobile au format international", async () => {
-    mockDb(sansMobile("+33 6 12 34 56 78"), () => ({ rows: [] }));
-    const res = await avecAuth(request(app).get("/api/convoyeur/missions"));
-    expect(res.status).toBe(200);
-  });
-
-  it("n'affecte pas le profil, accessible sans mobile", async () => {
-    mockDb(sansMobile(null), () => ({ rows: [sansMobile(null)] }));
     const res = await avecAuth(request(app).get("/api/convoyeur/profil"));
     expect(res.status).toBe(200);
   });
@@ -211,9 +161,9 @@ describe("PUT /api/convoyeur/telephone", () => {
     expect(update[1][1]).toBe(CONVOYEUR.id);
   });
 
-  it("confirme que les missions arriveront par WhatsApp", async () => {
+  it("confirme que les missions arriveront par Telegram", async () => {
     const res = await enregistrer("0612345678");
-    expect(res.body.message).toMatch(/whatsapp/i);
+    expect(res.body.message).toMatch(/telegram/i);
   });
 
   it("refuse un appelant non authentifié (401)", async () => {

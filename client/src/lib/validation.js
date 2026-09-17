@@ -74,7 +74,7 @@ export function telephoneValide(saisie) {
  * Vrai si le numéro est un mobile.
  *
  * Plus strict que `telephoneValide` : les convoyeurs sont prévenus de
- * leurs missions par WhatsApp, qui n'aboutit pas sur un fixe.
+ * leurs missions par Telegram, qui repose sur un numéro mobile.
  */
 export function mobileValide(saisie) {
   const analyse = analyser(saisie);

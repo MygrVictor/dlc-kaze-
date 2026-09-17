@@ -23,24 +23,7 @@ import {
   Moon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import TelephoneRequis from "../components/TelephoneRequis";
 import CrispChat from "../components/CrispChat";
-
-/**
- * Reproduit la règle serveur : seuls les mobiles reçoivent WhatsApp.
- */
-function mobileManquant(user) {
-  if (user?.role !== "convoyeur") return false;
-  const chiffres = String(user.phone || "").replace(/\D/g, "");
-  if (!chiffres) return true;
-  if (/^0[67]\d{8}$/.test(chiffres)) return false;
-  if (/^(?:00)?330?[67]\d{8}$/.test(chiffres)) return false;
-  return (
-    chiffres.startsWith("33") ||
-    /^0[1-5,9]/.test(chiffres) ||
-    chiffres.length < 10
-  );
-}
 
 const NAV_ITEMS = {
   client: [
@@ -105,8 +88,7 @@ export default function DashboardLayout() {
 
   // Fetch badge count pour "Missions disponibles" si convoyeur
   useEffect(() => {
-    // Inutile tant que le mobile manque : l'API refuserait l'appel.
-    if (user?.role === "convoyeur" && !mobileManquant(user)) {
+    if (user?.role === "convoyeur") {
       const fetchCount = async () => {
         try {
           const { data } = await api.get(
@@ -122,13 +104,7 @@ export default function DashboardLayout() {
       const interval = setInterval(fetchCount, 30000);
       return () => clearInterval(interval);
     }
-  }, [user?.role, user?.phone]);
-
-  // Un convoyeur sans mobile ne peut pas être prévenu des missions :
-  // on l'oriente vers la saisie de son numéro avant toute autre chose.
-  if (mobileManquant(user)) {
-    return <TelephoneRequis />;
-  }
+  }, [user?.role]);
 
   const handleLogout = () => {
     logout();

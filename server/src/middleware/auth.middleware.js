@@ -59,26 +59,4 @@ const requireValidation = (req, res, next) => {
   next();
 };
 
-/**
- * Exige qu'un convoyeur ait renseigné un mobile valide.
- *
- * Les missions disponibles sont annoncées par WhatsApp : sans numéro, un
- * convoyeur ne serait jamais prévenu. On bloque donc l'accès aux missions
- * tant que le profil est incomplet, en signalant au client la marche à
- * suivre via le code `PHONE_REQUIRED`.
- */
-const requirePhone = (req, res, next) => {
-  if (req.user.role !== "convoyeur") return next();
-
-  const { isValidMobile } = require("./security.middleware");
-  if (!isValidMobile(req.user.phone)) {
-    return res.status(403).json({
-      code: "PHONE_REQUIRED",
-      error:
-        "Renseignez votre numéro de mobile pour accéder aux missions : les nouvelles missions sont annoncées par WhatsApp.",
-    });
-  }
-  next();
-};
-
-module.exports = { authenticate, authorize, requireValidation, requirePhone };
+module.exports = { authenticate, authorize, requireValidation };

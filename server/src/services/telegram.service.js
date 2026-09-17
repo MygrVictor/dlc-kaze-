@@ -4,15 +4,11 @@
  * Publie les missions disponibles dans un salon Telegram unique, partagé
  * par tous les convoyeurs.
  *
- * ── Pourquoi Telegram plutôt que WhatsApp ──────────────────────
- * L'API WhatsApp Business est conçue pour la relation client un-à-un et
- * se facture au message : diffuser une mission à 50 convoyeurs coûte 50
- * messages, et Meta n'expose aucune API d'envoi en groupe. Telegram
- * publie dans un salon en une seule requête, gratuitement et sans
- * limite. Une mission = un message, quel que soit le nombre de lecteurs.
+ * ── Pourquoi Telegram ───────────────────────────────────────────
+ * Telegram permet la diffusion de missions dans un salon unique,
+ * en une seule requête, quel que soit le nombre de convoyeurs.
  *
- * WhatsApp reste pertinent pour l'individuel (mission attribuée, rappel
- * de départ) : les deux services coexistent.
+ * Une mission = un message, avec une traçabilité claire côté équipe.
  *
  * ── Mise en place ──────────────────────────────────────────────
  *   1. Créer le bot via @BotFather sur Telegram → jeton
@@ -139,8 +135,8 @@ function messageErreur(err) {
 /**
  * Annonce une mission disponible dans le salon des convoyeurs.
  *
- * Contrairement à son équivalent WhatsApp, cette fonction envoie
- * **un seul** message quel que soit le nombre de convoyeurs.
+ * Cette fonction envoie **un seul** message quel que soit le nombre
+ * de convoyeurs.
  *
  * L'échec est signalé mais jamais propagé : une annonce manquée ne doit
  * pas faire échouer l'acceptation d'un devis.

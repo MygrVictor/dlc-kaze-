@@ -112,13 +112,13 @@ function isValidEmail(email) {
   );
 }
 
-// ─── 5 bis. Validation du mobile (notifications WhatsApp) ─────
+// ─── 5 bis. Validation du mobile (notifications Telegram) ─────
 /**
- * Vérifie qu'un numéro est un mobile joignable sur WhatsApp.
+ * Vérifie qu'un numéro est un mobile joignable pour Telegram.
  *
  * Accepte les écritures françaises courantes (06…, +33 6…, 0033 6…)
  * ainsi que les numéros internationaux préfixés par « + ».
- * Les fixes français (01 à 05, 09) sont refusés : WhatsApp exige un mobile.
+ * Les fixes français (01 à 05, 09) sont refusés : le canal exige un mobile.
  */
 function isValidMobile(phone) {
   if (typeof phone !== "string") return false;
@@ -157,7 +157,7 @@ function isValidMobile(phone) {
 /**
  * Vérifie qu'un numéro est joignable, mobile ou fixe.
  *
- * Distinct d'`isValidMobile`, qui sert aux notifications WhatsApp et
+ * Distinct d'`isValidMobile`, qui sert aux notifications Telegram et
  * refuse donc les fixes. Ici le contexte est différent : le contact d'un
  * garage, d'une concession ou d'un service logistique est le plus souvent
  * un fixe, et l'exclure obligerait à saisir un numéro faux pour passer.

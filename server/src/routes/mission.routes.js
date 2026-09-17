@@ -8,7 +8,6 @@ const {
 } = require("../middleware/auth.middleware");
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
-const whatsappService = require("../services/whatsapp.service");
 const telegramService = require("../services/telegram.service");
 const geocodingService = require("../services/geocoding.service");
 const {
@@ -406,20 +405,9 @@ router.post(
           }
         }
 
-        const lienMission = process.env.CLIENT_URL
-          ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
-          : undefined;
-
-        for (const mission of createdMissions) {
-          if (mission.convoyeur_id) continue;
-          if (telegramService.actif) {
-            telegramService
-              .annoncerMissionDisponible(mission, lienMission)
-              .catch((err) =>
-                console.error("⚠️ Annonce Telegram échouée :", err.message),
-              );
-          }
-        }
+        // Phase de test sans convoyeurs actifs dans l'application :
+        // aucune mission créée par l'administration n'est diffusée dans
+        // le groupe Telegram, même sans pré-affectation.
       } else {
         // Alerter l'admin : une mission non cotée n'avance pas tant que
         // personne ne l'a vue. L'échec d'envoi ne doit pas annuler la
@@ -722,11 +710,9 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
     });
 
     // 4. Annoncer la mission aux convoyeurs (asynchrone, ne bloque pas
-    //    la réponse). Le canal par défaut est Telegram : une mission =
-    //    un message dans le salon commun, quel que soit le nombre de
-    //    convoyeurs. WhatsApp facturant chaque destinataire, il n'est
-    //    conservé qu'en repli, si aucun salon Telegram n'est configuré.
-    //    Une mission déjà pourvue n'est annoncée à personne.
+    //    la réponse). Le canal est Telegram : une mission = un message
+    //    dans le salon commun. Une mission déjà pourvue n'est annoncée
+    //    à personne.
     try {
       if (!result.preAssignee) {
         const { rows: fullMission } = await db.query(
@@ -739,30 +725,14 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
             ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
             : undefined;
 
-          if (telegramService.actif) {
-            telegramService
-              .annoncerMissionDisponible(fullMission[0], lienMission)
-              .catch((err) => {
-                console.error(
-                  "⚠️ Erreur lors de l'annonce Telegram :",
-                  err.message,
-                );
-              });
-          } else {
-            const { rows: convoyeurs } = await db.query(
-              "SELECT id, email, full_name, phone FROM users WHERE role = 'convoyeur'",
-            );
-            if (convoyeurs.length > 0) {
-              whatsappService
-                .notifierMissionDisponible(convoyeurs, fullMission[0])
-                .catch((err) => {
-                  console.error(
-                    "⚠️ Erreur lors de la notification des convoyeurs :",
-                    err.message,
-                  );
-                });
-            }
-          }
+          telegramService
+            .annoncerMissionDisponible(fullMission[0], lienMission)
+            .catch((err) => {
+              console.error(
+                "⚠️ Erreur lors de l'annonce Telegram :",
+                err.message,
+              );
+            });
         }
       }
     } catch (notifyErr) {

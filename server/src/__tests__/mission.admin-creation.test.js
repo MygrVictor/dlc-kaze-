@@ -42,14 +42,6 @@ jest.mock("../services/telegram.service", () => ({
   annoncerMissionDisponible: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock("../services/whatsapp.service", () => ({
-  estActif: jest.fn(() => true),
-  normaliserNumero: jest.fn((n) => (n ? String(n).replace(/\D/g, "") : null)),
-  notifierMissionDisponible: jest
-    .fn()
-    .mockResolvedValue({ envoyes: 0, ignores: 0, echecs: 0 }),
-}));
-
 jest.mock("../services/devis.service", () => ({
   generateDevisPDF: jest.fn(),
   generateDevisGroupePDF: jest.fn(),
@@ -80,6 +72,7 @@ const CLIENT = {
 
 const CLIENT_CIBLE = "44444444-4444-4444-4444-444444444444";
 const MISSION_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const CONVOYEUR_CIBLE = "55555555-5555-5555-5555-555555555555";
 
 const tokenFor = (user) =>
   jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
@@ -101,16 +94,43 @@ const corpsMinimal = {
  * Installe le mock de `db.query` et retourne l'objet dans lequel les
  * paramètres de l'insertion seront capturés.
  */
-function preparerBase(utilisateur, { clientExiste = true } = {}) {
+function preparerBase(
+  utilisateur,
+  { clientExiste = true, convoyeurExiste = true } = {},
+) {
   const capture = {};
   db.query.mockImplementation(async (sql, params) => {
     if (estLectureUtilisateur(sql)) return { rows: [utilisateur] };
     if (/AND role = 'client'/i.test(sql))
       return { rows: clientExiste ? [{ id: CLIENT_CIBLE }] : [] };
+    if (/AND role = ANY\(\$2\)/i.test(sql)) {
+      return {
+        rows: convoyeurExiste
+          ? [
+              {
+                id: params?.[0] || CONVOYEUR_CIBLE,
+                full_name: "Convoyeur Test",
+                kaze_driver_id: null,
+              },
+            ]
+          : [],
+      };
+    }
     if (/INSERT INTO missions/i.test(sql)) {
       capture.sql = sql;
       capture.params = params;
       return { rows: [{ id: MISSION_ID, status: "ACCEPTEE" }] };
+    }
+    if (/UPDATE missions\s+SET convoyeur_id = \$1/i.test(sql)) {
+      return {
+        rows: [
+          {
+            id: params?.[1] || MISSION_ID,
+            status: "ASSIGNEE",
+            convoyeur_id: params?.[0] || CONVOYEUR_CIBLE,
+          },
+        ],
+      };
     }
     return { rows: [] };
   });
@@ -185,13 +205,28 @@ describe("POST /api/missions — saisie administrative", () => {
     expect(res.status).toBe(404);
   });
 
-  it("annonce la mission aux convoyeurs", async () => {
+  it("n'annonce pas la mission dans le groupe Telegram (phase de test)", async () => {
     preparerBase(ADMIN);
 
     await creer({ ...corpsMinimal, priceConvoyeur: 180 });
     await viderTachesDeFond();
 
-    expect(telegramService.annoncerMissionDisponible).toHaveBeenCalledTimes(1);
+    expect(telegramService.annoncerMissionDisponible).not.toHaveBeenCalled();
+  });
+
+  it("n'annonce pas dans le groupe Telegram si un convoyeur est pré-assigné", async () => {
+    const capture = preparerBase(ADMIN);
+
+    const res = await creer({
+      ...corpsMinimal,
+      priceConvoyeur: 180,
+      convoyeurId: CONVOYEUR_CIBLE,
+    });
+    await viderTachesDeFond();
+
+    expect(res.status).toBe(201);
+    expect(capture.params).toContain("ASSIGNEE");
+    expect(telegramService.annoncerMissionDisponible).not.toHaveBeenCalled();
   });
 
   it("n'alerte pas l'administration d'une mission à coter", async () => {

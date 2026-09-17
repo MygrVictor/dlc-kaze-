@@ -148,7 +148,7 @@ export default function DevenirConvoyeurPage() {
       return "Adresse email invalide.";
     }
     if (!form.phone.trim()) {
-      return "Le numéro de mobile est obligatoire : les missions vous sont annoncées par WhatsApp.";
+      return "Le numéro de mobile est obligatoire : les missions vous sont annoncées par Telegram.";
     }
     if (!mobileValide(form.phone)) {
       return "Numéro de mobile invalide. Format attendu : 06 12 34 56 78.";
@@ -216,7 +216,7 @@ export default function DevenirConvoyeurPage() {
       accent="var(--teal)"
       titre="Devenez convoyeur partenaire"
       sousTitre="Accédez chaque semaine à des missions à travers l'Europe et choisissez celles qui vous conviennent. Vos justificatifs nous permettent d'ouvrir votre accès sans attendre."
-      confirmation="Merci ! Nous avons bien reçu votre candidature et vos justificatifs. Notre équipe examine votre dossier et vous recontacte pour un pré-rendez-vous de validation. Une fois votre accès ouvert, les missions disponibles vous seront annoncées par WhatsApp."
+      confirmation="Merci ! Nous avons bien reçu votre candidature et vos justificatifs. Notre équipe examine votre dossier et vous recontacte pour un pré-rendez-vous de validation. Une fois votre accès ouvert, les missions disponibles vous seront annoncées par Telegram."
       valider={valider}
       preparer={preparer}
       fichiers={fichiers}

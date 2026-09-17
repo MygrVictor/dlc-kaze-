@@ -4,11 +4,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 const multer = require("multer");
 const db = require("../db");
-const {
-  authenticate,
-  authorize,
-  requirePhone,
-} = require("../middleware/auth.middleware");
+const { authenticate, authorize } = require("../middleware/auth.middleware");
 const kazeService = require("../services/kaze.service");
 const syncService = require("../services/sync.service");
 const {
@@ -270,9 +266,6 @@ router.delete("/lier-kaze", async (req, res, next) => {
 });
 
 // ═════════════════════════════════════════════════════════════// Convoyeur : Renseigner son numéro de mobile
-//
-// Volontairement placée avant `requirePhone` : c'est la seule action
-// possible tant que le profil est incomplet.
 // ════════════════════════════════════════════════════════════
 router.put("/telephone", async (req, res, next) => {
   try {
@@ -301,15 +294,12 @@ router.put("/telephone", async (req, res, next) => {
 
     res.json({
       user: rows[0],
-      message: "Numéro enregistré. Vous recevrez les missions par WhatsApp.",
+      message: "Numéro enregistré. Vous recevrez les missions par Telegram.",
     });
   } catch (err) {
     next(err);
   }
 });
-
-// ── À partir d'ici, un mobile valide est requis ───────────
-router.use(requirePhone);
 
 // ════════════════════════════════════════════════════════════// Portail Convoyeur : Missions attribuées (depuis Kaze)
 // ═════════════════════════════════════════════════════════════
