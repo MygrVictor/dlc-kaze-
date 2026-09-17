@@ -52,6 +52,7 @@ export default function AdminUsers() {
   const [kazeEmailInput, setKazeEmailInput] = useState("");
   const [kazePhoneInput, setKazePhoneInput] = useState("");
   const [kazeIdInput, setKazeIdInput] = useState("");
+  const [kazeLinkMethod, setKazeLinkMethod] = useState("email");
   const [kazeSaving, setKazeSaving] = useState(false);
 
   // ── Modal rattachement à un siège ──────────────────────
@@ -162,10 +163,8 @@ export default function AdminUsers() {
 
   const openKazeModal = (u) => {
     setKazeModal(u);
+    setKazeLinkMethod("email");
     setKazeIdInput(u.kaze_driver_id || "");
-    // On pré-remplit avec les coordonnées du compte DLC : dans l'immense
-    // majorité des cas, ce sont les mêmes que sur Kaze, et un simple clic
-    // suffit alors à retrouver le bon identifiant.
     setKazeEmailInput(u.email || "");
     setKazePhoneInput(u.phone || "");
   };
@@ -222,21 +221,35 @@ export default function AdminUsers() {
     }
   };
 
-  const handleKazeLink = async (mode = "id") => {
+  const handleKazeLink = async (methodOverride) => {
+    const method = methodOverride || kazeLinkMethod;
+    if (method === "email" && !kazeEmailInput.trim()) {
+      return toast.error("Veuillez saisir l'email Kaze.");
+    }
+    if (method === "phone" && !kazePhoneInput.trim()) {
+      return toast.error("Veuillez saisir le téléphone Kaze.");
+    }
+    if (method === "id" && !kazeIdInput.trim()) {
+      return toast.error("Laissez le champ vide pour supprimer la liaison.");
+    }
+
     setKazeSaving(true);
     try {
-      const corps =
-        mode === "email"
+      const payload =
+        method === "email"
           ? { kazeEmail: kazeEmailInput.trim() }
-          : mode === "phone"
+          : method === "phone"
             ? { kazePhone: kazePhoneInput.trim() }
             : { kazeDriverId: kazeIdInput.trim() || null };
 
       const { data } = await api.patch(
         `/admin/users/${kazeModal.id}/kaze-link`,
-        corps,
+        payload,
       );
-      toast.success(data.message);
+      if (data.user?.kaze_driver_id) {
+        setKazeIdInput(data.user.kaze_driver_id);
+      }
+      toast.success(data.message || "Compte Kaze lié.");
       setKazeModal(null);
       fetchUsers();
     } catch (err) {
@@ -583,56 +596,78 @@ export default function AdminUsers() {
             </div>
 
             <p className="text-sm text-dark-400 mb-4">
-              Recherchez le convoyeur dans Kaze par son email ou son téléphone :
-              l'identifiant exact sera récupéré automatiquement. La saisie
-              manuelle reste possible, mais seul un UUID Kaze est accepté — un
-              identifiant approximatif ferait apparaître le planning de toute
-              l'entreprise dans l'espace du convoyeur.
+              Entrez l'email ou le téléphone utilisé sur Kaze. Le UUID exact est
+              trouvé automatiquement. Si le compte est bien identifié, l'ID Kaze
+              apparaît ci-dessous.
             </p>
 
-            <label className="block text-xs text-dark-400 mb-1">
-              Email du compte Kaze
-            </label>
-            <div className="flex gap-2 mb-3">
-              <input
-                type="email"
-                value={kazeEmailInput}
-                onChange={(e) => setKazeEmailInput(e.target.value)}
-                className="input-field flex-1"
-                placeholder="prenom.nom@exemple.fr"
-              />
+            <div className="flex gap-1 p-1 bg-dark-800 rounded-xl border border-dark-700 mb-4">
               <button
-                onClick={() => handleKazeLink("email")}
-                disabled={kazeSaving || !kazeEmailInput.trim()}
-                className="btn-primary whitespace-nowrap disabled:opacity-40"
+                type="button"
+                onClick={() => setKazeLinkMethod("email")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  kazeLinkMethod === "email"
+                    ? "bg-dark-600 text-white shadow"
+                    : "text-dark-400 hover:text-dark-200"
+                }`}
               >
-                Lier
+                <Mail size={14} />
+                Par email
+              </button>
+              <button
+                type="button"
+                onClick={() => setKazeLinkMethod("phone")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  kazeLinkMethod === "phone"
+                    ? "bg-dark-600 text-white shadow"
+                    : "text-dark-400 hover:text-dark-200"
+                }`}
+              >
+                <KeyRound size={14} />
+                Par téléphone
               </button>
             </div>
 
-            <label className="block text-xs text-dark-400 mb-1">
-              Téléphone du compte Kaze
-            </label>
-            <div className="flex gap-2 mb-4">
-              <input
-                type="tel"
-                value={kazePhoneInput}
-                onChange={(e) => setKazePhoneInput(e.target.value)}
-                className="input-field flex-1"
-                placeholder="06 12 34 56 78"
-              />
-              <button
-                onClick={() => handleKazeLink("phone")}
-                disabled={kazeSaving || !kazePhoneInput.trim()}
-                className="btn-primary whitespace-nowrap disabled:opacity-40"
-              >
-                Lier
-              </button>
-            </div>
+            {kazeLinkMethod === "email" ? (
+              <div className="mb-4">
+                <label className="block text-xs text-dark-400 mb-1">
+                  Email du compte Kaze
+                </label>
+                <input
+                  type="email"
+                  value={kazeEmailInput}
+                  onChange={(e) => setKazeEmailInput(e.target.value)}
+                  className="input-field"
+                  placeholder="prenom.nom@exemple.fr"
+                />
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label className="block text-xs text-dark-400 mb-1">
+                  Téléphone du compte Kaze
+                </label>
+                <input
+                  type="tel"
+                  value={kazePhoneInput}
+                  onChange={(e) => setKazePhoneInput(e.target.value)}
+                  className="input-field"
+                  placeholder="06 12 34 56 78"
+                />
+              </div>
+            )}
+
+            {kazeIdInput && (
+              <div className="mb-4 p-3 rounded-xl border border-green-500/20 bg-green-500/5">
+                <p className="text-xs text-dark-400 mb-1">ID Kaze trouvé</p>
+                <p className="font-mono text-sm text-green-300 break-all">
+                  {kazeIdInput}
+                </p>
+              </div>
+            )}
 
             <div className="border-t border-dark-700 pt-4">
               <label className="block text-xs text-dark-400 mb-1">
-                Identifiant Kaze (UUID) — ou laissez vide pour délier
+                UUID Kaze manuel (fallback) — laisser vide pour délier
               </label>
               <input
                 type="text"
@@ -645,7 +680,7 @@ export default function AdminUsers() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => handleKazeLink("id")}
+                onClick={() => handleKazeLink()}
                 disabled={kazeSaving}
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
@@ -653,8 +688,8 @@ export default function AdminUsers() {
                 {kazeSaving
                   ? "Enregistrement…"
                   : kazeIdInput.trim()
-                    ? "Lier cet UUID"
-                    : "Supprimer la liaison"}
+                    ? "Lier"
+                    : "Lier via email/téléphone"}
               </button>
               <button
                 onClick={() => setKazeModal(null)}
