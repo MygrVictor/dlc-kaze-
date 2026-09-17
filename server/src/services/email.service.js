@@ -363,8 +363,8 @@ async function notifyAccountCreated(user, clearPassword) {
     <h2>Bienvenue sur Drive Line Connect, ${user.full_name} !</h2>
     <p>Un compte <strong>${roleLabel}</strong> a été créé pour vous par l'administrateur.</p>
     <div class="info-box">
-      <div class="info-row"><span class="info-label">Email</span><span class="info-value">${user.email}</span></div>
-      <div class="info-row"><span class="info-label">Mot de passe</span><span class="info-value" style="font-family: monospace; letter-spacing: 1px;">${clearPassword}</span></div>
+      <div class="info-row"><span class="info-label">Email : </span><span class="info-value">${user.email}</span></div>
+      <div class="info-row"><span class="info-label">Mot de passe : </span><span class="info-value" style="font-family: monospace; letter-spacing: 1px;">${clearPassword}</span></div>
     </div>
     <p style="color: #f59e0b; font-size: 13px;">Nous vous recommandons de changer votre mot de passe lors de votre première connexion.</p>
     <p style="text-align: center;">
