@@ -7,7 +7,7 @@ const emailService = require("../services/email.service");
 const geocodingService = require("../services/geocoding.service");
 const { auditLog } = require("../middleware/security.middleware");
 const { creerLienReinitialisation } = require("../lib/password-reset");
-const { isDemoMission } = require("../lib/demo-mission");
+const { isDemoMission, isValidKazeDriverId } = require("../lib/demo-mission");
 const fs = require("fs");
 const path = require("path");
 
@@ -991,10 +991,11 @@ router.delete("/users/:id", async (req, res, next) => {
 
 router.patch("/users/:id/kaze-link", async (req, res, next) => {
   try {
-    const { kazeDriverId } = req.body;
-    const userRow = await db.query("SELECT id, role FROM users WHERE id = $1", [
-      req.params.id,
-    ]);
+    const { kazeDriverId, kazeEmail, kazePhone } = req.body;
+    const userRow = await db.query(
+      "SELECT id, role, email, phone FROM users WHERE id = $1",
+      [req.params.id],
+    );
     if (userRow.rows.length === 0)
       return res.status(404).json({ error: "Utilisateur introuvable." });
     // L'administrateur convoie lui aussi et dispose de son propre compte
@@ -1007,14 +1008,60 @@ router.patch("/users/:id/kaze-link", async (req, res, next) => {
       });
     }
 
-    if (kazeDriverId) {
+    // ── Résolution de l'identifiant ────────────────────────────
+    // Saisir un identifiant à la main est la source d'erreur no 1 : un nom
+    // tapé dans le champ (« Enzo Charabie ») est accepté par Kaze sans
+    // broncher, mais le filtre `performer_id` devient inopérant et le
+    // convoyeur se retrouve avec le planning de toute l'entreprise sous les
+    // yeux. On privilégie donc la recherche par email ou téléphone, qui
+    // rapporte toujours un UUID authentique.
+    let identifiantRetenu = kazeDriverId ? String(kazeDriverId).trim() : null;
+    let driverTrouve = null;
+
+    const rechercheEmail = (kazeEmail || "").trim();
+    const recherchePhone = (kazePhone || "").trim();
+
+    if (rechercheEmail || recherchePhone) {
+      try {
+        if (rechercheEmail) {
+          driverTrouve = await kazeService.getDriverByEmail(rechercheEmail);
+        }
+        if (!driverTrouve && recherchePhone) {
+          driverTrouve = await kazeService.getDriverByPhone(recherchePhone);
+        }
+      } catch (kazeErr) {
+        console.error("⚠️ Recherche Kaze échouée :", kazeErr.message);
+        return res.status(502).json({
+          error:
+            "Impossible de contacter l'API Kaze. Réessayez dans un instant.",
+        });
+      }
+
+      if (!driverTrouve?.id) {
+        return res.status(404).json({
+          error: rechercheEmail
+            ? "Aucun convoyeur Kaze trouvé avec cet email."
+            : "Aucun convoyeur Kaze trouvé avec ce numéro de téléphone.",
+        });
+      }
+      identifiantRetenu = driverTrouve.id;
+    }
+
+    if (identifiantRetenu && !isValidKazeDriverId(identifiantRetenu)) {
+      return res.status(400).json({
+        error:
+          "Identifiant Kaze invalide : il doit s'agir d'un UUID. Utilisez plutôt la recherche par email ou téléphone.",
+      });
+    }
+
+    if (identifiantRetenu) {
       const existing = await db.query(
         "SELECT id, full_name FROM users WHERE kaze_driver_id = $1 AND id != $2",
-        [kazeDriverId, req.params.id],
+        [identifiantRetenu, req.params.id],
       );
       if (existing.rows.length > 0) {
         return res.status(409).json({
-          error: `Ce kaze_driver_id est déjà lié à ${existing.rows[0].full_name}.`,
+          error: `Ce compte Kaze est déjà lié à ${existing.rows[0].full_name}. Déliez-le d'abord.`,
         });
       }
     }
@@ -1023,12 +1070,15 @@ router.patch("/users/:id/kaze-link", async (req, res, next) => {
       `UPDATE users SET kaze_driver_id = $1, updated_at = NOW()
        WHERE id = $2
        RETURNING id, email, full_name, kaze_driver_id`,
-      [kazeDriverId || null, req.params.id],
+      [identifiantRetenu || null, req.params.id],
     );
 
     res.json({
       user: updated.rows[0],
-      message: kazeDriverId ? "Compte Kaze lié." : "Liaison Kaze supprimée.",
+      kazeDriver: driverTrouve || null,
+      message: identifiantRetenu
+        ? `Compte Kaze lié${driverTrouve?.name ? ` à ${driverTrouve.name}` : ""}.`
+        : "Liaison Kaze supprimée.",
     });
   } catch (err) {
     next(err);
@@ -1134,7 +1184,7 @@ router.patch("/users/:id/parent", async (req, res, next) => {
   }
 });
 
-router.get("/users/:id/documents", async (req, res, next) => {
+const listerDocumentsConvoyeur = async (req, res, next) => {
   try {
     const { rows } = await db.query(
       `SELECT d.*, u.full_name AS reviewed_by_name
@@ -1148,9 +1198,15 @@ router.get("/users/:id/documents", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+};
 
-router.patch("/users/:id/documents/:docId", async (req, res, next) => {
+// Alias conservé pour compatibilité rétroactive. Certains environnements
+// filtrent agressivement des chemins contenant certains mots-clés ;
+// l'alias `docs` permet au front d'utiliser un chemin plus robuste.
+router.get("/users/:id/documents", listerDocumentsConvoyeur);
+router.get("/users/:id/docs", listerDocumentsConvoyeur);
+
+const reviserDocumentConvoyeur = async (req, res, next) => {
   try {
     const { status, admin_note } = req.body;
     if (!["valide", "refuse"].includes(status)) {
@@ -1183,7 +1239,10 @@ router.patch("/users/:id/documents/:docId", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+};
+
+router.patch("/users/:id/documents/:docId", reviserDocumentConvoyeur);
+router.patch("/users/:id/docs/:docId", reviserDocumentConvoyeur);
 
 router.get("/kaze-health", (_req, res) =>
   res.json(kazeService.getKazeHealth()),
@@ -1527,7 +1586,7 @@ router.post("/missions", async (req, res, next) => {
 
 router.post("/missions/:id/proposer-prix", async (req, res, next) => {
   try {
-    const { price, price_convoyeur, assignerAdmin } = req.body;
+    const { price, price_convoyeur, assignerAdmin, convoyeurId } = req.body;
     if (!price || isNaN(price) || Number(price) <= 0) {
       return res
         .status(400)
@@ -1545,6 +1604,13 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
     if (Number(price_convoyeur) > Number(price)) {
       return res.status(400).json({
         error: "Le prix convoyeur ne peut pas dépasser le prix client.",
+      });
+    }
+
+    if (assignerAdmin && convoyeurId) {
+      return res.status(400).json({
+        error:
+          "Choisissez soit l'auto-attribution admin, soit un convoyeur précis.",
       });
     }
 
@@ -1568,6 +1634,24 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
       });
     }
 
+    let convoyeurPreassigneId = null;
+    if (convoyeurId) {
+      const { rows: convoyeurs } = await db.query(
+        `SELECT id
+           FROM users
+          WHERE id = $1
+            AND role = ANY($2)`,
+        [convoyeurId, ROLES_CONVOYABLES],
+      );
+      if (convoyeurs.length === 0) {
+        return res.status(404).json({ error: "Convoyeur introuvable." });
+      }
+      convoyeurPreassigneId = convoyeurs[0].id;
+    }
+
+    const convoyeurRetenu =
+      convoyeurPreassigneId || (assignerAdmin ? req.user.id : null);
+
     const updated = await db.query(
       `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
               status = 'DEVIS_PROPOSE', updated_at = NOW()
@@ -1578,7 +1662,7 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
       // sans passer par la bourse aux missions. Décocher lors d'une
       // recotation libère la mission, sans quoi un choix ne se reprendrait
       // plus.
-      [price, price_convoyeur, assignerAdmin ? req.user.id : null, mission.id],
+      [price, price_convoyeur, convoyeurRetenu, mission.id],
     );
 
     try {
@@ -1823,6 +1907,17 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
             : null;
         const driverLookup = emailLookup || phoneLookup;
         if (driverLookup?.id) {
+          // Un même performer Kaze ne peut appartenir qu'à un seul compte DLC :
+          // sinon les deux convoyeurs se partagent le même planning Kaze.
+          const dejaPris = await db.query(
+            "SELECT id, full_name FROM users WHERE kaze_driver_id = $1 AND id != $2",
+            [driverLookup.id, convoyeurId],
+          );
+          if (dejaPris.rows.length > 0) {
+            return res.status(409).json({
+              error: `Ce compte Kaze est déjà lié à ${dejaPris.rows[0].full_name}. Déliez-le avant de le rattacher à ce convoyeur.`,
+            });
+          }
           assignedKazeDriverId = driverLookup.id;
           await db.query(
             "UPDATE users SET kaze_driver_id = $1, updated_at = NOW() WHERE id = $2",

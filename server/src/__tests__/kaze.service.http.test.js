@@ -610,7 +610,9 @@ describe("Recherche de convoyeurs", () => {
 // ═════════════════════════════════════════════════════════════
 describe("getMissionsByDriver", () => {
   it("filtre sur le performer et les statuts actifs", async () => {
-    client.get.mockResolvedValue(page([{ id: "j1", status: "started" }]));
+    client.get.mockResolvedValue(
+      page([{ id: "j1", status: "started", performer: { id: "d1" } }]),
+    );
 
     const res = await kaze.getMissionsByDriver("d1");
 
@@ -629,6 +631,31 @@ describe("getMissionsByDriver", () => {
 
     const res = await kaze.getMissionsByDriver("d1");
 
+    expect(res.missions).toEqual([]);
+  });
+
+  it("écarte les jobs d'autrui quand Kaze ignore le filtre", async () => {
+    // Kaze renvoie parfois tout le carnet de l'entreprise, notamment quand
+    // l'identifiant transmis ne correspond à aucun performer connu. Sans
+    // re-filtrage, le convoyeur verrait le planning de ses collègues.
+    client.get.mockResolvedValue(
+      page([
+        { id: "j1", status: "started", performer: { id: "d1" } },
+        { id: "j2", status: "assigned", performer: { id: "autre" } },
+        { id: "j3", status: "assigned" },
+      ]),
+    );
+
+    const res = await kaze.getMissionsByDriver("d1");
+
+    expect(res.missions).toHaveLength(1);
+    expect(res.missions[0].kaze_job_id).toBe("j1");
+  });
+
+  it("n'interroge pas Kaze sans identifiant", async () => {
+    const res = await kaze.getMissionsByDriver("");
+
+    expect(client.get).not.toHaveBeenCalled();
     expect(res.missions).toEqual([]);
   });
 });

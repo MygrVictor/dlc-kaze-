@@ -1296,16 +1296,34 @@ const getDriverByPhone = async (phone) => {
  * Récupère les missions Kaze assignées à un driver.
  */
 const getMissionsByDriver = async (driverId) => {
+  const cible = String(driverId || "").trim();
+  if (!cible) return { missions: [], meta: null };
+
   return withRetry(
     async () => {
       const { data } = await kazeClient.get("/jobs", {
         params: {
-          "filter[performer_id]": driverId,
+          "filter[performer_id]": cible,
           "filter[status]": "assigned,started",
           per_page: 100,
         },
       });
-      const missions = (data.data || []).map(kazeJobToLocal);
+      const brutes = (data.data || []).map(kazeJobToLocal);
+
+      // Filet de sécurité : si Kaze ignore le filtre (identifiant inconnu ou
+      // mal formé), l'API renvoie *tous* les jobs du compte. Un convoyeur
+      // verrait alors le planning de ses collègues. On re-filtre donc ici,
+      // et on n'accepte que les jobs explicitement rattachés à ce performer.
+      const missions = brutes.filter(
+        (m) => m.performer_id && String(m.performer_id) === cible,
+      );
+
+      if (missions.length !== brutes.length) {
+        console.warn(
+          `⚠️ Kaze : filtre performer_id ignoré pour ${cible} — ${brutes.length - missions.length} mission(s) étrangère(s) écartée(s).`,
+        );
+      }
+
       return { missions, meta: data.meta };
     },
     { label: "getMissionsByDriver" },

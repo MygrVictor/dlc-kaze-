@@ -72,6 +72,7 @@ node server/src/db/migrate-password-reset.js
 node server/src/db/migrate-index-tri.js
 node server/src/db/migrate-structure-assureur.js
 node server/src/db/migrate-comptes-rattaches.js
+node server/src/db/migrate-kaze-driver-unique.js
 
 etape "Vérification du démarrage"
 # On lance l'application quelques secondes : mieux vaut détecter ici un module

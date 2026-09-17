@@ -74,6 +74,7 @@ export default function AdminDashboard() {
   // L'administrateur convoie lui-même une partie des missions : cocher
   // retient celle-ci pour lui dès la cotation.
   const [prendreLaMission, setPrendreLaMission] = useState(false);
+  const [convoyeurCotationId, setConvoyeurCotationId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [syncing, setSyncing] = useState(null);
 
@@ -194,20 +195,25 @@ export default function AdminDashboard() {
     }
     setSubmitting(true);
     try {
+      const convoyeurSelectionne = convoyeurs.find(
+        (c) => c.id === convoyeurCotationId && c.source === "dlc",
+      );
       await api.post(`/admin/missions/${priceModal.id}/proposer-prix`, {
         price: Number(priceValue),
         price_convoyeur: Number(priceConvoyeurValue),
-        assignerAdmin: prendreLaMission,
+        assignerAdmin: prendreLaMission && !convoyeurSelectionne,
+        convoyeurId: convoyeurSelectionne?.id || undefined,
       });
       toast.success(
-        prendreLaMission
-          ? "Devis proposé au client. La mission vous reviendra dès son accord."
+        prendreLaMission || convoyeurSelectionne
+          ? "Devis proposé au client. La mission sera pré-affectée à l'acceptation."
           : "Devis proposé au client !",
       );
       setPriceModal(null);
       setPriceValue("");
       setPriceConvoyeurValue("");
       setPrendreLaMission(false);
+      setConvoyeurCotationId("");
       fetchMissions();
       fetchStats();
     } catch (err) {
@@ -1317,6 +1323,8 @@ export default function AdminDashboard() {
                                               setPriceModal(m);
                                               setPriceValue("");
                                               setPriceConvoyeurValue("");
+                                              setPrendreLaMission(false);
+                                              setConvoyeurCotationId("");
                                             }}
                                             className="text-xs bg-primary-600 hover:bg-primary-500 text-white px-2 py-1 rounded flex items-center gap-1"
                                           >
@@ -1755,6 +1763,8 @@ export default function AdminDashboard() {
                       setPriceModal(detailModal);
                       setPriceValue("");
                       setPriceConvoyeurValue("");
+                      setPrendreLaMission(false);
+                      setConvoyeurCotationId("");
                     }}
                     className="text-sm bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"
                   >
@@ -1792,6 +1802,8 @@ export default function AdminDashboard() {
             setPriceModal(m);
             setPriceValue("");
             setPriceConvoyeurValue("");
+            setPrendreLaMission(false);
+            setConvoyeurCotationId("");
           }}
           onAssign={(m) => {
             setAssignModal(m);
@@ -1815,6 +1827,8 @@ export default function AdminDashboard() {
             setPriceModal(m);
             setPriceValue("");
             setPriceConvoyeurValue("");
+            setPrendreLaMission(false);
+            setConvoyeurCotationId("");
           }}
           onAssign={(m) => {
             setAssignModal(m);
@@ -1948,6 +1962,32 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                Pré-affecter un convoyeur (optionnel)
+              </label>
+              <select
+                value={convoyeurCotationId}
+                onChange={(e) => {
+                  setConvoyeurCotationId(e.target.value);
+                  if (e.target.value) setPrendreLaMission(false);
+                }}
+                className="input-field"
+              >
+                <option value="">Aucune pré-affectation</option>
+                {convoyeurs
+                  .filter((c) => c.source === "dlc" && c.id)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} — {c.email}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-xs text-dark-500 mt-1">
+                Si renseigné, la mission passera directement en assignée à
+                l&apos;acceptation du devis.
+              </p>
+            </div>
             {/* Une mission retenue ici ne paraîtra jamais dans la bourse
                 aux missions : elle passe directement en « assignée » dès
                 que le client valide le devis. */}
@@ -1955,6 +1995,7 @@ export default function AdminDashboard() {
               <input
                 type="checkbox"
                 checked={prendreLaMission}
+                disabled={Boolean(convoyeurCotationId)}
                 onChange={(e) => setPrendreLaMission(e.target.checked)}
                 className="mt-0.5 accent-accent-500"
               />

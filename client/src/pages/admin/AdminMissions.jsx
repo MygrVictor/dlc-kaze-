@@ -79,6 +79,7 @@ export default function AdminMissions() {
   // L'administrateur convoie lui-même une partie des missions : cocher
   // retient celle-ci pour lui dès la cotation.
   const [prendreLaMission, setPrendreLaMission] = useState(false);
+  const [convoyeurCotationId, setConvoyeurCotationId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -94,6 +95,16 @@ export default function AdminMissions() {
   const [selectedConvoyeur, setSelectedConvoyeur] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [retraitId, setRetraitId] = useState(null);
+
+  const chargerConvoyeurs = async () => {
+    try {
+      const res = await api.get("/admin/users?role=convoyeur,admin");
+      setConvoyeurs(Array.isArray(res.data?.users) ? res.data.users : []);
+    } catch {
+      setConvoyeurs([]);
+      toast.error("Impossible de charger les convoyeurs.");
+    }
+  };
 
   const fetchKazeJobs = useCallback(() => {
     setKazeLoading(true);
@@ -241,16 +252,18 @@ export default function AdminMissions() {
         price: Number(priceValue),
         price_convoyeur: Number(priceConvoyeurValue),
         assignerAdmin: prendreLaMission,
+        convoyeurId: convoyeurCotationId || undefined,
       });
       toast.success(
-        prendreLaMission
-          ? "Devis proposé au client. La mission vous reviendra dès son accord."
+        prendreLaMission || convoyeurCotationId
+          ? "Devis proposé au client. La mission sera pré-affectée à l'acceptation."
           : "Devis proposé au client.",
       );
       setPriceModal(null);
       setPriceValue("");
       setPriceConvoyeurValue("");
       setPrendreLaMission(false);
+      setConvoyeurCotationId("");
       fetchMissions();
     } catch (err) {
       toast.error(err.response?.data?.error || "Erreur.");
@@ -317,12 +330,7 @@ export default function AdminMissions() {
   const openAssignModal = async (mission) => {
     setAssignModal(mission);
     setSelectedConvoyeur("");
-    try {
-      const res = await api.get("/admin/users?role=convoyeur,admin");
-      setConvoyeurs(res.data.users);
-    } catch {
-      toast.error("Impossible de charger les convoyeurs.");
-    }
+    await chargerConvoyeurs();
   };
 
   const handleAssign = async () => {
@@ -684,6 +692,9 @@ export default function AdminMissions() {
                                 setLectureSeule(false);
                                 setPriceValue("");
                                 setPriceConvoyeurValue("");
+                                setPrendreLaMission(false);
+                                setConvoyeurCotationId("");
+                                chargerConvoyeurs();
                               }}
                               className="btn-primary btn-xs"
                             >
@@ -1183,10 +1194,36 @@ export default function AdminMissions() {
                   {/* Une mission retenue ici ne paraîtra jamais dans la
                       bourse aux missions : elle passe directement en
                       « assignée » dès que le client valide le devis. */}
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Pré-affecter un convoyeur (optionnel)
+                    </label>
+                    <select
+                      value={convoyeurCotationId}
+                      onChange={(e) => {
+                        setConvoyeurCotationId(e.target.value);
+                        if (e.target.value) setPrendreLaMission(false);
+                      }}
+                      className="input-field"
+                    >
+                      <option value="">Aucune pré-affectation</option>
+                      {convoyeurs.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.full_name} — {c.email}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-dark-500 mt-1">
+                      Si renseigné, la mission passera directement en assignée
+                      quand le client acceptera le devis.
+                    </p>
+                  </div>
+
                   <label className="mb-4 flex items-start gap-3 p-3 bg-dark-800/40 border border-dark-700 rounded-lg cursor-pointer">
                     <input
                       type="checkbox"
                       checked={prendreLaMission}
+                      disabled={Boolean(convoyeurCotationId)}
                       onChange={(e) => setPrendreLaMission(e.target.checked)}
                       className="mt-0.5 accent-accent-500"
                     />

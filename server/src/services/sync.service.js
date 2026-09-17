@@ -177,10 +177,10 @@ async function syncKazeStatusesInterne() {
     //    et qui ne sont pas déjà terminées (LIVREE, ANNULEE)
     const { rows: linkedMissions } = await db.query(
       `SELECT m.id, m.kaze_mission_id, m.status, m.client_id, m.vehicle_plate, m.comments, u.email AS client_email
-       FROM missions 
+       FROM missions m
        LEFT JOIN users u ON u.id = m.client_id
-       WHERE kaze_mission_id IS NOT NULL 
-         AND status NOT IN ('LIVREE', 'ANNULEE')
+       WHERE m.kaze_mission_id IS NOT NULL 
+         AND m.status NOT IN ('LIVREE', 'ANNULEE')
          AND NOT (
            COALESCE(u.email, '') ILIKE '%@demo.local'
            OR COALESCE(m.vehicle_plate, '') LIKE 'DM-%'

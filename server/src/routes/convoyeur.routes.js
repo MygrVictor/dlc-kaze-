@@ -18,6 +18,7 @@ const {
 const {
   isDemoEmail,
   isFakeKazeDriverId,
+  isValidKazeDriverId,
   isDemoMission,
   isDemoMissionPayload,
 } = require("../lib/demo-mission");
@@ -316,7 +317,24 @@ router.get("/missions", async (req, res, next) => {
   try {
     const { kaze_driver_id } = req.user;
     const kazeDesactivePourCeCompte =
-      MODE_DEMO || isFakeKazeDriverId(kaze_driver_id);
+      MODE_DEMO ||
+      isFakeKazeDriverId(kaze_driver_id) ||
+      // Un identifiant mal formé (un nom saisi à la main, par exemple) est
+      // ignoré par le filtre Kaze : /jobs renverrait alors le planning de
+      // toute l'entreprise. On retombe sur les missions locales, qui sont
+      // au moins exactes.
+      (Boolean(kaze_driver_id) && !isValidKazeDriverId(kaze_driver_id));
+
+    if (
+      kaze_driver_id &&
+      kazeDesactivePourCeCompte &&
+      !MODE_DEMO &&
+      !isFakeKazeDriverId(kaze_driver_id)
+    ) {
+      console.warn(
+        `⚠️ Convoyeur ${req.user.id} : identifiant Kaze mal formé (${kaze_driver_id}) — planning servi depuis la base locale.`,
+      );
+    }
 
     // Si le convoyeur a un ID Kaze, on récupère directement depuis Kaze
     if (kaze_driver_id && !kazeDesactivePourCeCompte) {

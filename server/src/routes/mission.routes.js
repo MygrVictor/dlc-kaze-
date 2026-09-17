@@ -31,6 +31,7 @@ const {
 const { isDemoMission, isDemoMissionPayload } = require("../lib/demo-mission");
 
 const router = express.Router();
+const ROLES_CONVOYABLES = ["convoyeur", "admin"];
 
 // ── Toutes les routes nécessitent une authentification ───────
 router.use(authenticate);
@@ -112,7 +113,11 @@ router.post(
       const clientId = estAdmin ? req.body.clientId || null : req.user.id;
       const priceConvoyeur = estAdmin ? req.body.priceConvoyeur || null : null;
       const priceClient = estAdmin ? req.body.priceClient || null : null;
+      const convoyeurPreassigneId = estAdmin
+        ? req.body.convoyeurId || null
+        : null;
       let clientEmail = estAdmin ? null : req.user.email || null;
+      let convoyeurPreassigne = null;
 
       if (estAdmin && clientId) {
         const { rows: compte } = await db.query(
@@ -123,6 +128,20 @@ router.post(
           return res.status(404).json({ error: "Client introuvable." });
         }
         clientEmail = compte[0].email || null;
+      }
+
+      if (estAdmin && convoyeurPreassigneId) {
+        const { rows: convoyeurs } = await db.query(
+          `SELECT id, full_name, kaze_driver_id
+             FROM users
+            WHERE id = $1
+              AND role = ANY($2)`,
+          [convoyeurPreassigneId, ROLES_CONVOYABLES],
+        );
+        if (convoyeurs.length === 0) {
+          return res.status(404).json({ error: "Convoyeur introuvable." });
+        }
+        convoyeurPreassigne = convoyeurs[0];
       }
 
       // Une mission diffusée sans rémunération ne trouvera pas preneur :
@@ -136,7 +155,11 @@ router.post(
 
       // Une mission administrative est déjà négociée, elle rejoint
       // directement les missions disponibles.
-      const statutInitial = estAdmin ? "ACCEPTEE" : "EN_ATTENTE_DE_COTATION";
+      const statutInitial = estAdmin
+        ? convoyeurPreassigneId
+          ? "ASSIGNEE"
+          : "ACCEPTEE"
+        : "EN_ATTENTE_DE_COTATION";
 
       if (!departureAddress || !arrivalAddress) {
         return res
@@ -321,7 +344,20 @@ router.post(
             arrivalStructureName || null,
           ],
         );
-        createdMissions.push(rows[0]);
+
+        let missionCreee = rows[0];
+        if (convoyeurPreassigneId) {
+          const { rows: missionAffectee } = await db.query(
+            `UPDATE missions
+                SET convoyeur_id = $1, updated_at = NOW()
+              WHERE id = $2
+          RETURNING *`,
+            [convoyeurPreassigneId, missionCreee.id],
+          );
+          missionCreee = missionAffectee[0] || missionCreee;
+        }
+
+        createdMissions.push(missionCreee);
       }
 
       // Une mission saisie par l'administration est déjà publiée : ce
@@ -349,6 +385,19 @@ router.post(
                 [idKaze, mission.id],
               );
               mission.kaze_mission_id = idKaze;
+
+              if (mission.convoyeur_id) {
+                if (convoyeurPreassigne?.kaze_driver_id) {
+                  await kazeService.assignDriver(
+                    idKaze,
+                    convoyeurPreassigne.kaze_driver_id,
+                  );
+                } else {
+                  console.error(
+                    `⚠️ Mission ${mission.id} pré-assignée à un compte sans liaison Kaze.`,
+                  );
+                }
+              }
             }
           } catch (kazeErr) {
             console.error(
@@ -362,6 +411,7 @@ router.post(
           : undefined;
 
         for (const mission of createdMissions) {
+          if (mission.convoyeur_id) continue;
           if (telegramService.actif) {
             telegramService
               .annoncerMissionDisponible(mission, lienMission)

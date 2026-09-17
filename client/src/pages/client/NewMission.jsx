@@ -134,27 +134,37 @@ export default function NewMission() {
   // personne — une course prise en direct n'a pas toujours de client
   // enregistré sur la plateforme.
   const [clients, setClients] = useState([]);
+  const [convoyeurs, setConvoyeurs] = useState([]);
   const [clientId, setClientId] = useState("");
+  const [convoyeurId, setConvoyeurId] = useState("");
   const [priceConvoyeur, setPriceConvoyeur] = useState("");
   const [priceClient, setPriceClient] = useState("");
 
   useEffect(() => {
     if (!estAdmin) return;
-    api
-      .get("/admin/users", { params: { role: "client" } })
-      .then(({ data }) => {
+    Promise.all([
+      api.get("/admin/users", { params: { role: "client" } }),
+      api.get("/admin/users", { params: { role: "convoyeur,admin" } }),
+    ])
+      .then(([clientsRes, convoyeursRes]) => {
         // La liste sert à retrouver un compte, pas à consulter les
         // dernières inscriptions : l'ordre alphabétique est le seul
         // dans lequel on cherche un nom.
-        const liste = (data.users || []).sort((a, b) =>
+        const listeClients = (clientsRes.data.users || []).sort((a, b) =>
           (a.company || a.full_name || "").localeCompare(
             b.company || b.full_name || "",
             "fr",
           ),
         );
-        setClients(liste);
+        const listeConvoyeurs = (convoyeursRes.data.users || []).sort((a, b) =>
+          (a.full_name || "").localeCompare(b.full_name || "", "fr"),
+        );
+        setClients(listeClients);
+        setConvoyeurs(listeConvoyeurs);
       })
-      .catch(() => toast.error("Liste des clients indisponible."));
+      .catch(() => {
+        toast.error("Annuaire indisponible (clients/convoyeurs).");
+      });
   }, [estAdmin]);
 
   // Destinataire du récapitulatif de fin de mission (PV, photos,
@@ -325,6 +335,7 @@ export default function NewMission() {
         // Ignorés par l'API si l'auteur n'est pas administrateur.
         ...(estAdmin && {
           clientId: clientId || null,
+          convoyeurId: convoyeurId || null,
           priceConvoyeur: priceConvoyeur || null,
           priceClient: priceClient || null,
         }),
@@ -447,6 +458,28 @@ export default function NewMission() {
                   {clients.length === 0
                     ? "Aucun compte client enregistré pour le moment."
                     : "Choisissez « Autre » pour une course prise en direct : la mission n’apparaîtra dans aucun espace client."}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                  Convoyeur à affecter (optionnel)
+                </label>
+                <select
+                  className="input-field"
+                  value={convoyeurId}
+                  onChange={(e) => setConvoyeurId(e.target.value)}
+                >
+                  <option value="">Ne pas affecter maintenant</option>
+                  {convoyeurs.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.full_name} — {c.email}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-dark-500 mt-2">
+                  Si choisi, la mission sera créée directement en statut
+                  assigné.
                 </p>
               </div>
 

@@ -983,17 +983,21 @@ describe("PATCH /api/admin/users/:id/kaze-link", () => {
 
   it("retourne 404 si l'utilisateur n'existe pas", async () => {
     mockDb(ADMIN, () => ({ rows: [] }));
-    const res = await lier({ kazeDriverId: "kz-1" });
+    const res = await lier({
+      kazeDriverId: "11111111-2222-3333-4444-555555555555",
+    });
     expect(res.status).toBe(404);
   });
 
   it("refuse de lier un compte non convoyeur", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/SELECT id, role FROM users/i.test(sql))
+      if (/SELECT id, role, email, phone FROM users/i.test(sql))
         return { rows: [{ id: USER_ID, role: "client" }] };
     });
 
-    const res = await lier({ kazeDriverId: "kz-1" });
+    const res = await lier({
+      kazeDriverId: "11111111-2222-3333-4444-555555555555",
+    });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/Seuls les convoyeurs/i);
@@ -1001,13 +1005,15 @@ describe("PATCH /api/admin/users/:id/kaze-link", () => {
 
   it("retourne 409 si le driver Kaze est déjà pris", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/SELECT id, role FROM users/i.test(sql))
+      if (/SELECT id, role, email, phone FROM users/i.test(sql))
         return { rows: [{ id: USER_ID, role: "convoyeur" }] };
       if (/kaze_driver_id = \$1 AND id != \$2/i.test(sql))
         return { rows: [{ full_name: "Paul Martin" }] };
     });
 
-    const res = await lier({ kazeDriverId: "kz-1" });
+    const res = await lier({
+      kazeDriverId: "11111111-2222-3333-4444-555555555555",
+    });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/Paul Martin/);
@@ -1015,14 +1021,23 @@ describe("PATCH /api/admin/users/:id/kaze-link", () => {
 
   it("lie le compte Kaze au convoyeur", async () => {
     mockDb(ADMIN, (sql) => {
-      if (/SELECT id, role FROM users/i.test(sql))
+      if (/SELECT id, role, email, phone FROM users/i.test(sql))
         return { rows: [{ id: USER_ID, role: "convoyeur" }] };
       if (/kaze_driver_id = \$1 AND id != \$2/i.test(sql)) return { rows: [] };
       if (/SET kaze_driver_id = \$1/i.test(sql))
-        return { rows: [{ id: USER_ID, kaze_driver_id: "kz-1" }] };
+        return {
+          rows: [
+            {
+              id: USER_ID,
+              kaze_driver_id: "11111111-2222-3333-4444-555555555555",
+            },
+          ],
+        };
     });
 
-    const res = await lier({ kazeDriverId: "kz-1" });
+    const res = await lier({
+      kazeDriverId: "11111111-2222-3333-4444-555555555555",
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Compte Kaze lié.");
@@ -1031,7 +1046,7 @@ describe("PATCH /api/admin/users/:id/kaze-link", () => {
   it("supprime la liaison quand kazeDriverId est vide", async () => {
     let params;
     mockDb(ADMIN, (sql, p) => {
-      if (/SELECT id, role FROM users/i.test(sql))
+      if (/SELECT id, role, email, phone FROM users/i.test(sql))
         return { rows: [{ id: USER_ID, role: "convoyeur" }] };
       if (/SET kaze_driver_id = \$1/i.test(sql)) {
         params = p;
@@ -1611,7 +1626,11 @@ describe("POST /api/admin/missions/:id/annuler", () => {
       if (isGetMissionById(sql))
         return {
           rows: [
-            { id: MISSION_ID, status: "ASSIGNEE", kaze_mission_id: "kz-1" },
+            {
+              id: MISSION_ID,
+              status: "ASSIGNEE",
+              kaze_mission_id: "11111111-2222-3333-4444-555555555555",
+            },
           ],
         };
       if (/status = 'ANNULEE'/i.test(sql))
@@ -1622,7 +1641,9 @@ describe("POST /api/admin/missions/:id/annuler", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.mission.status).toBe("ANNULEE");
-    expect(kazeService.cancelMission).toHaveBeenCalledWith("kz-1");
+    expect(kazeService.cancelMission).toHaveBeenCalledWith(
+      "11111111-2222-3333-4444-555555555555",
+    );
   });
 
   it("annule localement même si Kaze échoue", async () => {
@@ -1630,7 +1651,11 @@ describe("POST /api/admin/missions/:id/annuler", () => {
       if (isGetMissionById(sql))
         return {
           rows: [
-            { id: MISSION_ID, status: "ACCEPTEE", kaze_mission_id: "kz-1" },
+            {
+              id: MISSION_ID,
+              status: "ACCEPTEE",
+              kaze_mission_id: "11111111-2222-3333-4444-555555555555",
+            },
           ],
         };
       if (/status = 'ANNULEE'/i.test(sql))
@@ -1694,7 +1719,7 @@ describe("POST /api/admin/missions/:id/sync-kaze", () => {
             {
               id: MISSION_ID,
               status: "ASSIGNEE",
-              kaze_mission_id: "kz-1",
+              kaze_mission_id: "11111111-2222-3333-4444-555555555555",
               convoyeur_id: USER_ID,
             },
           ],
@@ -1708,7 +1733,7 @@ describe("POST /api/admin/missions/:id/sync-kaze", () => {
     expect(res.body.driver_assigned).toBe(true);
     expect(res.body.message).toMatch(/ré-assigné/i);
     expect(kazeService.assignDriver).toHaveBeenCalledWith(
-      "kz-1",
+      "11111111-2222-3333-4444-555555555555",
       "kz-driver-1",
     );
   });
@@ -1721,7 +1746,7 @@ describe("POST /api/admin/missions/:id/sync-kaze", () => {
             {
               id: MISSION_ID,
               status: "ASSIGNEE",
-              kaze_mission_id: "kz-1",
+              kaze_mission_id: "11111111-2222-3333-4444-555555555555",
               convoyeur_id: USER_ID,
             },
           ],
@@ -1829,9 +1854,11 @@ describe("GET /api/admin/missions/map", () => {
 
   it("conserve les jobs Kaze déjà géolocalisés", async () => {
     mockDb(ADMIN, () => ({ rows: [] }));
-    kazeService.fetchRecentJobs.mockResolvedValue([{ id: "kz-1" }]);
+    kazeService.fetchRecentJobs.mockResolvedValue([
+      { id: "11111111-2222-3333-4444-555555555555" },
+    ]);
     kazeService.kazeJobToLocal.mockReturnValue({
-      kaze_job_id: "kz-1",
+      kaze_job_id: "11111111-2222-3333-4444-555555555555",
       latitude: 43.6,
       longitude: 1.44,
       title: "Toulouse",
@@ -1848,9 +1875,11 @@ describe("GET /api/admin/missions/map", () => {
     // se compte en milliers et Nominatim plafonne à une requête par
     // seconde. Seul le cache, rempli hors ligne, est consulté.
     mockDb(ADMIN, () => ({ rows: [] }));
-    kazeService.fetchRecentJobs.mockResolvedValue([{ id: "kz-1" }]);
+    kazeService.fetchRecentJobs.mockResolvedValue([
+      { id: "11111111-2222-3333-4444-555555555555" },
+    ]);
     kazeService.kazeJobToLocal.mockReturnValue({
-      kaze_job_id: "kz-1",
+      kaze_job_id: "11111111-2222-3333-4444-555555555555",
       latitude: null,
       address: "Bordeaux",
     });
@@ -1903,7 +1932,9 @@ describe("Proxy Kaze", () => {
 
   it("liste les jobs Kaze sur 60 jours par défaut", async () => {
     mockDb(ADMIN);
-    kazeService.fetchRecentJobs.mockResolvedValue([{ id: "kz-1" }]);
+    kazeService.fetchRecentJobs.mockResolvedValue([
+      { id: "11111111-2222-3333-4444-555555555555" },
+    ]);
     kazeService.kazeJobToLocal.mockReturnValue({ kaze_status: "waiting" });
 
     const res = await auth(request(app).get("/api/admin/kaze/jobs"));
@@ -1933,7 +1964,9 @@ describe("Proxy Kaze", () => {
     // de la charge transférée à chaque ouverture du tableau de bord.
     // Il reste disponible sur le détail d'un job.
     mockDb(ADMIN);
-    kazeService.fetchRecentJobs.mockResolvedValue([{ id: "kz-1" }]);
+    kazeService.fetchRecentJobs.mockResolvedValue([
+      { id: "11111111-2222-3333-4444-555555555555" },
+    ]);
     kazeService.kazeJobToLocal.mockReturnValue({
       kaze_status: "waiting",
       steps: [{ name: "Départ" }],
@@ -1959,12 +1992,18 @@ describe("Proxy Kaze", () => {
 
   it("retourne le détail d'un job Kaze normalisé", async () => {
     mockDb(ADMIN);
-    kazeService.fetchJob.mockResolvedValue({ id: "kz-1" });
-    kazeService.kazeJobToLocal.mockReturnValue({ kaze_job_id: "kz-1" });
+    kazeService.fetchJob.mockResolvedValue({
+      id: "11111111-2222-3333-4444-555555555555",
+    });
+    kazeService.kazeJobToLocal.mockReturnValue({
+      kaze_job_id: "11111111-2222-3333-4444-555555555555",
+    });
 
     const res = await auth(request(app).get("/api/admin/kaze/jobs/kz-1"));
 
-    expect(res.body).toEqual({ kaze_job_id: "kz-1" });
+    expect(res.body).toEqual({
+      kaze_job_id: "11111111-2222-3333-4444-555555555555",
+    });
   });
 
   it("liste les utilisateurs Kaze normalisés", async () => {
@@ -2009,7 +2048,9 @@ describe("Proxy Kaze", () => {
 
   it("met à jour un job Kaze", async () => {
     mockDb(ADMIN);
-    kazeService.updateKazeJob.mockResolvedValue({ id: "kz-1" });
+    kazeService.updateKazeJob.mockResolvedValue({
+      id: "11111111-2222-3333-4444-555555555555",
+    });
 
     const res = await auth(request(app).put("/api/admin/kaze/jobs/kz-1")).send({
       title: "Nouveau titre",

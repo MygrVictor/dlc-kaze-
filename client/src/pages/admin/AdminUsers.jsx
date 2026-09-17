@@ -49,6 +49,8 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState("");
   const [kazeModal, setKazeModal] = useState(null); // user obj
+  const [kazeEmailInput, setKazeEmailInput] = useState("");
+  const [kazePhoneInput, setKazePhoneInput] = useState("");
   const [kazeIdInput, setKazeIdInput] = useState("");
   const [kazeSaving, setKazeSaving] = useState(false);
 
@@ -161,6 +163,11 @@ export default function AdminUsers() {
   const openKazeModal = (u) => {
     setKazeModal(u);
     setKazeIdInput(u.kaze_driver_id || "");
+    // On pré-remplit avec les coordonnées du compte DLC : dans l'immense
+    // majorité des cas, ce sont les mêmes que sur Kaze, et un simple clic
+    // suffit alors à retrouver le bon identifiant.
+    setKazeEmailInput(u.email || "");
+    setKazePhoneInput(u.phone || "");
   };
 
   const openParentModal = (u) => {
@@ -190,7 +197,7 @@ export default function AdminUsers() {
     setDocsData([]);
     setDocsLoading(true);
     api
-      .get(`/admin/users/${u.id}/documents`)
+      .get(`/admin/users/${u.id}/docs`)
       .then((res) => setDocsData(res.data.documents))
       .catch(() => toast.error("Erreur chargement documents."))
       .finally(() => setDocsLoading(false));
@@ -199,13 +206,10 @@ export default function AdminUsers() {
   const handleDocReview = async (userId, docId, status, note) => {
     setDocReviewing((p) => ({ ...p, [docId]: true }));
     try {
-      const { data } = await api.patch(
-        `/admin/users/${userId}/documents/${docId}`,
-        {
-          status,
-          admin_note: note || undefined,
-        },
-      );
+      const { data } = await api.patch(`/admin/users/${userId}/docs/${docId}`, {
+        status,
+        admin_note: note || undefined,
+      });
       toast.success(data.message);
       setDocsData((prev) =>
         prev.map((d) => (d.id === docId ? data.document : d)),
@@ -218,15 +222,21 @@ export default function AdminUsers() {
     }
   };
 
-  const handleKazeLink = async () => {
+  const handleKazeLink = async (mode = "id") => {
     setKazeSaving(true);
     try {
-      await api.patch(`/admin/users/${kazeModal.id}/kaze-link`, {
-        kazeDriverId: kazeIdInput.trim() || null,
-      });
-      toast.success(
-        kazeIdInput.trim() ? "Compte Kaze lié." : "Liaison Kaze supprimée.",
+      const corps =
+        mode === "email"
+          ? { kazeEmail: kazeEmailInput.trim() }
+          : mode === "phone"
+            ? { kazePhone: kazePhoneInput.trim() }
+            : { kazeDriverId: kazeIdInput.trim() || null };
+
+      const { data } = await api.patch(
+        `/admin/users/${kazeModal.id}/kaze-link`,
+        corps,
       );
+      toast.success(data.message);
       setKazeModal(null);
       fetchUsers();
     } catch (err) {
@@ -573,21 +583,69 @@ export default function AdminUsers() {
             </div>
 
             <p className="text-sm text-dark-400 mb-4">
-              Entrez l'ID du convoyeur dans Kaze (kaze_driver_id) ou laissez
-              vide pour supprimer la liaison.
+              Recherchez le convoyeur dans Kaze par son email ou son téléphone :
+              l'identifiant exact sera récupéré automatiquement. La saisie
+              manuelle reste possible, mais seul un UUID Kaze est accepté — un
+              identifiant approximatif ferait apparaître le planning de toute
+              l'entreprise dans l'espace du convoyeur.
             </p>
 
-            <input
-              type="text"
-              value={kazeIdInput}
-              onChange={(e) => setKazeIdInput(e.target.value)}
-              className="input-field mb-4"
-              placeholder="ex: drv_abc123xyz"
-            />
+            <label className="block text-xs text-dark-400 mb-1">
+              Email du compte Kaze
+            </label>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="email"
+                value={kazeEmailInput}
+                onChange={(e) => setKazeEmailInput(e.target.value)}
+                className="input-field flex-1"
+                placeholder="prenom.nom@exemple.fr"
+              />
+              <button
+                onClick={() => handleKazeLink("email")}
+                disabled={kazeSaving || !kazeEmailInput.trim()}
+                className="btn-primary whitespace-nowrap disabled:opacity-40"
+              >
+                Lier
+              </button>
+            </div>
+
+            <label className="block text-xs text-dark-400 mb-1">
+              Téléphone du compte Kaze
+            </label>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="tel"
+                value={kazePhoneInput}
+                onChange={(e) => setKazePhoneInput(e.target.value)}
+                className="input-field flex-1"
+                placeholder="06 12 34 56 78"
+              />
+              <button
+                onClick={() => handleKazeLink("phone")}
+                disabled={kazeSaving || !kazePhoneInput.trim()}
+                className="btn-primary whitespace-nowrap disabled:opacity-40"
+              >
+                Lier
+              </button>
+            </div>
+
+            <div className="border-t border-dark-700 pt-4">
+              <label className="block text-xs text-dark-400 mb-1">
+                Identifiant Kaze (UUID) — ou laissez vide pour délier
+              </label>
+              <input
+                type="text"
+                value={kazeIdInput}
+                onChange={(e) => setKazeIdInput(e.target.value)}
+                className="input-field mb-4 font-mono text-sm"
+                placeholder="79e92f95-e135-4479-a56f-86e12306fc18"
+              />
+            </div>
 
             <div className="flex gap-3">
               <button
-                onClick={handleKazeLink}
+                onClick={() => handleKazeLink("id")}
                 disabled={kazeSaving}
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
@@ -595,7 +653,7 @@ export default function AdminUsers() {
                 {kazeSaving
                   ? "Enregistrement…"
                   : kazeIdInput.trim()
-                    ? "Lier"
+                    ? "Lier cet UUID"
                     : "Supprimer la liaison"}
               </button>
               <button

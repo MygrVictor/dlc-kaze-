@@ -51,7 +51,7 @@ const CONVOYEUR = {
   phone: "0612345678",
   role: "convoyeur",
   is_validated: true,
-  kaze_driver_id: "kaze-driver-1",
+  kaze_driver_id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 };
 
 const CONVOYEUR_SANS_KAZE = { ...CONVOYEUR, kaze_driver_id: null };
@@ -171,7 +171,7 @@ describe("GET /api/convoyeur/profil", () => {
   it("enrichit le profil avec les données Kaze", async () => {
     mockDb(CONVOYEUR, () => ({ rows: [CONVOYEUR] }));
     kazeService.getDriver.mockResolvedValue({
-      id: "kaze-driver-1",
+      id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
       name: "Jean",
     });
 
@@ -189,7 +189,7 @@ describe("GET /api/convoyeur/profil", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.kazeLinked).toBe(true);
-    expect(res.body.kazeDriverInfo).toEqual({ id: "kaze-driver-1" });
+    expect(res.body.kazeDriverInfo).toEqual({ id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" });
   });
 });
 
@@ -573,7 +573,7 @@ describe("POST /api/convoyeur/kaze-missions/:kazeJobId/prendre", () => {
     expect(res.status).toBe(200);
     expect(kazeService.assignDriver).toHaveBeenCalledWith(
       "kz-job-1",
-      "kaze-driver-1",
+      "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     );
   });
 });
@@ -654,7 +654,7 @@ describe("POST /api/convoyeur/missions/:id/prendre", () => {
     expect(res.body.mission.kaze_mission_id).toBe("kz-created-1");
     expect(kazeService.assignDriver).toHaveBeenCalledWith(
       "kz-created-1",
-      "kaze-driver-1",
+      "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     );
   });
 
