@@ -9,6 +9,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
+
 /**
  * Espace factures d'un destinataire.
  *
@@ -176,7 +178,7 @@ export default function EspaceFactures({
                 </div>
 
                 <a
-                  href={`${f.file_path}?token=${localStorage.getItem("dlc_token")}`}
+                  href={`${API_BASE}${f.file_path}`}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dark-700 text-sm font-medium hover:bg-dark-700 transition"

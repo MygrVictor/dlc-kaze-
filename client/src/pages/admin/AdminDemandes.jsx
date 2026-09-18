@@ -59,9 +59,8 @@ const PIECES = {
 const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
 // Les pièces d'identité ne sont servies qu'à un compte authentifié. Une
-// balise <a> ne peut pas porter d'en-tête, le jeton passe donc en query.
-const lienDocument = (chemin) =>
-  `${API_BASE}${chemin}?token=${localStorage.getItem("dlc_token")}`;
+// balise <a> ne peut pas porter d'en-tête, l'auth passe désormais par cookie.
+const lienDocument = (chemin) => `${API_BASE}${chemin}`;
 
 export default function AdminDemandes() {
   const [demandes, setDemandes] = useState([]);

@@ -1,6 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+const rateLimit = require("express-rate-limit");
 const db = require("../db");
 const {
   authenticatePartnerApiKey,
@@ -9,6 +10,17 @@ const pricingService = require("../services/pricing.service");
 
 const router = express.Router();
 
+// Limiteur dédié à l'API partenaire : borne les tentatives de devinette de
+// clé et l'usage abusif, indépendamment du limiteur global.
+const partnerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Trop de requêtes. Réessayez plus tard." },
+});
+
+router.use(partnerLimiter);
 router.use(authenticatePartnerApiKey);
 
 router.post("/devis", async (req, res, next) => {
@@ -102,7 +114,7 @@ router.post("/commandes", async (req, res, next) => {
 
       if (!clientId) {
         const randomPassword = crypto.randomBytes(24).toString("hex");
-        const hash = await bcrypt.hash(randomPassword, 10);
+        const hash = await bcrypt.hash(randomPassword, 12);
 
         const created = await trx.query(
           `INSERT INTO users (email, password_hash, full_name, phone, role, is_validated)

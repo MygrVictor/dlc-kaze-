@@ -379,7 +379,7 @@ describe("POST /api/partner/commandes", () => {
       "0600000000",
     ]);
     // Le mot de passe est bien aléatoire et jamais transmis par le partenaire.
-    expect(bcrypt.hash).toHaveBeenCalledWith(expect.any(String), 10);
+    expect(bcrypt.hash).toHaveBeenCalledWith(expect.any(String), 12);
     expect(bcrypt.hash.mock.calls[0][0]).toHaveLength(48);
   });
 

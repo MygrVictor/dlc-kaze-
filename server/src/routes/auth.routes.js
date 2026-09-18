@@ -22,9 +22,18 @@ const kazeService = require("../services/kaze.service");
 const { isValidSiret, normaliserSiret } = require("../lib/siret");
 
 const { authenticate, authorize } = require("../middleware/auth.middleware");
+const { setAuthCookie, clearAuthCookie } = require("../lib/auth-cookie");
 const crypto = require("crypto");
 
 const router = express.Router();
+
+// Hachage bcrypt inerte, comparé lorsqu'aucun compte ne correspond à
+// l'email fourni au login. Il n'ouvre aucun accès : sa seule fonction est
+// de faire durer la vérification aussi longtemps qu'un vrai `compare`,
+// pour qu'un email inexistant et un mot de passe erroné répondent au même
+// rythme. Généré une fois pour « mot de passe impossible », coût 12.
+const LEURRE_HASH_BCRYPT =
+  "$2a$12$4QQBFLGgXQLRYVl5dxiRX.i4k/7A9j/g4zf4rZaDFnmCAQ94yk8.e";
 
 // ── Justificatifs joints à une candidature convoyeur ─────────
 //
@@ -726,6 +735,11 @@ router.post("/login", authLimiter, async (req, res, next) => {
       normalizedEmail,
     ]);
     if (rows.length === 0) {
+      // Un compte inexistant renverrait immédiatement, sans passer par
+      // bcrypt : la différence de temps face à un mot de passe erroné
+      // trahirait l'existence de l'adresse. On paie donc un hachage à
+      // vide pour aligner les deux chemins.
+      await bcrypt.compare(password, LEURRE_HASH_BCRYPT);
       // Audit : tentative échouée (utilisateur inexistant)
       auditLog("LOGIN_FAILED", null, {
         ip: req.ip,
@@ -762,6 +776,11 @@ router.post("/login", authLimiter, async (req, res, next) => {
       role: user.role,
     });
 
+    setAuthCookie(res, token);
+
+    // Le jeton ne voyage que dans le cookie httpOnly : le renvoyer dans le
+    // corps l'exposerait à tout script de la page, annulant le bénéfice du
+    // httpOnly.
     res.json({
       user: {
         id: user.id,
@@ -770,11 +789,15 @@ router.post("/login", authLimiter, async (req, res, next) => {
         role: user.role,
         is_validated: user.is_validated,
       },
-      token,
     });
   } catch (err) {
     next(err);
   }
+});
+
+router.post("/logout", (_req, res) => {
+  clearAuthCookie(res);
+  res.json({ message: "Déconnecté." });
 });
 
 // ── Réinitialisation de mot de passe ─────────────────────────
@@ -839,10 +862,13 @@ router.post("/reset-password", authLimiter, async (req, res, next) => {
         .status(400)
         .json({ error: "Lien et nouveau mot de passe obligatoires." });
     }
-    if (String(password).length < 8) {
-      return res.status(400).json({
-        error: "Le mot de passe doit contenir au moins 8 caractères.",
-      });
+    // Même exigence qu'à la création du compte : sans cela, le reset
+    // devenait une porte dérobée pour se fixer un mot de passe faible.
+    const passwordErrors = validatePassword(String(password));
+    if (passwordErrors.length > 0) {
+      return res
+        .status(400)
+        .json({ error: passwordErrors[0], details: passwordErrors });
     }
 
     const { rows } = await db.query(
@@ -866,7 +892,7 @@ router.post("/reset-password", authLimiter, async (req, res, next) => {
     if (!demande || demande.used_at) return invalide();
     if (new Date(demande.expires_at) <= new Date()) return invalide();
 
-    const hash = await bcrypt.hash(String(password), 10);
+    const hash = await bcrypt.hash(String(password), 12);
 
     // Marquage et changement dans la même transaction : un jeton consommé
     // sans mot de passe changé enfermerait l'utilisateur dehors.

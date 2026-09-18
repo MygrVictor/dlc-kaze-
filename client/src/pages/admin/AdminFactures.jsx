@@ -14,6 +14,8 @@ import {
   Truck,
 } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
+
 /**
  * Dépôt et suivi des factures.
  *
@@ -289,7 +291,9 @@ export default function AdminFactures() {
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-dark-200">Numéro *</span>
+              <span className="text-sm font-medium text-dark-200">
+                Numéro *
+              </span>
               <input
                 type="text"
                 value={form.numero}
@@ -302,7 +306,9 @@ export default function AdminFactures() {
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-dark-200">Montant TTC (€)</span>
+              <span className="text-sm font-medium text-dark-200">
+                Montant TTC (€)
+              </span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -342,7 +348,9 @@ export default function AdminFactures() {
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-dark-200">Date d'émission</span>
+              <span className="text-sm font-medium text-dark-200">
+                Date d'émission
+              </span>
               <input
                 type="date"
                 value={form.date_emission}
@@ -352,7 +360,9 @@ export default function AdminFactures() {
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-dark-200">Échéance</span>
+              <span className="text-sm font-medium text-dark-200">
+                Échéance
+              </span>
               <input
                 type="date"
                 value={form.date_echeance}
@@ -387,7 +397,9 @@ export default function AdminFactures() {
             />
             <Upload size={22} className="mx-auto mb-2 text-slate-400" />
             {fichier ? (
-              <p className="text-sm font-medium text-dark-200">{fichier.name}</p>
+              <p className="text-sm font-medium text-dark-200">
+                {fichier.name}
+              </p>
             ) : (
               <p className="text-sm text-slate-500">
                 Glissez le PDF ici, ou cliquez pour le choisir
@@ -530,7 +542,7 @@ export default function AdminFactures() {
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <a
-                        href={`${f.file_path}?token=${localStorage.getItem("dlc_token")}`}
+                        href={`${API_BASE}${f.file_path}`}
                         target="_blank"
                         rel="noreferrer"
                         title="Télécharger"

@@ -107,7 +107,11 @@ describe("POST /api/auth/login", () => {
       .post("/api/auth/login")
       .send({ email: "user@test.com", password: "GoodPass#1" });
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty("token");
+    // Le jeton ne doit plus apparaître dans le corps : il n'est posé que
+    // dans le cookie httpOnly.
+    expect(res.body).not.toHaveProperty("token");
+    const cookies = res.headers["set-cookie"] || [];
+    expect(cookies.some((c) => c.startsWith("dlc_token="))).toBe(true);
     expect(res.body.user.email).toBe("user@test.com");
   });
 });

@@ -23,8 +23,7 @@ import toast from "react-hot-toast";
 const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
 const getFileUrl = (filePath) => {
-  const token = localStorage.getItem("dlc_token");
-  return `${API_BASE}${filePath}?token=${token}`;
+  return `${API_BASE}${filePath}`;
 };
 
 const DOCUMENT_TYPES = [

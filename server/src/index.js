@@ -15,6 +15,7 @@ const convoyeurRoutes = require("./routes/convoyeur.routes");
 const factureRoutes = require("./routes/facture.routes");
 const webhookRoutes = require("./routes/webhook.routes");
 const partnerRoutes = require("./routes/partner.routes");
+const { extractAuthToken } = require("./lib/auth-cookie");
 const {
   sanitizeInputs,
   securityHeaders,
@@ -158,21 +159,16 @@ app.use(
 app.use(securityHeaders);
 
 // ── CORS strict ─────────────────────────────────────────────
-if (isProduction) {
-  // En production, le client est servi depuis le même serveur
-  // CORS n'est pas nécessaire mais on l'active pour les requêtes API
-  app.use(cors({ origin: true, credentials: true }));
-} else {
-  app.use(
-    cors({
-      origin: process.env.CLIENT_URL,
-      credentials: true,
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-      maxAge: 86400,
-    }),
-  );
-}
+const corsOrigin = process.env.CLIENT_URL || false;
+app.use(
+  cors({
+    origin: corsOrigin,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    maxAge: 86400,
+  }),
+);
 
 // ── Protection HTTP Parameter Pollution ─────────────────────
 app.use(hpp());
@@ -234,8 +230,10 @@ app.use("/api/v1", partnerRoutes);
 // Un jeton valide ne suffit pas, on vérifie en base que le demandeur
 // est bien le propriétaire du document — ou un administrateur.
 //
-// Le jeton est accepté en query param car ces URL sont posées dans des
-// balises <img>/<a> qui ne peuvent pas porter d'en-tête Authorization.
+// L'authentification s'appuie sur le cookie httpOnly envoyé
+// automatiquement par le navigateur (ou, à défaut, l'en-tête Bearer) :
+// aucun jeton ne transite plus par l'URL, où il aurait fini dans les
+// journaux d'accès et l'historique.
 const uploadsDir = require("./lib/uploads").RACINE_UPLOADS;
 if (!require("fs").existsSync(uploadsDir))
   require("fs").mkdirSync(uploadsDir, { recursive: true });
@@ -247,13 +245,7 @@ const db = require("./db");
 app.get("/uploads/*", async (req, res) => {
   let charge;
   try {
-    let token = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    } else if (req.query.token) {
-      token = req.query.token;
-    }
+    const token = extractAuthToken(req);
 
     if (!token) {
       return res.status(401).json({ error: "Token manquant." });

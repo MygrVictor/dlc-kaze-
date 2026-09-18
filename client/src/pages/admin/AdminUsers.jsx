@@ -39,10 +39,7 @@ import toast from "react-hot-toast";
 // qui serait figé dans le bundle et casserait les téléchargements en ligne.
 const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
-const getFileUrl = (filePath) => {
-  const token = localStorage.getItem("dlc_token");
-  return `${API_BASE}${filePath}?token=${token}`;
-};
+const getFileUrl = (filePath) => `${API_BASE}${filePath}`;
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);

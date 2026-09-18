@@ -1,17 +1,16 @@
 const jwt = require("jsonwebtoken");
 const db = require("../db");
+const { extractAuthToken } = require("../lib/auth-cookie");
 
 /**
  * Vérifie le token JWT et attache req.user.
  */
 const authenticate = async (req, res, next) => {
   try {
-    const header = req.headers.authorization;
-    if (!header || !header.startsWith("Bearer ")) {
+    const token = extractAuthToken(req);
+    if (!token) {
       return res.status(401).json({ error: "Token manquant." });
     }
-
-    const token = header.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const { rows } = await db.query(
