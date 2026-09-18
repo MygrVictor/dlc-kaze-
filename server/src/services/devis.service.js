@@ -483,9 +483,9 @@ function generateDevisPDF(mission, client) {
     .text("TTC", 450, y + 7, { width: 95, align: "right" });
   y += 25;
 
-  // Ligne mission
-  const ht = mission.price ? (Number(mission.price) / 1.2).toFixed(2) : "—";
-  const ttc = mission.price ? Number(mission.price).toFixed(2) : "—";
+  // Ligne mission — le prix coté au client est HORS TAXE
+  const ht = mission.price ? Number(mission.price).toFixed(2) : "—";
+  const ttc = mission.price ? (Number(mission.price) * 1.2).toFixed(2) : "—";
   const description =
     `Convoyage ${mission.vehicle_brand || ""} ${mission.vehicle_model || ""} — ${mission.departure_address} → ${mission.arrival_address}`.trim();
 
@@ -546,9 +546,7 @@ function generateDevisPDF(mission, client) {
     .font("Helvetica")
     .fillColor(COLORS.muted)
     .text("TVA (20%)", 350, y, { width: 100, align: "right" });
-  const tva = mission.price
-    ? (Number(mission.price) - Number(mission.price) / 1.2).toFixed(2)
-    : "—";
+  const tva = mission.price ? (Number(mission.price) * 0.2).toFixed(2) : "—";
   doc
     .fontSize(9)
     .font("Helvetica")
@@ -567,7 +565,7 @@ function generateDevisPDF(mission, client) {
     .fontSize(13)
     .font("Helvetica-Bold")
     .fillColor(COLORS.white)
-    .text(formatPrice(mission.price), 450, y + 2, {
+    .text(formatPrice(Number(mission.price) * 1.2), 450, y + 2, {
       width: 85,
       align: "right",
     });
@@ -720,7 +718,7 @@ function generateDevisGroupePDF(missions, client) {
     .text("TTC", 450, y + 7, { width: 95, align: "right" });
   y += 25;
 
-  let totalTTC = 0;
+  let totalHT = 0;
 
   missions.forEach((m, index) => {
     // Saut de page si la ligne ne rentre plus : sans cela le tableau
@@ -730,8 +728,8 @@ function generateDevisGroupePDF(missions, client) {
       y = 60;
     }
 
-    const prixTTC = Number(m.price) || 0;
-    totalTTC += prixTTC;
+    const prixHT = Number(m.price) || 0;
+    totalHT += prixHT;
 
     if (index % 2 === 1) doc.rect(50, y, pageWidth, 30).fill("#fafafa");
 
@@ -763,14 +761,14 @@ function generateDevisGroupePDF(missions, client) {
       .fontSize(9)
       .font("Helvetica")
       .fillColor(COLORS.text)
-      .text(`${(prixTTC / 1.2).toFixed(2)} €`, 350, y + 9, {
+      .text(`${prixHT.toFixed(2)} €`, 350, y + 9, {
         width: 100,
         align: "right",
       });
     doc
       .fontSize(9)
       .font("Helvetica-Bold")
-      .text(`${prixTTC.toFixed(2)} €`, 450, y + 9, {
+      .text(`${(prixHT * 1.2).toFixed(2)} €`, 450, y + 9, {
         width: 95,
         align: "right",
       });
@@ -807,8 +805,8 @@ function generateDevisGroupePDF(missions, client) {
     .stroke();
   y += 8;
 
-  const totalHT = totalTTC / 1.2;
-  const tva = totalTTC - totalHT;
+  const tva = totalHT * 0.2;
+  const totalTTC = totalHT * 1.2;
 
   doc
     .fontSize(9)
