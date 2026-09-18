@@ -64,6 +64,30 @@ etape "Installation des dépendances de production"
 node "$NPM_REEL" install --omit=dev --prefix "$RACINE"
 echo "→ $(ls "$RACINE/node_modules" | wc -l) paquets présents"
 
+etape "Front (client/dist)"
+# Le serveur Express sert `client/dist` en statique. Sur ce mutualisé, npm
+# est instable (edgesOut null) et l'install des devDependencies dépasse le
+# quota d'inodes : builder ici échoue régulièrement. Le `dist` est donc
+# versionné et livré prêt à l'emploi par `git pull`.
+#
+# On refuse simplement de déployer un front plus vieux que ses sources :
+# c'est le piège qui a fait croire à un bug d'authentification (login OK
+# puis 401 partout) alors que le bundle servi datait d'avant le correctif.
+if [ -f "$RACINE/client/dist/index.html" ]; then
+  SRC_RECENT="$(find "$RACINE/client/src" "$RACINE/client/index.html" \
+    -type f -newer "$RACINE/client/dist/index.html" 2>/dev/null | head -n 1)"
+  if [ -n "$SRC_RECENT" ]; then
+    echo "✖ client/dist est plus ancien que les sources du front."
+    echo "  Rebuild en local puis commit/push le dist :"
+    echo "    (cd client && npm run build) && git add client/dist && git commit && git push"
+    exit 1
+  fi
+  echo "→ client/dist présent et à jour"
+else
+  echo "✖ client/dist absent — buildez le front en local et poussez-le."
+  exit 1
+fi
+
 etape "Migrations de base de données"
 # Chaque migration est idempotente (IF NOT EXISTS), la rejouer est sans risque.
 node server/src/db/migrate.js
