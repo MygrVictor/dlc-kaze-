@@ -369,8 +369,8 @@ if (isProduction) {
   const SONDAGE_CONNU =
     /^\/(wp-|wordpress|xmlrpc|feed|storage|vendor|\.git|\.env)/i;
 
-  app.get("*", (req, res) => {
-    if (req.path.startsWith("/api")) return;
+  app.get(/.*/, (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
 
     if (RESSOURCE_ABSENTE.test(req.path) || SONDAGE_CONNU.test(req.path)) {
       return res.status(404).type("text/plain").send("Introuvable");
