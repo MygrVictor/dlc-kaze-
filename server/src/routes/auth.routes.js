@@ -27,6 +27,15 @@ const crypto = require("crypto");
 
 const router = express.Router();
 
+function resolveJwtExpiresIn() {
+  const raw = String(process.env.JWT_EXPIRES_IN || "7d").trim();
+  if (/^\d+[smhd]$/i.test(raw)) return raw.toLowerCase();
+  // Cas fréquent en prod : "7" saisi pour "7 jours".
+  // jsonwebtoken interprète "7" (string) en millisecondes.
+  if (/^\d+$/.test(raw)) return `${raw}d`;
+  return "7d";
+}
+
 // Hachage bcrypt inerte, comparé lorsqu'aucun compte ne correspond à
 // l'email fourni au login. Il n'ouvre aucun accès : sa seule fonction est
 // de faire durer la vérification aussi longtemps qu'un vrai `compare`,
@@ -765,7 +774,7 @@ router.post("/login", authLimiter, async (req, res, next) => {
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET,
       {
-        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+        expiresIn: resolveJwtExpiresIn(),
       },
     );
 
