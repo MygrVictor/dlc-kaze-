@@ -54,6 +54,11 @@ function extractAuthToken(req) {
   );
 }
 
+function cookieDomain() {
+  const domain = String(process.env.COOKIE_DOMAIN || "").trim();
+  return domain || undefined;
+}
+
 function buildAuthCookieOptions() {
   const isProduction = process.env.NODE_ENV === "production";
   return {
@@ -61,6 +66,7 @@ function buildAuthCookieOptions() {
     secure: isProduction,
     sameSite: "lax",
     path: "/",
+    domain: cookieDomain(),
     maxAge: parseJwtExpiresIn(process.env.JWT_EXPIRES_IN || "7d"),
   };
 }
@@ -76,6 +82,7 @@ function clearAuthCookie(res) {
     secure: isProduction,
     sameSite: "lax",
     path: "/",
+    domain: cookieDomain(),
   });
 }
 
