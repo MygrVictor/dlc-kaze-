@@ -13,7 +13,9 @@ api.interceptors.response.use(
   (error) => {
     // 401 = session expirée → déconnexion
     if (error.response?.status === 401) {
-      window.location.href = "/login";
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
     // Ne pas rejeter les annulations (AbortController)
     if (axios.isCancel(error)) {

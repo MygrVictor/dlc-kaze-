@@ -6,19 +6,27 @@
  */
 
 const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
 
 // ─── Identité de l'émetteur ───────────────────────────────
 const SOCIETE = {
-  nom: "DLC DRIVE LINE CONNECT",
+  nom: "DRIVE LINE CONNECT",
+  adresse: "25 Rue Lenepveu 49100 Angers, France",
+  tel: "+33669583430",
   ville: "Angers",
   siret: "982 423 113 00025",
+  tva: "FR11982423113",
+  email: "drivelineconnect@gmail.com",
 };
 
 const MENTIONS_LEGALES = `${SOCIETE.nom} — ${SOCIETE.ville} — SIRET : ${SOCIETE.siret}`;
 
 // ─── Couleurs ────────────────────────────────────────────────────
 const COLORS = {
-  primary: "#6366f1", // indigo-500
+  // Palette alignée avec le site vitrine Drive Line
+  primary: "#0B1D3A", // navy
+  accent: "#FFD11A", // amber
   dark: "#1e1e2e",
   text: "#333333",
   muted: "#6b7280",
@@ -56,6 +64,15 @@ const formatDateShort = (dateStr) => {
   });
 };
 
+const formatDateNumeric = (dateStr) => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
 const energyLabels = {
   essence: "Essence",
   diesel: "Diesel",
@@ -70,6 +87,44 @@ const stateLabels = {
   occasion: "Occasion",
   accidente: "Accidenté",
   non_roulant: "Non roulant",
+};
+
+const formatDevisNumber = (value) => {
+  const n = Number(value);
+  const safe = Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+  return `DEV-${String(safe).padStart(6, "0")}`;
+};
+
+const resolveDevisLogoPath = () => {
+  const candidates = [
+    process.env.DEVIS_LOGO_PATH,
+    path.resolve(__dirname, "../../../client/public/logo_devis.png"),
+    path.resolve(__dirname, "../../../client/dist/logo_devis.png"),
+    path.resolve(__dirname, "../../../client/public/logo.png"),
+    path.resolve(__dirname, "../../../client/dist/logo.png"),
+  ].filter(Boolean);
+
+  return candidates.find((p) => {
+    try {
+      return fs.existsSync(p);
+    } catch {
+      return false;
+    }
+  });
+};
+
+const drawBrandHeader = (doc) => {
+  const logoPath = resolveDevisLogoPath();
+
+  if (logoPath) {
+    doc.image(logoPath, 50, 22, { fit: [250, 50], align: "left" });
+    return;
+  }
+};
+
+const drawLegalBlock = (doc, y) => {
+  void doc;
+  void y;
 };
 
 // ─── Génération du PDF ──────────────────────────────────────────
@@ -91,81 +146,118 @@ function generateDevisPDF(mission, client) {
   doc.rect(0, 0, doc.page.width, 8).fill(COLORS.primary);
 
   // Logo / Nom entreprise
-  doc
-    .fontSize(28)
-    .font("Helvetica-Bold")
-    .fillColor(COLORS.primary)
-    .text("DLC KAZE", 50, 30);
-  doc
-    .fontSize(9)
-    .font("Helvetica")
-    .fillColor(COLORS.muted)
-    .text("Convoyage Automobile Professionnel", 50, 60);
+  drawBrandHeader(doc);
 
   // Numéro de devis (côté droit)
-  const devisNum = `DEV-${mission.id.substring(0, 8).toUpperCase()}`;
+  const devisNum = formatDevisNumber(
+    mission.devis_number || mission.devis_numero || mission.quote_number,
+  );
+  const today = new Date();
+  const echeance = mission.arrival_date || mission.departure_date || today;
+
   doc
-    .fontSize(11)
+    .fontSize(10)
     .font("Helvetica-Bold")
     .fillColor(COLORS.text)
-    .text("DEVIS", 350, 30, { width: pageWidth - 300, align: "right" });
-  doc
-    .fontSize(18)
-    .font("Helvetica-Bold")
-    .fillColor(COLORS.primary)
-    .text(devisNum, 350, 45, { width: pageWidth - 300, align: "right" });
+    .text(`Devis N° : ${devisNum}`, 300, 30, {
+      width: pageWidth - 250,
+      align: "right",
+    });
   doc
     .fontSize(9)
     .font("Helvetica")
     .fillColor(COLORS.muted)
-    .text(`Émis le ${formatDateShort(new Date())}`, 350, 68, {
-      width: pageWidth - 300,
+    .text(`Date d'émission : ${formatDateNumeric(today)}`, 300, 48, {
+      width: pageWidth - 250,
+      align: "right",
+    })
+    .text(`Date d'échéance : ${formatDateNumeric(echeance)}`, 300, 64, {
+      width: pageWidth - 250,
       align: "right",
     });
 
   // Ligne de séparation
   doc
-    .moveTo(50, 90)
-    .lineTo(50 + pageWidth, 90)
+    .moveTo(50, 98)
+    .lineTo(50 + pageWidth, 98)
     .strokeColor(COLORS.line)
     .lineWidth(1)
     .stroke();
 
-  // ── INFORMATIONS CLIENT ───────────────────────────────────────
-  let y = 105;
+  // ── CONTACT + DESTINATAIRE ────────────────────────────────────
+  let y = 112;
+  let yRight = 112;
   doc
     .fontSize(10)
     .font("Helvetica-Bold")
     .fillColor(COLORS.primary)
-    .text("CLIENT", 50, y);
+    .text("CONTACT", 50, y);
   y += 16;
   doc
     .fontSize(10)
     .font("Helvetica-Bold")
     .fillColor(COLORS.text)
-    .text(client.full_name || "—", 50, y);
+    .text(SOCIETE.nom, 50, y, { width: 230 });
   y += 14;
   doc
     .fontSize(9)
     .font("Helvetica")
     .fillColor(COLORS.muted)
-    .text(client.email || "", 50, y);
-  if (client.phone) {
-    y += 13;
-    doc.text(client.phone, 50, y);
-  }
-  if (client.company) {
-    y += 13;
-    doc.text(client.company, 50, y);
-  }
+    .text(SOCIETE.adresse, 50, y, { width: 230 });
+  y += doc.heightOfString(SOCIETE.adresse, { width: 230 }) + 3;
+  doc.text(`Tel: ${SOCIETE.tel}`, 50, y);
+  y += 12;
+  doc.text(`Email: ${SOCIETE.email}`, 50, y);
+  y += 12;
+  doc.text(`SIRET: ${SOCIETE.siret}`, 50, y);
+  y += 12;
+  doc.text(`TVA intracommunautaire: ${SOCIETE.tva}`, 50, y);
 
-  // ── VÉHICULE ──────────────────────────────────────────────────
-  y = 105;
   doc
     .fontSize(10)
     .font("Helvetica-Bold")
     .fillColor(COLORS.primary)
-    .text("VÉHICULE", 320, y);
+    .text("DESTINATAIRE DE LA FACTURE", 320, yRight, { width: 225 });
+  yRight += 16;
+
+  const destinataire = client.company || client.full_name || "—";
+  doc
+    .fontSize(10)
+    .font("Helvetica-Bold")
+    .fillColor(COLORS.text)
+    .text(destinataire, 320, yRight, { width: 225 });
+  yRight += 14;
+  if (client.full_name && client.company) {
+    doc
+      .fontSize(9)
+      .font("Helvetica")
+      .fillColor(COLORS.muted)
+      .text(client.full_name, 320, yRight, { width: 225 });
+    yRight += 12;
+  }
+  if (client.phone) {
+    doc.text(`Tel: ${client.phone}`, 320, yRight, { width: 225 });
+    yRight += 12;
+  }
+  doc.text(`Email: ${client.email || "—"}`, 320, yRight, { width: 225 });
+  yRight += 12;
+
+  // ── SÉPARATION ────────────────────────────────────────────────
+  y = Math.max(y, yRight) + 14;
+  doc
+    .moveTo(50, y)
+    .lineTo(50 + pageWidth, y)
+    .strokeColor(COLORS.line)
+    .lineWidth(0.5)
+    .stroke();
+  y += 15;
+
+  // ── VÉHICULE ──────────────────────────────────────────────────
+  doc
+    .fontSize(10)
+    .font("Helvetica-Bold")
+    .fillColor(COLORS.primary)
+    .text("VÉHICULE", 50, y);
   y += 16;
 
   const vehicleLines = [];
@@ -209,17 +301,17 @@ function generateDevisPDF(mission, client) {
       .fontSize(8)
       .font("Helvetica")
       .fillColor(COLORS.muted)
-      .text(line.label, 320, y);
+      .text(line.label, 50, y, { width: 140 });
     doc
       .fontSize(9)
       .font("Helvetica-Bold")
       .fillColor(COLORS.text)
-      .text(line.value, 420, y);
+      .text(line.value, 190, y, { width: pageWidth - 140 });
     y += 14;
   });
 
   // ── SÉPARATION ────────────────────────────────────────────────
-  y = Math.max(y, 200) + 10;
+  y += 10;
   doc
     .moveTo(50, y)
     .lineTo(50 + pageWidth, y)
@@ -233,8 +325,8 @@ function generateDevisPDF(mission, client) {
   doc
     .fontSize(10)
     .font("Helvetica-Bold")
-    .fillColor(COLORS.success)
-    .text("● ENLÈVEMENT (DÉPART)", 50, y);
+    .fillColor(COLORS.text)
+    .text("ENLÈVEMENT (DÉPART)", 50, y);
   y += 16;
 
   doc
@@ -284,8 +376,8 @@ function generateDevisPDF(mission, client) {
   doc
     .fontSize(10)
     .font("Helvetica-Bold")
-    .fillColor("#ef4444")
-    .text("● LIVRAISON (ARRIVÉE)", 50, y);
+    .fillColor(COLORS.text)
+    .text("LIVRAISON (ARRIVÉE)", 50, y);
   y += 16;
 
   doc
@@ -480,23 +572,9 @@ function generateDevisPDF(mission, client) {
       align: "right",
     });
 
-  // ── CONDITIONS ────────────────────────────────────────────────
+  // ── CONDITIONS ET MENTIONS LÉGALES ───────────────────────────
   y += 55;
-  doc
-    .fontSize(8)
-    .font("Helvetica")
-    .fillColor(COLORS.muted)
-    .text(
-      "Ce devis est valable 30 jours à compter de sa date d'émission.",
-      50,
-      y,
-    )
-    .text(
-      "Conditions de paiement : à réception de facture. Pénalités de retard : 3 fois le taux d'intérêt légal.",
-      50,
-      y + 12,
-    )
-    .text(MENTIONS_LEGALES, 50, y + 24);
+  drawLegalBlock(doc, y);
 
   // ── FOOTER ────────────────────────────────────────────────────
   doc.rect(0, doc.page.height - 8, doc.page.width, 8).fill(COLORS.primary);
@@ -516,7 +594,9 @@ function generateDevisPDF(mission, client) {
  */
 function generateDevisGroupePDF(missions, client) {
   const first = missions[0];
-  const devisNum = `DEV-${(first.batch_id || first.id).substring(0, 8).toUpperCase()}`;
+  const devisNum = formatDevisNumber(
+    first.devis_number || first.devis_numero || first.quote_number,
+  );
 
   const doc = new PDFDocument({
     size: "A4",
@@ -532,16 +612,7 @@ function generateDevisGroupePDF(missions, client) {
 
   // ── HEADER ────────────────────────────────────────────────────
   doc.rect(0, 0, doc.page.width, 8).fill(COLORS.primary);
-  doc
-    .fontSize(28)
-    .font("Helvetica-Bold")
-    .fillColor(COLORS.primary)
-    .text("DLC KAZE", 50, 30);
-  doc
-    .fontSize(9)
-    .font("Helvetica")
-    .fillColor(COLORS.muted)
-    .text("Convoyage Automobile Professionnel", 50, 60);
+  drawBrandHeader(doc);
 
   doc
     .fontSize(11)
@@ -610,8 +681,8 @@ function generateDevisGroupePDF(missions, client) {
   doc
     .fontSize(8)
     .font("Helvetica")
-    .fillColor(COLORS.success)
-    .text("● DÉPART", 320, yr);
+    .fillColor(COLORS.text)
+    .text("DÉPART", 320, yr);
   yr += 11;
   doc
     .fontSize(9)
@@ -619,7 +690,7 @@ function generateDevisGroupePDF(missions, client) {
     .fillColor(COLORS.text)
     .text(first.departure_address || "—", 320, yr, { width: 225 });
   yr += doc.heightOfString(first.departure_address || "—", { width: 225 }) + 8;
-  doc.fontSize(8).fillColor("#ef4444").text("● ARRIVÉE", 320, yr);
+  doc.fontSize(8).fillColor(COLORS.text).text("ARRIVÉE", 320, yr);
   yr += 11;
   doc
     .fontSize(9)
@@ -772,23 +843,9 @@ function generateDevisGroupePDF(missions, client) {
     .fillColor(COLORS.white)
     .text(formatPrice(totalTTC), 450, y + 2, { width: 85, align: "right" });
 
-  // ── CONDITIONS ────────────────────────────────────────────────
+  // ── CONDITIONS ET MENTIONS LÉGALES ───────────────────────────
   y += 55;
-  doc
-    .fontSize(8)
-    .font("Helvetica")
-    .fillColor(COLORS.muted)
-    .text(
-      "Ce devis est valable 30 jours à compter de sa date d'émission.",
-      50,
-      y,
-    )
-    .text(
-      "Conditions de paiement : à réception de facture. Pénalités de retard : 3 fois le taux d'intérêt légal.",
-      50,
-      y + 12,
-    )
-    .text(MENTIONS_LEGALES, 50, y + 24);
+  drawLegalBlock(doc, y);
 
   doc.rect(0, doc.page.height - 8, doc.page.width, 8).fill(COLORS.primary);
 
