@@ -242,7 +242,7 @@ const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const db = require("./db");
 
-app.get("/uploads/*", async (req, res) => {
+app.get(/^\/uploads\/(.+)$/, async (req, res) => {
   let charge;
   try {
     const token = extractAuthToken(req);

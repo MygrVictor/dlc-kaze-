@@ -717,7 +717,7 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
       if (!result.preAssignee) {
         const { rows: fullMission } = await db.query(
           "SELECT * FROM missions WHERE id = $1",
-          [req.body.missionId || req.params.id],
+          [req.body?.missionId || req.params.id],
         );
 
         if (fullMission[0]) {
