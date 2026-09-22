@@ -329,13 +329,31 @@ router.get("/stats", async (_req, res, next) => {
 //    du CA encaissé et du CA espéré dans un même chiffre est la
 //    meilleure façon de ne plus savoir ce qu'on lit.
 //
-// Les montants sont ceux de `missions.price` / `price_convoyeur`, sans
-// aucun croisement avec la table `factures` : deux sources pour un même
-// chiffre finiraient par diverger.
+// Les montants sont calculés depuis `missions` (sans croiser `factures`).
+// Coût analytique :
+//   - convoyeur externe : `price_convoyeur`
+//   - mission convoyée par un admin DLC : coût estimé à 50 % du CA mission
+// Deux sources pour un même chiffre finiraient sinon par diverger.
 // ══════════════════════════════════════════════════════════════
 
 /** Statuts qui engagent le client — le devis est signé. */
 const STATUTS_ENGAGES = ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"];
+
+/**
+ * Coût retenu pour la marge analytique.
+ *
+ * Les missions réalisées par un administrateur n'ont pas de coût convoyeur
+ * externe en base. Pour éviter de gonfler artificiellement la marge, on
+ * leur applique un coût interne forfaitaire de 50 % du prix mission.
+ */
+const COUT_ANALYTIQUE_EXPR =
+  "CASE WHEN conv.role = 'admin' THEN COALESCE(m.price, 0) * 0.5 ELSE COALESCE(m.price_convoyeur, 0) END";
+
+const COUT_ANALYTIQUE_MISSIONS_EXPR =
+  "CASE WHEN conv.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price_convoyeur, 0) END";
+
+const COUT_ANALYTIQUE_TOTAUX_EXPR =
+  "CASE WHEN c.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price_convoyeur, 0) END";
 
 /**
  * Traduit les paramètres de période en bornes SQL.
@@ -400,12 +418,9 @@ const SQL_TOTAUX = `
     COUNT(*) FILTER (WHERE status = 'ANNULEE')                 AS annulees,
     COUNT(*) FILTER (WHERE status = ANY($3))                   AS missions_engagees,
     COALESCE(SUM(price)           FILTER (WHERE status = 'LIVREE'), 0)   AS ca_realise,
-    -- Ne compter le coût convoyeur que si le convoyeur n'est pas un
-    -- administrateur : quand l'admin conduit, il s'agit d'une
-    -- prestation interne sans coût convoyeur externe.
-    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = 'LIVREE' AND (c.role IS NULL OR c.role != 'admin')), 0)   AS cout_realise,
+    COALESCE(SUM(${COUT_ANALYTIQUE_TOTAUX_EXPR}) FILTER (WHERE status = 'LIVREE'), 0)   AS cout_realise,
     COALESCE(SUM(price)           FILTER (WHERE status = ANY($3)), 0)    AS ca_engage,
-    COALESCE(SUM(price_convoyeur) FILTER (WHERE status = ANY($3) AND (c.role IS NULL OR c.role != 'admin')), 0)    AS cout_engage,
+    COALESCE(SUM(${COUT_ANALYTIQUE_TOTAUX_EXPR}) FILTER (WHERE status = ANY($3)), 0)    AS cout_engage,
     COALESCE(SUM(price)           FILTER (WHERE status = 'DEVIS_REFUSE'), 0) AS ca_perdu
   FROM missions
   -- La jointure ne remonte que l'identifiant et le rôle : ramener toute la
@@ -612,8 +627,7 @@ router.get("/analyse", async (req, res, next) => {
              COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
              COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
              COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
-             -- Exclure le coût convoyeur si le convoyeur est un admin
-             COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE' AND (conv.role IS NULL OR conv.role != 'admin')), 0) AS cout_realise,
+             COALESCE(SUM(${COUT_ANALYTIQUE_EXPR}) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise,
              COALESCE(SUM(m.price)           FILTER (WHERE m.status = ANY($3)), 0)  AS ca_engage,
              MAX(m.created_at)                                           AS derniere_mission
            FROM users u
@@ -653,9 +667,10 @@ router.get("/analyse", async (req, res, next) => {
              COUNT(*)                                                     AS missions,
              COUNT(*) FILTER (WHERE missions.status = 'LIVREE')           AS livrees,
              COALESCE(SUM(missions.price) FILTER (WHERE missions.status = 'LIVREE'), 0) AS ca,
-             COALESCE(SUM(missions.price_convoyeur) FILTER (WHERE missions.status = 'LIVREE'), 0) AS cout
+             COALESCE(SUM(${COUT_ANALYTIQUE_MISSIONS_EXPR}) FILTER (WHERE missions.status = 'LIVREE'), 0) AS cout
            FROM missions
               LEFT JOIN users u ON u.id = missions.client_id
+              LEFT JOIN users conv ON conv.id = missions.convoyeur_id
             WHERE missions.created_at >= date_trunc('month', NOW()) - INTERVAL '11 months'
               ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
            GROUP BY 1
@@ -792,7 +807,7 @@ router.get("/analyse/export-csv", async (req, res, next) => {
          COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
          COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
          COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
-         COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE' AND (conv.role IS NULL OR conv.role != 'admin')), 0) AS cout_realise
+         COALESCE(SUM(${COUT_ANALYTIQUE_EXPR}) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise
        FROM users u
        JOIN missions m ON m.client_id = u.id
        LEFT JOIN users conv ON conv.id = m.convoyeur_id
