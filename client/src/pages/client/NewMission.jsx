@@ -30,7 +30,7 @@ import {
 import toast from "react-hot-toast";
 import ChampAdresse from "../../components/ChampAdresse";
 
-const ENERGIES = ["Essence", "Diesel", "Électrique", "Hybride"];
+const ENERGIES = ["Essence", "Diesel", "Électrique", "Hybride", "GNV"];
 
 // Liste des marques strictement identique au widget « Marque »
 // du workflow CONVOYAGE de Kaze (widget_select id="brand").
@@ -139,6 +139,7 @@ export default function NewMission() {
   const [convoyeurId, setConvoyeurId] = useState("");
   const [priceConvoyeur, setPriceConvoyeur] = useState("");
   const [priceClient, setPriceClient] = useState("");
+  const [purchaseOrderNumber, setPurchaseOrderNumber] = useState("");
 
   useEffect(() => {
     if (!estAdmin) return;
@@ -338,6 +339,7 @@ export default function NewMission() {
           convoyeurId: convoyeurId || null,
           priceConvoyeur: priceConvoyeur || null,
           priceClient: priceClient || null,
+          purchaseOrderNumber: purchaseOrderNumber.trim() || null,
         }),
       };
 
@@ -519,6 +521,22 @@ export default function NewMission() {
                     Pour votre suivi, jamais affiché au convoyeur.
                   </p>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                  N° commande / N° bon de commande
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={purchaseOrderNumber}
+                  onChange={(e) => setPurchaseOrderNumber(e.target.value)}
+                  placeholder="Ex. BC-2026-1042"
+                />
+                <p className="text-xs text-dark-500 mt-2">
+                  Référence interne, visible uniquement côté administration.
+                </p>
               </div>
 
               <p className="text-xs text-primary-300 bg-primary-600/10 border border-primary-600/20 rounded-lg px-4 py-3 leading-relaxed">

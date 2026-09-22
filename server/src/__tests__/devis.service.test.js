@@ -182,6 +182,7 @@ describe("Bloc véhicule", () => {
     ["electrique", "Électrique"],
     ["hybride", "Hybride"],
     ["hybride_rechargeable", "Hybride rechargeable"],
+    ["gnv", "GNV"],
     ["gpl", "GPL"],
   ])("traduit l'énergie « %s » en « %s »", (code, libelle) => {
     generateDevisPDF({ ...missionMinimale(), vehicle_energy: code }, CLIENT);

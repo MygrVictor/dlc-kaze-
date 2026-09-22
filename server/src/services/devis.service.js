@@ -79,6 +79,7 @@ const energyLabels = {
   electrique: "Électrique",
   hybride: "Hybride",
   hybride_rechargeable: "Hybride rechargeable",
+  gnv: "GNV",
   gpl: "GPL",
 };
 

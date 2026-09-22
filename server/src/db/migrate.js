@@ -226,6 +226,10 @@ const migrate = async () => {
     -- Vide = on retombe sur l'email du compte.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS recap_email VARCHAR(255);
 
+    -- Référence interne administration (numéro de commande / bon de
+    -- commande). Ce champ n'est pas destiné aux convoyeurs.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS purchase_order_number VARCHAR(150);
+
     -- Refus de devis : motif saisi par le client + horodatage, pour que
     -- l'équipe puisse le rappeler et ajuster la proposition.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS refus_motif  TEXT;

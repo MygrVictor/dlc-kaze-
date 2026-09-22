@@ -132,6 +132,7 @@ export default function MissionDetail() {
     electrique: "Électrique",
     hybride: "Hybride",
     hybride_rechargeable: "Hybride rechargeable",
+    gnv: "GNV",
     gpl: "GPL",
   };
   const stateLabels = {

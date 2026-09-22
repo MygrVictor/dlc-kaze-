@@ -846,6 +846,17 @@ export default function AdminMissions() {
                 </div>
               </div>
 
+              {priceModal.purchase_order_number && (
+                <div className="p-3 bg-dark-700/50 rounded-lg">
+                  <p className="text-xs text-dark-400">
+                    N° commande / bon de commande
+                  </p>
+                  <p className="text-sm font-medium mt-1">
+                    {priceModal.purchase_order_number}
+                  </p>
+                </div>
+              )}
+
               {/* Véhicule */}
               <div className="p-3 bg-dark-700/50 rounded-lg">
                 <div className="flex items-center gap-2 mb-3">

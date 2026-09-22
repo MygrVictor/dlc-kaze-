@@ -827,7 +827,28 @@ router.post("/missions/:id/livrer", async (req, res, next) => {
 router.get("/missions/:id", async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      `SELECT m.*, u.full_name AS client_name
+      `SELECT m.id, m.client_id,
+              m.vehicle_plate, m.vehicle_vin, m.vehicle_brand, m.vehicle_model,
+              m.vehicle_finish, m.vehicle_energy, m.vehicle_state, m.vehicle_keys,
+              m.vehicle_year, m.vehicle_type, m.vehicle_toll_class, m.vehicle_utility_12m3,
+              m.departure_address, m.departure_date,
+              m.departure_structure, m.departure_structure_name,
+              m.departure_contact_name, m.departure_contact_phone, m.departure_contact_email,
+              m.departure_instructions,
+              m.arrival_address, m.arrival_date,
+              m.arrival_structure, m.arrival_structure_name,
+              m.arrival_contact_name, m.arrival_contact_phone, m.arrival_contact_email,
+              m.arrival_instructions,
+              m.service_wash_exterior, m.service_clean_interior,
+              m.service_refuel, m.service_document_management, m.service_handover,
+              m.retribution_details,
+              m.emergency_contact_name, m.emergency_phone, m.emergency_contact_email,
+              m.comments, m.desired_delivery_date, m.is_urgent,
+              m.batch_id, m.recap_email,
+              m.price_convoyeur AS price,
+              m.status, m.kaze_mission_id, m.convoyeur_id,
+              m.created_at, m.updated_at,
+              u.full_name AS client_name
        FROM missions m
        LEFT JOIN users u ON u.id = m.client_id
        WHERE m.id = $1 AND m.convoyeur_id = $2`,

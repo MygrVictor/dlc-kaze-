@@ -32,6 +32,15 @@ const { isDemoMission, isDemoMissionPayload } = require("../lib/demo-mission");
 const router = express.Router();
 const ROLES_CONVOYABLES = ["convoyeur", "admin"];
 
+const ADMIN_ONLY_MISSION_FIELDS = ["purchase_order_number"];
+
+const missionPourUtilisateur = (mission, user) => {
+  if (!mission || user?.role === "admin") return mission;
+  const copie = { ...mission };
+  for (const champ of ADMIN_ONLY_MISSION_FIELDS) delete copie[champ];
+  return copie;
+};
+
 // ── Toutes les routes nécessitent une authentification ───────
 router.use(authenticate);
 
@@ -115,6 +124,9 @@ router.post(
       const convoyeurPreassigneId = estAdmin
         ? req.body.convoyeurId || null
         : null;
+      const purchaseOrderNumber = estAdmin
+        ? req.body.purchaseOrderNumber || null
+        : null;
       let clientEmail = estAdmin ? null : req.user.email || null;
       let convoyeurPreassigne = null;
 
@@ -180,6 +192,7 @@ router.post(
         "Contact d'urgence": [emergencyContactName, 150],
         "Structure de départ": [departureStructureName, 150],
         "Structure de livraison": [arrivalStructureName, 150],
+        "N° commande / bon de commande": [purchaseOrderNumber, 150],
       };
 
       for (const [libelle, [valeur, max]] of Object.entries(LONGUEURS_MAX)) {
@@ -272,7 +285,8 @@ router.post(
             retribution_details,
             emergency_contact_name, emergency_phone, emergency_contact_email,
             comments, desired_delivery_date, is_urgent, batch_id, status,
-            recap_email, price, price_convoyeur, created_by
+            recap_email, price, price_convoyeur, created_by,
+            purchase_order_number
           ) VALUES (
             $1,
             $2, $3, $4, $5, $6,
@@ -288,7 +302,8 @@ router.post(
             $30,
             $31, $32, $33,
             $34, $35, $36, $37, $39,
-            $38, $40, $41, $42
+            $38, $40, $41, $42,
+            $45
           ) RETURNING *`,
           [
             clientId,
@@ -341,6 +356,7 @@ router.post(
             // un risque de décalage sans rien apporter.
             arrivalStructure || null,
             arrivalStructureName || null,
+            purchaseOrderNumber ? String(purchaseOrderNumber).trim() : null,
           ],
         );
 
@@ -437,7 +453,9 @@ router.post(
         );
 
       res.status(201).json({
-        missions: createdMissions,
+        missions: createdMissions.map((m) =>
+          missionPourUtilisateur(m, req.user),
+        ),
         count: createdMissions.length,
         message: estAdmin
           ? createdMissions.length > 1
@@ -503,7 +521,7 @@ router.get("/mes-missions", authorize("client"), async (req, res, next) => {
     ]);
 
     res.json({
-      missions: rows,
+      missions: rows.map((m) => missionPourUtilisateur(m, req.user)),
       pagination: {
         page: parseInt(page),
         limit: safeLimit,
@@ -537,7 +555,7 @@ router.get("/:id", authorize("client", "admin"), async (req, res, next) => {
       return res.status(403).json({ error: "Accès interdit." });
     }
 
-    res.json({ mission });
+    res.json({ mission: missionPourUtilisateur(mission, req.user) });
   } catch (err) {
     next(err);
   }
@@ -818,7 +836,7 @@ router.post("/:id/refuser", authorize("client"), async (req, res, next) => {
     res.json({
       message: "Devis refusé. Notre équipe vous recontacte rapidement.",
       status: "DEVIS_REFUSE",
-      mission: updated[0],
+      mission: missionPourUtilisateur(updated[0], req.user),
     });
   } catch (err) {
     next(err);
