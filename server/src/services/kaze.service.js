@@ -301,6 +301,10 @@ const RECENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * @returns {Object[]} – jobs bruts Kaze (non transformés)
  */
 const fetchRecentJobs = async (days = 60) => {
+  const cacheAgeMs = _recentJobsCacheTime
+    ? Date.now() - _recentJobsCacheTime
+    : 0;
+
   // Retourner le cache s'il est encore frais
   if (
     _recentJobsCache &&
@@ -312,101 +316,112 @@ const fetchRecentJobs = async (days = 60) => {
     return _recentJobsCache;
   }
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffMs = cutoff.getTime();
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffMs = cutoff.getTime();
 
-  const allJobs = [];
-  const activeStatuses = ["waiting", "assigned", "started"];
-  const closedStatuses = ["completed", "cancelled"];
+    const allJobs = [];
+    const activeStatuses = ["waiting", "assigned", "started"];
+    const closedStatuses = ["completed", "cancelled"];
 
-  console.log(`🔍 Kaze: récupération missions des ${days} derniers jours…`);
+    console.log(`🔍 Kaze: récupération missions des ${days} derniers jours…`);
 
-  // Statuts actifs : on prend tout (peu de missions en général)
-  for (const st of activeStatuses) {
-    let page = 1;
-    let totalPages = 1;
-    while (page <= totalPages) {
-      const result = await fetchJobs({ status: st, page, perPage: 100 });
-      const jobs = result.data || [];
-      allJobs.push(
-        ...jobs.filter((j) => {
-          const d = j.created_at
-            ? new Date(j.created_at).getTime()
-            : Date.now();
-          return d >= cutoffMs;
-        }),
-      );
-      totalPages = result.meta?.total_pages || 1;
-      page++;
-    }
-  }
-
-  // Statuts fermés : pagination avec arrêt anticipé
-  for (const st of closedStatuses) {
-    let page = 1;
-    let totalPages = 1;
-    while (page <= totalPages) {
-      const result = await fetchJobs({ status: st, page, perPage: 100 });
-      const jobs = result.data || [];
-      const recentJobs = jobs.filter((j) => {
-        const d = j.created_at ? new Date(j.created_at).getTime() : 0;
-        return d >= cutoffMs;
-      });
-      allJobs.push(...recentJobs);
-      totalPages = result.meta?.total_pages || 1;
-
-      // Arrêt anticipé : si aucune mission récente sur cette page,
-      // les suivantes seront encore plus anciennes → on arrête
-      if (recentJobs.length === 0 && jobs.length > 0) {
-        console.log(
-          `⏭️  Kaze [${st}]: arrêt page ${page}/${totalPages} (missions trop anciennes)`,
+    // Statuts actifs : on prend tout (peu de missions en général)
+    for (const st of activeStatuses) {
+      let page = 1;
+      let totalPages = 1;
+      while (page <= totalPages) {
+        const result = await fetchJobs({ status: st, page, perPage: 100 });
+        const jobs = result.data || [];
+        allJobs.push(
+          ...jobs.filter((j) => {
+            const d = j.created_at
+              ? new Date(j.created_at).getTime()
+              : Date.now();
+            return d >= cutoffMs;
+          }),
         );
-        break;
+        totalPages = result.meta?.total_pages || 1;
+        page++;
       }
-      page++;
     }
-  }
 
-  console.log(`✅ Kaze: ${allJobs.length} missions récentes (${days}j)`);
+    // Statuts fermés : pagination avec arrêt anticipé
+    for (const st of closedStatuses) {
+      let page = 1;
+      let totalPages = 1;
+      while (page <= totalPages) {
+        const result = await fetchJobs({ status: st, page, perPage: 100 });
+        const jobs = result.data || [];
+        const recentJobs = jobs.filter((j) => {
+          const d = j.created_at ? new Date(j.created_at).getTime() : 0;
+          return d >= cutoffMs;
+        });
+        allJobs.push(...recentJobs);
+        totalPages = result.meta?.total_pages || 1;
 
-  // Déduplication défensive par ID (certaines réponses Kaze peuvent contenir
-  // des doublons entre requêtes filtrées par statut).
-  const dedupedJobsById = new Map();
-  for (const job of allJobs) {
-    if (!job?.id) continue;
-    const prev = dedupedJobsById.get(job.id);
-    if (!prev) {
-      dedupedJobsById.set(job.id, job);
-      continue;
+        // Arrêt anticipé : si aucune mission récente sur cette page,
+        // les suivantes seront encore plus anciennes → on arrête
+        if (recentJobs.length === 0 && jobs.length > 0) {
+          console.log(
+            `⏭️  Kaze [${st}]: arrêt page ${page}/${totalPages} (missions trop anciennes)`,
+          );
+          break;
+        }
+        page++;
+      }
     }
-    const prevTs = prev.updated_at
-      ? new Date(prev.updated_at).getTime()
-      : prev.created_at
-        ? new Date(prev.created_at).getTime()
-        : 0;
-    const nextTs = job.updated_at
-      ? new Date(job.updated_at).getTime()
-      : job.created_at
-        ? new Date(job.created_at).getTime()
-        : 0;
-    if (nextTs >= prevTs) {
-      dedupedJobsById.set(job.id, job);
+
+    console.log(`✅ Kaze: ${allJobs.length} missions récentes (${days}j)`);
+
+    // Déduplication défensive par ID (certaines réponses Kaze peuvent contenir
+    // des doublons entre requêtes filtrées par statut).
+    const dedupedJobsById = new Map();
+    for (const job of allJobs) {
+      if (!job?.id) continue;
+      const prev = dedupedJobsById.get(job.id);
+      if (!prev) {
+        dedupedJobsById.set(job.id, job);
+        continue;
+      }
+      const prevTs = prev.updated_at
+        ? new Date(prev.updated_at).getTime()
+        : prev.created_at
+          ? new Date(prev.created_at).getTime()
+          : 0;
+      const nextTs = job.updated_at
+        ? new Date(job.updated_at).getTime()
+        : job.created_at
+          ? new Date(job.created_at).getTime()
+          : 0;
+      if (nextTs >= prevTs) {
+        dedupedJobsById.set(job.id, job);
+      }
     }
+
+    const dedupedJobs = Array.from(dedupedJobsById.values());
+    if (dedupedJobs.length !== allJobs.length) {
+      console.log(
+        `🧹 Kaze: déduplication ${allJobs.length} → ${dedupedJobs.length} mission(s)`,
+      );
+    }
+
+    // Mettre en cache
+    _recentJobsCache = dedupedJobs;
+    _recentJobsCacheTime = Date.now();
+
+    return dedupedJobs;
+  } catch (err) {
+    if (_recentJobsCache) {
+      const ageSec = Math.max(1, Math.round(cacheAgeMs / 1000));
+      console.warn(
+        `⚠️ Kaze indisponible (${err.message}) — retour du cache missions récent (âge ${ageSec}s)`,
+      );
+      return _recentJobsCache;
+    }
+    throw err;
   }
-
-  const dedupedJobs = Array.from(dedupedJobsById.values());
-  if (dedupedJobs.length !== allJobs.length) {
-    console.log(
-      `🧹 Kaze: déduplication ${allJobs.length} → ${dedupedJobs.length} mission(s)`,
-    );
-  }
-
-  // Mettre en cache
-  _recentJobsCache = dedupedJobs;
-  _recentJobsCacheTime = Date.now();
-
-  return dedupedJobs;
 };
 
 /** Récupère le détail complet d'une mission. */
