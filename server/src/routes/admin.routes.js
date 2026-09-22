@@ -342,18 +342,20 @@ const STATUTS_ENGAGES = ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"];
 /**
  * Coût retenu pour la marge analytique.
  *
- * Les missions réalisées par un administrateur n'ont pas de coût convoyeur
- * externe en base. Pour éviter de gonfler artificiellement la marge, on
- * leur applique un coût interne forfaitaire de 50 % du prix mission.
+ * Les missions réalisées par un administrateur n'ont pas toujours de coût
+ * convoyeur externe en base (notamment les anciennes). Pour éviter de gonfler
+ * artificiellement la marge, on applique un coût interne forfaitaire de 50 %
+ * du prix mission dès qu'aucun coût convoyeur n'est saisi et qu'il s'agit
+ * d'une mission admin (convoyeur admin ou mission créée par un admin).
  */
 const COUT_ANALYTIQUE_EXPR =
-  "CASE WHEN conv.role = 'admin' THEN COALESCE(m.price, 0) * 0.5 ELSE COALESCE(m.price_convoyeur, 0) END";
+  "CASE WHEN m.price_convoyeur IS NOT NULL THEN m.price_convoyeur WHEN conv.role = 'admin' OR m.created_by IS NOT NULL THEN COALESCE(m.price, 0) * 0.5 ELSE 0 END";
 
 const COUT_ANALYTIQUE_MISSIONS_EXPR =
-  "CASE WHEN conv.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price_convoyeur, 0) END";
+  "CASE WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN conv.role = 'admin' OR missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE 0 END";
 
 const COUT_ANALYTIQUE_TOTAUX_EXPR =
-  "CASE WHEN c.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price_convoyeur, 0) END";
+  "CASE WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN c.role = 'admin' OR missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE 0 END";
 
 /**
  * Traduit les paramètres de période en bornes SQL.
