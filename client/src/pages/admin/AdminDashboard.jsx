@@ -445,6 +445,18 @@ export default function AdminDashboard() {
       <div className="flex gap-1 mb-6 bg-dark-800/50 p-1 rounded-xl overflow-x-auto scrollbar-none">
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          if (tab.id === "convoyeurs") {
+            return (
+              <Link
+                key={tab.id}
+                to="/admin/utilisateurs?role=convoyeur"
+                className="shrink-0 flex items-center gap-2 px-3 min-h-[40px] rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap text-dark-400 hover:text-white hover:bg-dark-700/50"
+              >
+                <Icon size={16} />
+                {tab.label}
+              </Link>
+            );
+          }
           return (
             <button
               key={tab.id}

@@ -417,9 +417,20 @@ export default function AdminMap() {
     [missions, activePhases],
   );
 
+  const kazeJobsDedupes = useMemo(() => {
+    const linkedKazeIds = new Set(
+      missions
+        .map((m) => m.kaze_mission_id)
+        .filter(Boolean)
+        .map((id) => String(id)),
+    );
+
+    return kazeJobs.filter((j) => !linkedKazeIds.has(String(j.kaze_job_id)));
+  }, [missions, kazeJobs]);
+
   const kazeFiltres = useMemo(
-    () => kazeJobs.filter((j) => activePhases.has(phaseDeKaze(j))),
-    [kazeJobs, activePhases],
+    () => kazeJobsDedupes.filter((j) => activePhases.has(phaseDeKaze(j))),
+    [kazeJobsDedupes, activePhases],
   );
 
   // Liste unique et plate de tous les marqueurs. Le regroupement ne peut
@@ -505,9 +516,9 @@ export default function AdminMap() {
   const stats = useMemo(() => {
     const counts = { A_TRAITER: 0, EN_COURS: 0, TERMINEE: 0 };
     missions.forEach((m) => counts[phaseDeStatut(m.status)]++);
-    kazeJobs.forEach((j) => counts[phaseDeKaze(j)]++);
+    kazeJobsDedupes.forEach((j) => counts[phaseDeKaze(j)]++);
     return counts;
-  }, [missions, kazeJobs]);
+  }, [missions, kazeJobsDedupes]);
 
   if (loading) {
     return (
