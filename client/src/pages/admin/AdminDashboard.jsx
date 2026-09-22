@@ -1805,6 +1805,7 @@ export default function AdminDashboard() {
       {activeTab === "upcoming" && (
         <UpcomingMissionsTab
           missions={missions}
+          missionsTotal={missionsTotal}
           kazeJobs={kazeJobs}
           loading={missionsLoading}
           kazeLoading={kazeLoading}
@@ -1823,6 +1824,7 @@ export default function AdminDashboard() {
             setAssignModal(m);
             setSelectedConvoyeur("");
           }}
+          onAnnuler={handleAnnuler}
           onSyncKaze={handleSyncKaze}
           syncing={syncing}
         />
@@ -2688,12 +2690,14 @@ function ConvoyeursTab({ kazeUsers, kazeLoading, kazeError, onRefresh }) {
 // ═══════════════════════════════════════════════════════════════
 function UpcomingMissionsTab({
   missions,
+  missionsTotal,
   kazeJobs,
   loading,
   kazeLoading,
   onRefresh,
   onCoter,
   onAssign,
+  onAnnuler,
   onSyncKaze,
   syncing,
 }) {
@@ -2785,6 +2789,9 @@ function UpcomingMissionsTab({
       .toLowerCase()
       .includes(q);
   });
+
+  const dlcCount = dlcUpcoming.length;
+  const kazeOnlyCount = kazeUpcomingJobs.length;
 
   return (
     <div className="space-y-4">
