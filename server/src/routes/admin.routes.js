@@ -2299,7 +2299,12 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
     }
 
     const updated = await db.query(
-      `UPDATE missions SET convoyeur_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      `UPDATE missions
+          SET convoyeur_id = $1,
+              status = CASE WHEN status = 'ACCEPTEE' THEN 'ASSIGNEE' ELSE status END,
+              updated_at = NOW()
+        WHERE id = $2
+        RETURNING *`,
       [convoyeurId, missionRecord.id],
     );
     if (updated.rows.length === 0)

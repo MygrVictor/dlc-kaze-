@@ -259,6 +259,23 @@ const migrate = async () => {
     `ALTER TYPE mission_status ADD VALUE IF NOT EXISTS 'DEVIS_REFUSE'`,
   );
 
+  // Rattrapage historique : certaines missions ont pu rester en ACCEPTEE
+  // alors qu'un convoyeur était déjà affecté. Elles doivent être en
+  // ASSIGNEE pour être classées dans le bon onglet et les bons KPI.
+  const rattrapageAssignation = await db.query(`
+    UPDATE missions
+       SET status = 'ASSIGNEE',
+           updated_at = NOW()
+     WHERE status = 'ACCEPTEE'
+       AND convoyeur_id IS NOT NULL
+    RETURNING id
+  `);
+  if (rattrapageAssignation.rowCount > 0) {
+    console.log(
+      `🛠️  Rattrapage statuts missions : ${rattrapageAssignation.rowCount} mission(s) passées de ACCEPTEE à ASSIGNEE.`,
+    );
+  }
+
   console.log("✅ Migration terminée avec succès.");
   process.exit(0);
 };

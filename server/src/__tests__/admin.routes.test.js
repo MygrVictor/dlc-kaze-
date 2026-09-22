@@ -1527,11 +1527,18 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
     mockDb(ADMIN, (sql) => {
       if (/role = ANY\(\$2\)/i.test(sql)) return { rows: [CONVOYEUR_ROW] };
       if (isGetMissionById(sql))
-        return { rows: [{ id: MISSION_ID, client_id: CLIENT.id }] };
+        return {
+          rows: [{ id: MISSION_ID, client_id: CLIENT.id, status: "ACCEPTEE" }],
+        };
       if (/SET convoyeur_id = \$1/i.test(sql))
         return {
           rows: [
-            { id: MISSION_ID, client_id: CLIENT.id, convoyeur_id: USER_ID },
+            {
+              id: MISSION_ID,
+              client_id: CLIENT.id,
+              convoyeur_id: USER_ID,
+              status: "ASSIGNEE",
+            },
           ],
         };
       if (/SELECT email, full_name FROM users/i.test(sql))
@@ -1543,6 +1550,7 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
     const res = await attribuer({ convoyeurId: USER_ID });
 
     expect(res.status).toBe(200);
+    expect(res.body.mission.status).toBe("ASSIGNEE");
     expect(res.body.kazeSync).toEqual({ synced: true, error: null });
     expect(kazeService.assignDriver).toHaveBeenCalledWith(
       "kz-job-1",
