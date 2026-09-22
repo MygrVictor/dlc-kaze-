@@ -109,6 +109,43 @@ async function appliquerTransitions(transitions) {
   return total;
 }
 
+/**
+ * Extrait la date planifiée Kaze la plus pertinente.
+ *
+ * Kaze renseigne prioritairement `due_date`, parfois seulement `start_date`.
+ * On normalise en `Date` exploitable par PostgreSQL.
+ */
+function extraireDatePlanifieeKaze(job) {
+  const brute = job?.due_date || job?.start_date || null;
+  if (!brute) return null;
+  const date = new Date(brute);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function memeInstant(a, b) {
+  if (!a || !b) return false;
+  const da = new Date(a);
+  const db = new Date(b);
+  if (Number.isNaN(da.getTime()) || Number.isNaN(db.getTime())) return false;
+  return da.getTime() === db.getTime();
+}
+
+async function appliquerSynchronisationDates(misesAJourDates) {
+  if (misesAJourDates.length === 0) return 0;
+
+  for (const { id, departureDate } of misesAJourDates) {
+    await db.query(
+      `UPDATE missions
+          SET departure_date = $1,
+              updated_at = NOW()
+        WHERE id = $2`,
+      [departureDate, id],
+    );
+  }
+
+  return misesAJourDates.length;
+}
+
 // Clé arbitraire mais stable du verrou consultatif PostgreSQL. `isSyncing`
 // ne protège que le processus courant : le serveur web et le cron
 // `sync-once.js` sont deux processus distincts qui écriraient les mêmes
@@ -176,7 +213,8 @@ async function syncKazeStatusesInterne() {
     // 1. Récupérer toutes les missions DLC qui ont un kaze_mission_id
     //    et qui ne sont pas déjà terminées (LIVREE, ANNULEE)
     const { rows: linkedMissions } = await db.query(
-      `SELECT m.id, m.kaze_mission_id, m.status, m.client_id, m.vehicle_plate, m.comments, u.email AS client_email
+      `SELECT m.id, m.kaze_mission_id, m.status, m.departure_date,
+              m.client_id, m.vehicle_plate, m.comments, u.email AS client_email
        FROM missions m
        LEFT JOIN users u ON u.id = m.client_id
        WHERE m.kaze_mission_id IS NOT NULL 
@@ -205,6 +243,24 @@ async function syncKazeStatusesInterne() {
       try {
         const index = await indexerStatutsKaze();
         const transitions = [];
+        let jobsRecents = [];
+        if (typeof kazeService.fetchRecentJobs === "function") {
+          try {
+            jobsRecents = (await kazeService.fetchRecentJobs(60)) || [];
+          } catch (errDates) {
+            console.warn(
+              `⚠️  Sync groupée: dates Kaze indisponibles (${errDates.message}) — statuts synchronisés uniquement.`,
+            );
+          }
+        }
+        const dateParJobId = new Map();
+        for (const job of jobsRecents) {
+          if (!job?.id) continue;
+          const dateKaze = extraireDatePlanifieeKaze(job);
+          if (dateKaze) dateParJobId.set(job.id, dateKaze);
+        }
+
+        const misesAJourDates = [];
 
         for (const mission of linkedMissions) {
           const statutKaze = index.get(mission.kaze_mission_id);
@@ -214,13 +270,25 @@ async function syncKazeStatusesInterne() {
           if (statutLocal && statutLocal !== mission.status) {
             transitions.push({ id: mission.id, statut: statutLocal });
           }
+
+          const dateKaze = dateParJobId.get(mission.kaze_mission_id);
+          if (dateKaze && !memeInstant(mission.departure_date, dateKaze)) {
+            misesAJourDates.push({ id: mission.id, departureDate: dateKaze });
+          }
         }
 
         const misesAJour = await appliquerTransitions(transitions);
+        const datesMisesAJour =
+          await appliquerSynchronisationDates(misesAJourDates);
 
         if (misesAJour > 0) {
           console.log(
             `✅ Sync Kaze terminée: ${misesAJour} mission(s) mise(s) à jour sur ${linkedMissions.length} vérifiée(s)`,
+          );
+        }
+        if (datesMisesAJour > 0) {
+          console.log(
+            `🗓️ Sync Kaze: ${datesMisesAJour} date(s) de mission alignée(s) sur Kaze.`,
           );
         }
         return;
@@ -233,6 +301,7 @@ async function syncKazeStatusesInterne() {
 
     let updated = 0;
     let echecs = 0;
+    let datesUpdated = 0;
 
     console.log(
       `🔎 Sync Kaze: ${linkedMissions.length} mission(s) liée(s) à vérifier (mode unitaire).`,
@@ -263,6 +332,21 @@ async function syncKazeStatusesInterne() {
             `   ${mission.id} : ${mission.status} (Kaze: ${kazeStatus}) — inchangé`,
           );
         }
+
+        const dateKaze = extraireDatePlanifieeKaze(kazeJob);
+        if (dateKaze && !memeInstant(mission.departure_date, dateKaze)) {
+          await db.query(
+            `UPDATE missions
+                SET departure_date = $1,
+                    updated_at = NOW()
+              WHERE id = $2`,
+            [dateKaze, mission.id],
+          );
+          datesUpdated++;
+          console.log(
+            `🗓️  Sync Kaze: mission ${mission.id} date alignée sur ${dateKaze.toISOString()}`,
+          );
+        }
       } catch (err) {
         echecs++;
         // Toute erreur était auparavant tue « pour éviter le spam », si
@@ -286,6 +370,11 @@ async function syncKazeStatusesInterne() {
     if (updated > 0) {
       console.log(
         `✅ Sync Kaze terminée: ${updated} mission(s) mise(s) à jour sur ${linkedMissions.length} vérifiée(s)`,
+      );
+    }
+    if (datesUpdated > 0) {
+      console.log(
+        `🗓️ Sync Kaze: ${datesUpdated} date(s) de mission alignée(s) sur Kaze.`,
       );
     }
   } catch (err) {

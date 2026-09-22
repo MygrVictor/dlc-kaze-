@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
 import {
@@ -337,7 +337,30 @@ export default function AdminDashboard() {
   };
 
   // ── Computed ──────────────────────────────────────────────
-  const missionsNonSync = missions.filter(
+  // Pour les missions liées à Kaze, on privilégie les dates Kaze : si une
+  // mission non terminée est reportée à la semaine suivante, la date locale
+  // doit refléter ce report (lundi suivant) dans les onglets admin.
+  const missionsWithKazeDates = useMemo(() => {
+    const kazeById = new Map(
+      (kazeJobs?.data || []).map((job) => [job.kaze_job_id, job]),
+    );
+
+    return missions.map((mission) => {
+      if (!mission.kaze_mission_id) return mission;
+      const job = kazeById.get(mission.kaze_mission_id);
+      if (!job) return mission;
+
+      const dateKaze = job.due_date || job.start_date || job.scheduled_at;
+      if (!dateKaze) return mission;
+
+      return {
+        ...mission,
+        departure_date: dateKaze,
+      };
+    });
+  }, [missions, kazeJobs]);
+
+  const missionsNonSync = missionsWithKazeDates.filter(
     (m) =>
       !m.kaze_mission_id &&
       ["ACCEPTEE", "ASSIGNEE", "EN_COURS"].includes(m.status),
@@ -362,11 +385,13 @@ export default function AdminDashboard() {
     "ASSIGNEE",
   ];
   const upcomingCount =
-    missions.filter((m) => UPCOMING_STATUSES.includes(m.status)).length +
+    missionsWithKazeDates.filter((m) => UPCOMING_STATUSES.includes(m.status))
+      .length +
     (kazeJobs?.data || []).filter(
       (j) =>
-        !missions.some((m) => m.kaze_mission_id === j.kaze_job_id) &&
-        ["waiting", "assigned"].includes(j.kaze_status),
+        !missionsWithKazeDates.some(
+          (m) => m.kaze_mission_id === j.kaze_job_id,
+        ) && ["waiting", "assigned"].includes(j.kaze_status),
     ).length;
 
   const tabs = [
@@ -378,7 +403,10 @@ export default function AdminDashboard() {
       count:
         (stats?.missions?.total || 0) +
         (kazeJobs?.data || []).filter(
-          (j) => !missions.some((m) => m.kaze_mission_id === j.kaze_job_id),
+          (j) =>
+            !missionsWithKazeDates.some(
+              (m) => m.kaze_mission_id === j.kaze_job_id,
+            ),
         ).length,
     },
     {
@@ -1139,7 +1167,7 @@ export default function AdminDashboard() {
                     {(() => {
                       // Fusionner missions DLC et jobs Kaze non déjà liés
                       const linkedKazeIds = new Set(
-                        missions
+                        missionsWithKazeDates
                           .filter((m) => m.kaze_mission_id)
                           .map((m) => m.kaze_mission_id),
                       );
@@ -1165,7 +1193,7 @@ export default function AdminDashboard() {
                           raw: j,
                         }));
 
-                      const dlcMissions = missions.map((m) => ({
+                      const dlcMissions = missionsWithKazeDates.map((m) => ({
                         ...m,
                         source: "dlc",
                       }));
@@ -1786,7 +1814,7 @@ export default function AdminDashboard() {
       {/* ═══ TAB: Missions (DLC + Kaze fusionnées) ═══ */}
       {activeTab === "missions" && (
         <MissionsTab
-          missions={missions}
+          missions={missionsWithKazeDates}
           missionsTotal={missionsTotal}
           kazeJobs={kazeJobs}
           loading={missionsLoading}
@@ -1816,7 +1844,7 @@ export default function AdminDashboard() {
       {/* ═══ TAB: Missions à venir ═══ */}
       {activeTab === "upcoming" && (
         <UpcomingMissionsTab
-          missions={missions}
+          missions={missionsWithKazeDates}
           missionsTotal={missionsTotal}
           kazeJobs={kazeJobs}
           loading={missionsLoading}
