@@ -652,6 +652,124 @@ describe("Gestion des utilisateurs", () => {
     expect(params).toEqual([["convoyeur", "admin"]]);
   });
 
+  it("met à jour l'email d'un convoyeur", async () => {
+    let updateParams;
+    mockDb(ADMIN, (sql, p) => {
+      if (
+        /SELECT id, role, email, full_name FROM users WHERE id = \$1/i.test(sql)
+      ) {
+        return {
+          rows: [
+            {
+              id: USER_ID,
+              role: "convoyeur",
+              email: "ancien@test.com",
+              full_name: "Paul Martin",
+            },
+          ],
+        };
+      }
+      if (
+        /SELECT id FROM users WHERE email = \$1 AND id != \$2 LIMIT 1/i.test(
+          sql,
+        )
+      ) {
+        return { rows: [] };
+      }
+      if (/UPDATE users SET email = \$1, updated_at = NOW\(\)/i.test(sql)) {
+        updateParams = p;
+        return {
+          rows: [
+            {
+              id: USER_ID,
+              role: "convoyeur",
+              email: "nouveau@test.com",
+              full_name: "Paul Martin",
+            },
+          ],
+        };
+      }
+    });
+
+    const res = await auth(
+      request(app).patch(`/api/admin/users/${USER_ID}/email`),
+    ).send({ email: "NOUVEAU@Test.com " });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe("nouveau@test.com");
+    expect(updateParams[0]).toBe("nouveau@test.com");
+  });
+
+  it("refuse un email invalide", async () => {
+    mockDb(ADMIN);
+
+    const res = await auth(
+      request(app).patch(`/api/admin/users/${USER_ID}/email`),
+    ).send({ email: "not-an-email" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/email invalide/i);
+  });
+
+  it("refuse la modification d'un compte admin", async () => {
+    mockDb(ADMIN, (sql) => {
+      if (
+        /SELECT id, role, email, full_name FROM users WHERE id = \$1/i.test(sql)
+      ) {
+        return {
+          rows: [
+            {
+              id: USER_ID,
+              role: "admin",
+              email: "admin2@test.com",
+              full_name: "Admin Bis",
+            },
+          ],
+        };
+      }
+    });
+
+    const res = await auth(
+      request(app).patch(`/api/admin/users/${USER_ID}/email`),
+    ).send({ email: "admin2+new@test.com" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/clients et convoyeurs/i);
+  });
+
+  it("retourne 409 si l'email est déjà pris", async () => {
+    mockDb(ADMIN, (sql) => {
+      if (
+        /SELECT id, role, email, full_name FROM users WHERE id = \$1/i.test(sql)
+      ) {
+        return {
+          rows: [
+            {
+              id: USER_ID,
+              role: "client",
+              email: "client1@test.com",
+              full_name: "Client 1",
+            },
+          ],
+        };
+      }
+      if (
+        /SELECT id FROM users WHERE email = \$1 AND id != \$2 LIMIT 1/i.test(
+          sql,
+        )
+      ) {
+        return { rows: [{ id: "autre" }] };
+      }
+    });
+
+    const res = await auth(
+      request(app).patch(`/api/admin/users/${USER_ID}/email`),
+    ).send({ email: "deja@test.com" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/déjà utilisée/i);
+  });
+
   it("valide un compte et notifie l'utilisateur", async () => {
     mockDb(ADMIN, (sql) => {
       if (/SET is_validated = true/i.test(sql))

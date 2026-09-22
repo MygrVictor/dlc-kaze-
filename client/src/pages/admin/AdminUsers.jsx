@@ -81,6 +81,9 @@ export default function AdminUsers() {
   // ── Modal suppression ──────────────────────────────────────
   const [deleteModal, setDeleteModal] = useState(null); // user obj
   const [deleting, setDeleting] = useState(false);
+  const [emailModal, setEmailModal] = useState(null); // user obj
+  const [emailInput, setEmailInput] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
 
   // Envoi en cours, par identifiant : le tableau peut compter des
   // dizaines de lignes, un indicateur global ne dirait pas laquelle.
@@ -155,6 +158,37 @@ export default function AdminUsers() {
       );
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const openEmailModal = (u) => {
+    setEmailModal(u);
+    setEmailInput(u.email || "");
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!emailModal) return;
+
+    const prochainEmail = emailInput.trim().toLowerCase();
+    if (!prochainEmail) {
+      toast.error("Veuillez renseigner un email.");
+      return;
+    }
+
+    setEmailSaving(true);
+    try {
+      const { data } = await api.patch(`/admin/users/${emailModal.id}/email`, {
+        email: prochainEmail,
+      });
+      toast.success(data.message || "Email mis à jour.");
+      setEmailModal(null);
+      fetchUsers();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Erreur lors de la mise à jour.",
+      );
+    } finally {
+      setEmailSaving(false);
     }
   };
 
@@ -530,6 +564,15 @@ export default function AdminUsers() {
                           )}
                         {u.role !== "admin" && (
                           <button
+                            onClick={() => openEmailModal(u)}
+                            className="p-1.5 rounded-lg text-dark-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                            title="Modifier l'email"
+                          >
+                            <Mail size={15} />
+                          </button>
+                        )}
+                        {u.role !== "admin" && (
+                          <button
                             onClick={() => handleEnvoyerReset(u)}
                             disabled={envoiReset[u.id]}
                             className="p-1.5 rounded-lg text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
@@ -576,6 +619,56 @@ export default function AdminUsers() {
           >
             Afficher les comptes plus anciens
           </button>
+        </div>
+      )}
+
+      {/* Modal modification email */}
+      {emailModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Modifier l'email — {emailModal.full_name}
+              </h3>
+              <button
+                onClick={() => setEmailModal(null)}
+                className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-dark-400 mb-4">
+              Cette action est réservée à l'administrateur.
+            </p>
+
+            <label className="block text-xs text-dark-400 mb-1">
+              Nouvel email
+            </label>
+            <input
+              type="email"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="input-field mb-4"
+              placeholder="utilisateur@exemple.fr"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleUpdateEmail}
+                disabled={emailSaving}
+                className="btn-primary flex-1"
+              >
+                {emailSaving ? "Enregistrement…" : "Enregistrer"}
+              </button>
+              <button
+                onClick={() => setEmailModal(null)}
+                className="btn-secondary flex-1"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

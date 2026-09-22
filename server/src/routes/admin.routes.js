@@ -5,7 +5,7 @@ const kazeService = require("../services/kaze.service");
 const syncService = require("../services/sync.service");
 const emailService = require("../services/email.service");
 const geocodingService = require("../services/geocoding.service");
-const { auditLog } = require("../middleware/security.middleware");
+const { auditLog, isValidEmail } = require("../middleware/security.middleware");
 const { creerLienReinitialisation } = require("../lib/password-reset");
 const { isDemoMission, isValidKazeDriverId } = require("../lib/demo-mission");
 const fs = require("fs");
@@ -1102,6 +1102,79 @@ router.patch("/users/:id/validate", async (req, res, next) => {
     res.json({
       user: updated.rows[0],
       message: `${updated.rows[0].role === "convoyeur" ? "Convoyeur" : "Client"} validé.`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Met à jour l'email d'un client ou d'un convoyeur.
+ *
+ * Réservé au back-office admin : ni les clients ni les convoyeurs ne
+ * peuvent modifier eux-mêmes cet identifiant, car il sert à l'authentification
+ * et aux notifications métier.
+ */
+router.patch("/users/:id/email", async (req, res, next) => {
+  try {
+    const brut = String(req.body?.email || "").trim();
+    const email = brut.toLowerCase();
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "Adresse email invalide." });
+    }
+
+    const cibleRes = await db.query(
+      "SELECT id, role, email, full_name FROM users WHERE id = $1",
+      [req.params.id],
+    );
+    const cible = cibleRes.rows[0];
+
+    if (!cible)
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+
+    if (!["client", "convoyeur"].includes(cible.role)) {
+      return res.status(400).json({
+        error:
+          "Seuls les comptes clients et convoyeurs peuvent être modifiés ici.",
+      });
+    }
+
+    if (cible.email === email) {
+      return res.json({
+        user: cible,
+        message: "Aucun changement : cet email est déjà enregistré.",
+      });
+    }
+
+    const existe = await db.query(
+      "SELECT id FROM users WHERE email = $1 AND id != $2 LIMIT 1",
+      [email, req.params.id],
+    );
+    if (existe.rows.length > 0) {
+      return res
+        .status(409)
+        .json({ error: "Cette adresse email est déjà utilisée." });
+    }
+
+    const updated = await db.query(
+      `UPDATE users SET email = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, email, full_name, role`,
+      [email, req.params.id],
+    );
+
+    auditLog("ADMIN_EMAIL_UPDATED", req.user.id, {
+      ip: req.ip,
+      targetUserId: req.params.id,
+      targetRole: cible.role,
+      oldEmail: cible.email,
+      newEmail: email,
+    });
+
+    res.json({
+      user: updated.rows[0],
+      message: "Email mis à jour.",
     });
   } catch (err) {
     next(err);
