@@ -129,9 +129,37 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_MIME.includes(file.mimetype)) cb(null, true);
-    else cb(new Error("Format non supporté. Utilisez JPG, PNG, WEBP ou PDF."));
+    else {
+      const err = new Error(
+        "Format non supporté. Utilisez JPG, PNG, WEBP ou PDF.",
+      );
+      err.status = 400;
+      cb(err);
+    }
   },
 });
+
+function singleDocumentUpload(req, res, next) {
+  upload.single("document")(req, res, (err) => {
+    if (!err) return next();
+
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res
+          .status(400)
+          .json({ error: "Fichier trop volumineux : 10 Mo maximum." });
+      }
+
+      return res.status(400).json({
+        error: err.message || "Erreur lors de l'envoi du document.",
+      });
+    }
+
+    return res.status(err.status || 400).json({
+      error: err.message || "Erreur lors de l'envoi du document.",
+    });
+  });
+}
 
 const router = express.Router();
 
@@ -899,7 +927,7 @@ router.post(
     }
     next();
   },
-  upload.single("document"),
+  singleDocumentUpload,
   async (req, res, next) => {
     try {
       if (!req.file) {

@@ -26,6 +26,34 @@ const getFileUrl = (filePath) => {
   return `${API_BASE}${filePath}`;
 };
 
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
+const MIME_AUTORISES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+];
+const EXTENSIONS_AUTORISEES = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+
+function hasAllowedExtension(fileName) {
+  const normalized = String(fileName || "").toLowerCase();
+  return EXTENSIONS_AUTORISEES.some((extension) =>
+    normalized.endsWith(extension),
+  );
+}
+
+function getUploadErrorMessage(err) {
+  if (err.code === "ECONNABORTED") {
+    return "L'envoi a pris trop de temps. Vérifiez votre réseau ou compressez le fichier, puis réessayez.";
+  }
+
+  if (!err.response) {
+    return "Impossible d'envoyer le document. Vérifiez votre connexion puis réessayez.";
+  }
+
+  return err.response?.data?.error || "Erreur lors de l'envoi du fichier.";
+}
+
 const DOCUMENT_TYPES = [
   {
     key: "permis",
@@ -168,19 +196,33 @@ export default function DocumentsValidation() {
 
   const handleUpload = async (type, file) => {
     if (!file) return;
+
+    if (file.size > MAX_UPLOAD_SIZE) {
+      toast.error("Fichier trop volumineux : 10 Mo maximum.");
+      if (fileInputs.current[type]) fileInputs.current[type].value = "";
+      return;
+    }
+
+    if (
+      (file.type && !MIME_AUTORISES.includes(file.type)) ||
+      (!file.type && !hasAllowedExtension(file.name))
+    ) {
+      toast.error("Format non supporté. Utilisez un PDF, JPG, PNG ou WEBP.");
+      if (fileInputs.current[type]) fileInputs.current[type].value = "";
+      return;
+    }
+
     setUploading((p) => ({ ...p, [type]: true }));
     const formData = new FormData();
     formData.append("document", file);
     try {
       await api.post(`/convoyeur/documents/${type}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
       });
       toast.success("Document déposé avec succès !");
       fetchDocuments();
     } catch (err) {
-      toast.error(
-        err.response?.data?.error || "Erreur lors de l'envoi du fichier.",
-      );
+      toast.error(getUploadErrorMessage(err));
     } finally {
       setUploading((p) => ({ ...p, [type]: false }));
       if (fileInputs.current[type]) fileInputs.current[type].value = "";

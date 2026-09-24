@@ -1,5 +1,18 @@
 import axios from "axios";
 
+const PROTECTED_PATH_PREFIXES = [
+  "/client",
+  "/admin",
+  "/convoyeur",
+  "/dashboard",
+];
+
+function isProtectedPath(pathname) {
+  return PROTECTED_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 const api = axios.create({
   baseURL: "/api",
   headers: { "Content-Type": "application/json" },
@@ -13,7 +26,8 @@ api.interceptors.response.use(
   (error) => {
     // 401 = session expirée → déconnexion
     if (error.response?.status === 401) {
-      if (window.location.pathname !== "/login") {
+      const pathname = window.location.pathname;
+      if (pathname !== "/login" && isProtectedPath(pathname)) {
         window.location.href = "/login";
       }
     }
