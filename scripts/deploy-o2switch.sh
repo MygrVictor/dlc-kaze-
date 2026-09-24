@@ -73,10 +73,25 @@ etape "Front (client/dist)"
 # On refuse simplement de déployer un front plus vieux que ses sources :
 # c'est le piège qui a fait croire à un bug d'authentification (login OK
 # puis 401 partout) alors que le bundle servi datait d'avant le correctif.
+#
+# Attention : après un `git pull`, les dates des fichiers sur disque reflètent
+# l'instant d'extraction des blobs, pas l'ordre logique des commits. Comparer
+# `find -newer` sur le serveur produit donc des faux positifs : `client/src`
+# peut sembler plus récent que `client/dist` alors qu'ils ont été commités
+# ensemble. On s'appuie ici sur l'historique Git, qui reste stable après pull.
 if [ -f "$RACINE/client/dist/index.html" ]; then
-  SRC_RECENT="$(find "$RACINE/client/src" "$RACINE/client/index.html" \
-    -type f -newer "$RACINE/client/dist/index.html" 2>/dev/null | head -n 1)"
-  if [ -n "$SRC_RECENT" ]; then
+  SRC_REV="$(git log -1 --format=%H HEAD -- client/src client/index.html)"
+  DIST_REV="$(git log -1 --format=%H HEAD -- client/dist)"
+
+  if [ -z "$DIST_REV" ]; then
+    echo "✖ client/dist absent de l'historique Git — buildez le front en local et poussez-le."
+    exit 1
+  fi
+
+  SRC_TS="$(git show -s --format=%ct "$SRC_REV")"
+  DIST_TS="$(git show -s --format=%ct "$DIST_REV")"
+
+  if [ "$SRC_TS" -gt "$DIST_TS" ]; then
     echo "✖ client/dist est plus ancien que les sources du front."
     echo "  Rebuild en local puis commit/push le dist :"
     echo "    (cd client && npm run build) && git add client/dist && git commit && git push"
