@@ -789,6 +789,22 @@ describe("createMission", () => {
     arrival_address: "1 place Bellecour, Lyon",
   };
 
+  const widgetEmailPayload = () => {
+    const payload = client.post.mock.calls[0][1];
+    return {
+      departure:
+        payload.data?.["step-depart"]?.["76f43f34-f1f7-4428-b43a-718db56ebb60"]
+          ?.data,
+      arrival:
+        payload.data?.["step-arrivee"]?.["0a1b5854-2535-416f-9650-264edd61ba7c"]
+          ?.data,
+      recap:
+        payload.data?.["e319864c-907d-42ce-b406-579a59666e19"]?.[
+          "e319864c-907d-42ce-b406-579a59666e19"
+        ]?.email_addresses,
+    };
+  };
+
   /**
    * Gabarit de workflow minimal reproduisant la structure Kaze : un nœud
    * racine, une étape « Signature Client » et quelques widgets.
@@ -798,8 +814,31 @@ describe("createMission", () => {
       type: "template_workflow",
       children: [
         {
+          id: "job-info-1",
           type: "template_job_info",
           children: [],
+        },
+        {
+          id: "step-depart",
+          type: "template_step",
+          children: [
+            {
+              id: "76f43f34-f1f7-4428-b43a-718db56ebb60",
+              type: "widget_text",
+              children: [],
+            },
+          ],
+        },
+        {
+          id: "step-arrivee",
+          type: "template_step",
+          children: [
+            {
+              id: "0a1b5854-2535-416f-9650-264edd61ba7c",
+              type: "widget_text",
+              children: [],
+            },
+          ],
         },
         {
           id: "e319864c-907d-42ce-b406-579a59666e19",
@@ -938,6 +977,20 @@ describe("createMission", () => {
 
     expect(destinatairesRecap()).toContain("compta@entreprise.fr");
     expect(destinatairesRecap()).not.toContain("compte-client@test.com");
+  });
+
+  it("ne recycle pas l'email client dans les contacts départ et arrivée", async () => {
+    await kaze.createMission({
+      ...MISSION,
+      client_email: "compte-client@test.com",
+      recap_email: "compta@entreprise.fr",
+    });
+
+    expect(widgetEmailPayload()).toEqual({
+      departure: "",
+      arrival: "",
+      recap: "compta@entreprise.fr",
+    });
   });
 
   it("avertit lorsqu'aucun email ne permet d'envoyer le récapitulatif", async () => {

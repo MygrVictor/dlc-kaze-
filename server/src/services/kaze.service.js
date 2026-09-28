@@ -950,7 +950,7 @@ const createMission = async (mission) => {
       setWidgetData(
         workflow,
         "76f43f34-f1f7-4428-b43a-718db56ebb60",
-        mission.departure_contact_email || mission.client_email || "",
+        mission.departure_contact_email || "",
       );
       // Remarques enlèvement
       setWidgetData(
@@ -984,7 +984,7 @@ const createMission = async (mission) => {
       setWidgetData(
         workflow,
         "0a1b5854-2535-416f-9650-264edd61ba7c",
-        mission.arrival_contact_email || mission.client_email || "",
+        mission.arrival_contact_email || "",
       );
       // Remarques livraison
       setWidgetData(
