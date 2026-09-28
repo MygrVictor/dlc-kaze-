@@ -33,7 +33,7 @@ import {
   Network,
   Upload,
   ReceiptText,
-  Plus,
+  Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
