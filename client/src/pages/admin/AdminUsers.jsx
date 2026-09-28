@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import api from "../../lib/api";
 import { formatDate } from "../../lib/utils";
 import {
@@ -57,6 +57,7 @@ export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [roleFilter, setRoleFilter] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [kazeModal, setKazeModal] = useState(null); // user obj
   const [kazeEmailInput, setKazeEmailInput] = useState("");
   const [kazePhoneInput, setKazePhoneInput] = useState("");
@@ -528,6 +529,19 @@ export default function AdminUsers() {
     admin: "bg-red-500/10 text-red-400 border border-red-500/20",
   };
 
+  const usersFiltres = useMemo(() => {
+    const terme = searchTerm.trim().toLowerCase();
+    if (!terme) return users;
+
+    return users.filter((u) => {
+      const contenu = [u.full_name, u.email, u.company, u.phone]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return contenu.includes(terme);
+    });
+  }, [users, searchTerm]);
+
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
@@ -547,20 +561,36 @@ export default function AdminUsers() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-6">
-        {["", "client", "convoyeur", "admin"].map((r) => (
-          <button
-            key={r}
-            onClick={() => setRoleFilter(r)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              roleFilter === r
-                ? "bg-primary-600 text-white"
-                : "bg-dark-800 text-dark-400 hover:text-white hover:bg-dark-700"
-            }`}
-          >
-            {r || "Tous"}
-          </button>
-        ))}
+      <div className="mb-6 space-y-3">
+        <div className="flex gap-2 flex-wrap">
+          {["", "client", "convoyeur", "admin"].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                roleFilter === r
+                  ? "bg-primary-600 text-white"
+                  : "bg-dark-800 text-dark-400 hover:text-white hover:bg-dark-700"
+              }`}
+            >
+              {r || "Tous"}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative max-w-md">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500"
+          />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Rechercher un nom, email, entreprise ou téléphone"
+            className="input-field pl-9"
+          />
+        </div>
       </div>
 
       {loading && (
@@ -585,7 +615,7 @@ export default function AdminUsers() {
             </p>
           </button>
 
-          {users.map((u) => {
+          {usersFiltres.map((u) => {
             const RoleIcon = roleIcons[u.role] || Users;
             return (
               <div
@@ -794,7 +824,7 @@ export default function AdminUsers() {
             );
           })}
 
-          {users.length === 0 && (
+          {usersFiltres.length === 0 && (
             <div className="card text-center py-16 text-dark-400 lg:col-span-2">
               <Users size={40} className="mx-auto mb-3 opacity-30" />
               <p>Aucun utilisateur trouvé.</p>
