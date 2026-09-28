@@ -167,20 +167,43 @@ export default function AdminMissions() {
     uniqueKazeJobs.map((j) => [String(j.kaze_job_id), j]),
   );
 
-  const KAZE_EXPECTED_STEPS = 7;
+  const getKazeStepState = (step) => {
+    const status = String(step?.status || "").toLowerCase();
+    if (!status) return "todo";
+    if (
+      ["done", "completed", "finished", "validated", "success"].some((token) =>
+        status.includes(token),
+      )
+    ) {
+      return "done";
+    }
+    if (
+      ["current", "in_progress", "active", "started", "processing"].some(
+        (token) => status.includes(token),
+      )
+    ) {
+      return "current";
+    }
+    return "todo";
+  };
 
   const inferStepProgress = (m) => {
-    const total = KAZE_EXPECTED_STEPS;
+    const steps = Array.isArray(m.kaze_steps) ? m.kaze_steps : [];
+    if (steps.length === 0) return null;
+
+    const total = steps.length;
+    const states = steps.map(getKazeStepState);
+    const done = states.filter((s) => s === "done").length;
+
+    let current = states.findIndex((s) => s === "current");
+    if (current < 0) current = states.findIndex((s) => s === "todo");
+    if (current < 0) current = total - 1;
+
     if (m.kaze_status === "completed" || m.status === "LIVREE") {
       return { total, done: total, current: total };
     }
-    if (m.kaze_status === "started" || m.status === "EN_COURS") {
-      return { total, done: 0, current: 1 };
-    }
-    if (m.kaze_status === "assigned" || m.status === "ASSIGNEE") {
-      return { total, done: 0, current: 1 };
-    }
-    return null;
+
+    return { total, done, current: current + 1 };
   };
 
   const getKazeCurrentStepName = (steps) => {

@@ -2123,14 +2123,20 @@ function MissionsTab({
 
   // ── Fusionner missions DLC + Kaze ──
   const linkedKazeIds = new Set(
-    missions.filter((m) => m.kaze_mission_id).map((m) => m.kaze_mission_id),
+    missions
+      .filter((m) => m.kaze_mission_id)
+      .map((m) => String(m.kaze_mission_id)),
   );
 
   const uniqueKazeJobs = Array.from(
-    new Map((kazeJobs?.data || []).map((j) => [j.kaze_job_id, j])).values(),
+    new Map(
+      (kazeJobs?.data || []).map((j) => [String(j.kaze_job_id), j]),
+    ).values(),
   );
 
-  const kazeJobsById = new Map(uniqueKazeJobs.map((j) => [j.kaze_job_id, j]));
+  const kazeJobsById = new Map(
+    uniqueKazeJobs.map((j) => [String(j.kaze_job_id), j]),
+  );
 
   const KAZE_EXPECTED_STEPS = 7;
 
@@ -2220,7 +2226,7 @@ function MissionsTab({
   };
 
   const kazeOnlyJobs = uniqueKazeJobs
-    .filter((j) => !linkedKazeIds.has(j.kaze_job_id))
+    .filter((j) => !linkedKazeIds.has(String(j.kaze_job_id)))
     .map((j) => ({
       id: j.kaze_job_id,
       source: "kaze",
@@ -2247,7 +2253,7 @@ function MissionsTab({
 
   const dlcMissions = missions.map((m) => {
     const linkedKaze = m.kaze_mission_id
-      ? kazeJobsById.get(m.kaze_mission_id)
+      ? kazeJobsById.get(String(m.kaze_mission_id))
       : null;
     return {
       ...m,
