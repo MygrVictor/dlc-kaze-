@@ -210,6 +210,13 @@ router.post(
   async (req, res, next) => {
     try {
       if (!req.file) {
+        console.warn("⚠️ Upload facture sans fichier", {
+          contentType: req.headers["content-type"] || null,
+          bodyKeys: Object.keys(req.body || {}),
+          hasBody: Boolean(req.body && Object.keys(req.body).length),
+          originalUrl: req.originalUrl,
+          method: req.method,
+        });
         return res.status(400).json({ error: "Aucun fichier reçu." });
       }
 

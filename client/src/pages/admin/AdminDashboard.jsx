@@ -2130,6 +2130,95 @@ function MissionsTab({
     new Map((kazeJobs?.data || []).map((j) => [j.kaze_job_id, j])).values(),
   );
 
+  const kazeJobsById = new Map(uniqueKazeJobs.map((j) => [j.kaze_job_id, j]));
+
+  const KAZE_EXPECTED_STEPS = 7;
+
+  const getKazeStepState = (step) => {
+    const status = String(step?.status || "").toLowerCase();
+    if (!status) return "todo";
+    if (
+      ["done", "completed", "finished", "validated", "success"].some((token) =>
+        status.includes(token),
+      )
+    ) {
+      return "done";
+    }
+    if (
+      ["current", "in_progress", "active", "started", "processing"].some(
+        (token) => status.includes(token),
+      )
+    ) {
+      return "current";
+    }
+    return "todo";
+  };
+
+  const getKazeCurrentStepLabel = (steps) => {
+    if (!Array.isArray(steps) || steps.length === 0) return null;
+
+    const norm = (v) => String(v || "").toLowerCase();
+    const isInProgress = (s) =>
+      ["current", "in_progress", "active", "started", "processing"].some(
+        (token) => norm(s?.status).includes(token),
+      );
+    const isDone = (s) =>
+      ["done", "completed", "finished", "validated", "success"].some((token) =>
+        norm(s?.status).includes(token),
+      );
+
+    let index = steps.findIndex(isInProgress);
+    if (index < 0) index = steps.findIndex((s) => !isDone(s));
+    if (index < 0) return null;
+
+    const step = steps[index];
+    const name = step?.name || step?.title || `Étape ${index + 1}`;
+    return name;
+  };
+
+  const getKazeStepProgress = (steps, kazeStatus) => {
+    if (!Array.isArray(steps) || steps.length === 0) {
+      if (kazeStatus === "started") {
+        return {
+          total: KAZE_EXPECTED_STEPS,
+          done: 0,
+          current: 1,
+          dots: Array.from({ length: KAZE_EXPECTED_STEPS }, (_v, i) =>
+            i === 0 ? "current" : "todo",
+          ),
+          inferred: true,
+        };
+      }
+      return null;
+    }
+
+    const total = steps.length;
+    const states = steps.map(getKazeStepState);
+    let current = states.findIndex((s) => s === "current");
+    if (current < 0) current = states.findIndex((s) => s === "todo");
+    if (current < 0) current = total - 1;
+
+    const done = states.filter((s) => s === "done").length;
+
+    if (kazeStatus === "completed") {
+      return {
+        total,
+        done: total,
+        current: total,
+        dots: states.map(() => "done"),
+        inferred: false,
+      };
+    }
+
+    return {
+      total,
+      done,
+      current: current + 1,
+      dots: states,
+      inferred: false,
+    };
+  };
+
   const kazeOnlyJobs = uniqueKazeJobs
     .filter((j) => !linkedKazeIds.has(j.kaze_job_id))
     .map((j) => ({
@@ -2153,9 +2242,21 @@ function MissionsTab({
       created_at: j.created_at,
       departure_date: j.due_date || j.start_date,
       tags: j.tags,
+      kaze_steps: j.steps || [],
     }));
 
-  const dlcMissions = missions.map((m) => ({ ...m, source: "dlc" }));
+  const dlcMissions = missions.map((m) => {
+    const linkedKaze = m.kaze_mission_id
+      ? kazeJobsById.get(m.kaze_mission_id)
+      : null;
+    return {
+      ...m,
+      source: "dlc",
+      kaze_status: m.kaze_status || linkedKaze?.kaze_status || null,
+      status_name: m.status_name || linkedKaze?.status_name || null,
+      kaze_steps: linkedKaze?.steps || [],
+    };
+  });
 
   const allMissions = [...dlcMissions, ...kazeOnlyJobs].sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at),
@@ -2417,21 +2518,70 @@ function MissionsTab({
                     </td>
                     {/* Statut */}
                     <td className="py-3 px-3">
-                      {m.source === "kaze" ? (
-                        <span
-                          className={`badge text-xs ${KAZE_STATUS_COLORS[m.kaze_status] || STATUS_COLORS[m.status] || "bg-dark-700 text-dark-300"}`}
-                        >
-                          {KAZE_STATUS_LABELS[m.kaze_status] ||
-                            m.status_name ||
-                            m.status}
-                        </span>
-                      ) : (
-                        <span
-                          className={`badge text-xs ${STATUS_COLORS[m.status]}`}
-                        >
-                          {STATUS_LABELS[m.status]}
-                        </span>
-                      )}
+                      <div className="space-y-1">
+                        {m.source === "kaze" ? (
+                          <span
+                            className={`badge text-xs ${KAZE_STATUS_COLORS[m.kaze_status] || STATUS_COLORS[m.status] || "bg-dark-700 text-dark-300"}`}
+                          >
+                            {KAZE_STATUS_LABELS[m.kaze_status] ||
+                              m.status_name ||
+                              m.status}
+                          </span>
+                        ) : (
+                          <span
+                            className={`badge text-xs ${STATUS_COLORS[m.status]}`}
+                          >
+                            {STATUS_LABELS[m.status]}
+                          </span>
+                        )}
+
+                        {(() => {
+                          const progress = getKazeStepProgress(
+                            m.kaze_steps,
+                            m.kaze_status,
+                          );
+                          const stepLabel = getKazeCurrentStepLabel(
+                            m.kaze_steps,
+                          );
+                          if (!progress && !stepLabel) return null;
+
+                          return (
+                            <div className="space-y-1">
+                              {progress && (
+                                <p className="text-[11px] text-dark-500 truncate max-w-[170px]">
+                                  Kaze : {progress.done}/{progress.total} étape
+                                  {progress.total > 1 ? "s" : ""}
+                                  {progress.inferred ? " (estimé)" : ""}
+                                </p>
+                              )}
+
+                              {progress?.dots?.length > 0 &&
+                                progress.total === KAZE_EXPECTED_STEPS && (
+                                  <div className="flex items-center gap-1">
+                                    {progress.dots.map((state, idx) => (
+                                      <span
+                                        key={idx}
+                                        className={`h-1.5 w-1.5 rounded-full ${
+                                          state === "done"
+                                            ? "bg-emerald-400"
+                                            : state === "current"
+                                              ? "bg-orange-400"
+                                              : "bg-dark-600"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+
+                              {stepLabel && (
+                                <p className="text-[11px] text-dark-500 truncate max-w-[170px]">
+                                  Étape en cours : {stepLabel}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </td>
                     {/* Convoyeur */}
                     <td className="py-3 px-3">

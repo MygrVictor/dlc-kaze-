@@ -1,1 +1,0 @@
-import{j as t}from"./index-BzZUASSA.js";import{E as r}from"./EspaceFactures-Z7_bIecU.js";import"./react-CLSu8xmm.js";import"./receipt-5HIrBBea.js";import"./circle-x-DTNNCW60.js";import"./circle-check-BrZidcr7.js";import"./triangle-alert-BbE5Yp0_.js";import"./download-rvKXfhkx.js";function n(){return t.jsx(r,{})}export{n as default};

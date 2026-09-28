@@ -180,7 +180,6 @@ export default function AdminFactures() {
       await api.post(
         `/factures/destinataires/${form.destinataire_id}`,
         donnees,
-        { headers: { "Content-Type": "multipart/form-data" } },
       );
       setForm(FORMULAIRE_VIDE);
       setFichier(null);

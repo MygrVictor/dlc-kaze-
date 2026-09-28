@@ -163,6 +163,47 @@ export default function AdminMissions() {
     new Map((kazeJobs || []).map((j) => [String(j.kaze_job_id), j])).values(),
   );
 
+  const kazeJobsById = new Map(
+    uniqueKazeJobs.map((j) => [String(j.kaze_job_id), j]),
+  );
+
+  const KAZE_EXPECTED_STEPS = 7;
+
+  const inferStepProgress = (m) => {
+    const total = KAZE_EXPECTED_STEPS;
+    if (m.kaze_status === "completed" || m.status === "LIVREE") {
+      return { total, done: total, current: total };
+    }
+    if (m.kaze_status === "started" || m.status === "EN_COURS") {
+      return { total, done: 0, current: 1 };
+    }
+    if (m.kaze_status === "assigned" || m.status === "ASSIGNEE") {
+      return { total, done: 0, current: 1 };
+    }
+    return null;
+  };
+
+  const getKazeCurrentStepName = (steps) => {
+    if (!Array.isArray(steps) || steps.length === 0) return null;
+
+    const norm = (v) => String(v || "").toLowerCase();
+    const isInProgress = (s) =>
+      ["current", "in_progress", "active", "started", "processing"].some(
+        (token) => norm(s?.status).includes(token),
+      );
+    const isDone = (s) =>
+      ["done", "completed", "finished", "validated", "success"].some((token) =>
+        norm(s?.status).includes(token),
+      );
+
+    let index = steps.findIndex(isInProgress);
+    if (index < 0) index = steps.findIndex((s) => !isDone(s));
+    if (index < 0) return null;
+
+    const step = steps[index];
+    return step?.name || step?.title || null;
+  };
+
   const kazeOnlyJobs = uniqueKazeJobs
     .filter((j) => !linkedKazeIds.has(String(j.kaze_job_id)))
     .map((j) => ({
@@ -184,9 +225,20 @@ export default function AdminMissions() {
       convoyeur_name: j.performer_name,
       created_at: j.created_at,
       departure_date: j.due_date || j.start_date,
+      kaze_steps: j.steps || [],
     }));
 
-  const dlcMissions = missions.map((m) => ({ ...m, source: "dlc" }));
+  const dlcMissions = missions.map((m) => {
+    const linked = m.kaze_mission_id
+      ? kazeJobsById.get(String(m.kaze_mission_id))
+      : null;
+    return {
+      ...m,
+      source: "dlc",
+      kaze_status: m.kaze_status || linked?.kaze_status || null,
+      kaze_steps: linked?.steps || [],
+    };
+  });
 
   const allMissions = [...dlcMissions, ...kazeOnlyJobs].sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at),
@@ -651,17 +703,42 @@ export default function AdminMissions() {
                       )}
                     </td>
                     <td className="py-3 px-4" data-label="Statut">
-                      {m.source === "kaze" && m.kaze_status ? (
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${KAZE_STATUS_COLORS[m.kaze_status] || "bg-dark-700 text-dark-300"}`}
-                        >
-                          {KAZE_STATUS_LABELS[m.kaze_status] || m.kaze_status}
-                        </span>
-                      ) : (
-                        <span className={`badge ${STATUS_COLORS[m.status]}`}>
-                          {STATUS_LABELS[m.status]}
-                        </span>
-                      )}
+                      <div className="space-y-1">
+                        {m.source === "kaze" && m.kaze_status ? (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${KAZE_STATUS_COLORS[m.kaze_status] || "bg-dark-700 text-dark-300"}`}
+                          >
+                            {KAZE_STATUS_LABELS[m.kaze_status] || m.kaze_status}
+                          </span>
+                        ) : (
+                          <span className={`badge ${STATUS_COLORS[m.status]}`}>
+                            {STATUS_LABELS[m.status]}
+                          </span>
+                        )}
+
+                        {(() => {
+                          if (!m.kaze_mission_id) return null;
+                          const progress = inferStepProgress(m);
+                          const currentStepName = getKazeCurrentStepName(
+                            m.kaze_steps,
+                          );
+                          if (!progress && !currentStepName) return null;
+                          return (
+                            <div className="space-y-0.5">
+                              {progress && (
+                                <p className="text-[11px] text-dark-500">
+                                  Kaze : {progress.done}/{progress.total} étapes
+                                </p>
+                              )}
+                              {currentStepName && (
+                                <p className="text-[11px] text-dark-500 truncate max-w-[220px]">
+                                  Étape en cours : {currentStepName}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td className="py-3 px-4" data-label="Convoyeur">
                       {m.convoyeur_name ? (
