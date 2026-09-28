@@ -1729,7 +1729,48 @@ router.get("/kaze/jobs", async (req, res, next) => {
       warning = `Kaze indisponible: ${kazeErr.message}`;
       console.error("⚠️ Kaze jobs fetch:", kazeErr.message);
     }
-    const jobs = (rawJobs || []).map(kazeService.kazeJobToLocal);
+
+    const jobsToHydrate = rawJobs.filter(
+      (job) => !Array.isArray(job?.steps) || job.steps.length === 0,
+    );
+
+    let hydratedJobs = rawJobs;
+    if (jobsToHydrate.length > 0) {
+      try {
+        hydratedJobs = await Promise.all(
+          rawJobs.map(async (job) => {
+            if (Array.isArray(job?.steps) && job.steps.length > 0) return job;
+            try {
+              const detail = await kazeService.fetchJob(job.id);
+              return {
+                ...job,
+                ...detail,
+                steps: detail.steps || job.steps || [],
+                workflow: detail.workflow || job.workflow || null,
+                current_step_id:
+                  detail.current_step_id || job.current_step_id || null,
+                first_not_completed_step_id:
+                  detail.first_not_completed_step_id ||
+                  job.first_not_completed_step_id ||
+                  null,
+              };
+            } catch (err) {
+              console.warn(
+                `⚠️ Kaze: hydrate détail job ${job.id} impossible (${err.message})`,
+              );
+              return job;
+            }
+          }),
+        );
+      } catch (err) {
+        console.warn(
+          `⚠️ Kaze: hydratation des jobs impossible (${err.message})`,
+        );
+        hydratedJobs = rawJobs;
+      }
+    }
+
+    const jobs = (hydratedJobs || []).map(kazeService.kazeJobToLocal);
     const { status } = req.query;
     const filtered = status
       ? jobs.filter((job) => job.kaze_status === status)

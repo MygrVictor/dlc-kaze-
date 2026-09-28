@@ -435,6 +435,84 @@ const fetchJob = async (jobId) => {
   );
 };
 
+const normalizeStepStatus = (raw) => {
+  const status = String(raw || "")
+    .trim()
+    .toLowerCase();
+  if (!status) return "todo";
+  if (
+    ["done", "completed", "finished", "validated", "success"].some((token) =>
+      status.includes(token),
+    )
+  ) {
+    return "done";
+  }
+  if (
+    ["current", "in_progress", "active", "started", "processing"].some(
+      (token) => status.includes(token),
+    )
+  ) {
+    return "current";
+  }
+  return "todo";
+};
+
+const flattenWorkflowSteps = (workflow) => {
+  if (!workflow || !Array.isArray(workflow.children)) return [];
+
+  return workflow.children
+    .filter(
+      (node) =>
+        node &&
+        node.id &&
+        typeof node.type === "string" &&
+        node.type.startsWith("template_"),
+    )
+    .map((node, index) => ({
+      id: node.id,
+      name: node.label || node.title || node.name || `Étape ${index + 1}`,
+      type: node.type,
+      status: "todo",
+    }));
+};
+
+const buildJobSteps = (job) => {
+  if (Array.isArray(job?.steps) && job.steps.length > 0) {
+    return job.steps.map((step, index) => ({
+      ...step,
+      id: step.id || step.key || step.slug || `step-${index + 1}`,
+      name: step.name || step.label || step.title || `Étape ${index + 1}`,
+      status: normalizeStepStatus(step.status),
+    }));
+  }
+
+  const workflowSteps = flattenWorkflowSteps(job?.workflow);
+  if (workflowSteps.length === 0) return [];
+
+  const currentStepId =
+    job?.first_not_completed_step_id || job?.current_step_id || null;
+  const currentIndex = currentStepId
+    ? workflowSteps.findIndex((step) => step.id === currentStepId)
+    : -1;
+
+  return workflowSteps.map((step, index) => {
+    if (job?.status === "completed" || job?.status === "cancelled") {
+      return { ...step, status: "done" };
+    }
+
+    let status = "todo";
+    if (currentIndex === -1) {
+      status = index === 0 ? "current" : "todo";
+    } else if (index < currentIndex) {
+      status = "done";
+    } else if (index === currentIndex) {
+      status = "current";
+    }
+
+    return { ...step, status };
+  });
+};
+
 /** Transforme un job Kaze → données compatibles DLC. */
 const kazeJobToLocal = (job) => {
   const loc = job.work_order_address?.location?.split(",") || [];
@@ -458,6 +536,7 @@ const kazeJobToLocal = (job) => {
 
   const departureAddress = lireAdresse("start_address", "start_navigation");
   const arrivalAddress = lireAdresse("end_address", "end_navigation");
+  const steps = buildJobSteps(job);
 
   return {
     kaze_job_id: job.id,
@@ -484,7 +563,7 @@ const kazeJobToLocal = (job) => {
     owner_name: job.owner_name,
     target_name: job.target_name,
     tags: job.tags || [],
-    steps: job.steps || [],
+    steps,
     raw: job,
   };
 };
