@@ -393,17 +393,18 @@ const STATUTS_ENGAGES = ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"];
  * 50 % du prix mission. Cette règle s'applique même si un `price_convoyeur`
  * est présent en base sur certaines lignes historiques.
  *
- * Pour les anciennes missions créées par un admin sans coût convoyeur saisi,
- * on applique aussi ce forfait de 50 %.
+ * Pour les anciennes missions sans coût exploitable (aucun prix convoyeur et
+ * aucun lien fiable vers un convoyeur), on applique aussi ce forfait de 50 %
+ * plutôt que 0 : une marge nulle dans l'analyse masquerait la réalité métier.
  */
 const COUT_ANALYTIQUE_EXPR =
-  "CASE WHEN conv.role = 'admin' THEN COALESCE(m.price, 0) * 0.5 WHEN m.price_convoyeur IS NOT NULL THEN m.price_convoyeur WHEN m.created_by IS NOT NULL THEN COALESCE(m.price, 0) * 0.5 ELSE 0 END";
+  "CASE WHEN conv.role = 'admin' THEN COALESCE(m.price, 0) * 0.5 WHEN m.price_convoyeur IS NOT NULL THEN m.price_convoyeur WHEN m.created_by IS NOT NULL THEN COALESCE(m.price, 0) * 0.5 ELSE COALESCE(m.price, 0) * 0.5 END";
 
 const COUT_ANALYTIQUE_MISSIONS_EXPR =
-  "CASE WHEN conv.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE 0 END";
+  "CASE WHEN conv.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price, 0) * 0.5 END";
 
 const COUT_ANALYTIQUE_TOTAUX_EXPR =
-  "CASE WHEN c.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE 0 END";
+  "CASE WHEN c.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price, 0) * 0.5 END";
 
 /**
  * Traduit les paramètres de période en bornes SQL.
@@ -1730,15 +1731,17 @@ router.get("/kaze/jobs", async (req, res, next) => {
       console.error("⚠️ Kaze jobs fetch:", kazeErr.message);
     }
 
-    const jobsToHydrate = rawJobs.filter(
+    const rawJobsArray = Array.isArray(rawJobs) ? rawJobs : [];
+
+    const jobsToHydrate = rawJobsArray.filter(
       (job) => !Array.isArray(job?.steps) || job.steps.length === 0,
     );
 
-    let hydratedJobs = rawJobs;
+    let hydratedJobs = rawJobsArray;
     if (jobsToHydrate.length > 0) {
       try {
         hydratedJobs = await Promise.all(
-          rawJobs.map(async (job) => {
+          rawJobsArray.map(async (job) => {
             if (Array.isArray(job?.steps) && job.steps.length > 0) return job;
             try {
               const detail = await kazeService.fetchJob(job.id);
@@ -1766,7 +1769,7 @@ router.get("/kaze/jobs", async (req, res, next) => {
         console.warn(
           `⚠️ Kaze: hydratation des jobs impossible (${err.message})`,
         );
-        hydratedJobs = rawJobs;
+        hydratedJobs = rawJobsArray;
       }
     }
 

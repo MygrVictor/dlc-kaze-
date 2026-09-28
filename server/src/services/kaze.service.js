@@ -308,12 +308,21 @@ const fetchRecentJobs = async (days = 60) => {
   // Retourner le cache s'il est encore frais
   if (
     _recentJobsCache &&
-    Date.now() - _recentJobsCacheTime < RECENT_CACHE_TTL
+    Date.now() - _recentJobsCacheTime < RECENT_CACHE_TTL &&
+    !_recentJobsCache.some(
+      (job) => !Array.isArray(job?.steps) || job.steps.length === 0,
+    )
   ) {
     console.log(
       `📦 Kaze: cache récent valide (${_recentJobsCache.length} missions)`,
     );
     return _recentJobsCache;
+  }
+
+  if (_recentJobsCache) {
+    console.warn(
+      "⚠️ Kaze: cache des jobs récents incomplet (pas d'étapes), refresh forcé…",
+    );
   }
 
   try {
