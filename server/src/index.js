@@ -289,6 +289,14 @@ app.get(/^\/uploads\/(.+)$/, async (req, res) => {
       if (factures[0]) proprietaireId = factures[0].destinataire_id;
     }
 
+    if (!proprietaireId) {
+      const { rows: docsClient } = await db.query(
+        "SELECT user_id FROM user_documents WHERE file_path = $1",
+        [cheminRelatif],
+      );
+      if (docsClient[0]) proprietaireId = docsClient[0].user_id;
+    }
+
     // Troisième famille : les pièces déposées par un candidat convoyeur,
     // qui n'a pas encore de compte. Elles n'ont donc pas de propriétaire
     // au sens de `users` — seul un administrateur peut les consulter.

@@ -1,5 +1,7 @@
 const express = require("express");
 const db = require("../db");
+const crypto = require("crypto");
+const multer = require("multer");
 const { authenticate, authorize } = require("../middleware/auth.middleware");
 const kazeService = require("../services/kaze.service");
 const syncService = require("../services/sync.service");
@@ -13,7 +15,11 @@ const path = require("path");
 
 // Racine des fichiers déposés. Sert à effacer du disque les pièces d'une
 // candidature écartée : la cascade SQL n'emporte que les lignes.
-const UPLOADS_DIR = require("../lib/uploads").RACINE_UPLOADS;
+const {
+  RACINE_UPLOADS: UPLOADS_DIR,
+  dossier: uploadsDossier,
+  cheminDisque,
+} = require("../lib/uploads");
 
 const router = express.Router();
 
@@ -28,6 +34,31 @@ const KAZE_ID_REGEX =
 // restreindre au seul rôle « convoyeur » l'obligerait à se créer un second
 // compte, avec un second compte Kaze, pour un travail qu'il fait déjà.
 const ROLES_CONVOYABLES = ["convoyeur", "admin"];
+
+const USER_DOCS_DIR = uploadsDossier("documents");
+const USER_DOCS_MIMES = {
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+};
+
+const userDocumentUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, USER_DOCS_DIR),
+    filename: (_req, file, cb) => {
+      const alea = crypto.randomBytes(16).toString("hex");
+      cb(null, `${alea}${USER_DOCS_MIMES[file.mimetype] || ""}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (USER_DOCS_MIMES[file.mimetype]) return cb(null, true);
+    return cb(
+      new Error("Format non supporté. Formats acceptés : PDF, JPG, PNG, WEBP."),
+    );
+  },
+});
 
 // En production, les jeux de démonstration (comptes @demo.local,
 // plaques dédiées et commentaires préfixés) ne doivent jamais polluer
@@ -53,6 +84,22 @@ router.param("docId", (req, res, next, value) => {
     return res.status(400).json({ error: "Identifiant invalide." });
   next();
 });
+
+router.param("fileId", (req, res, next, value) => {
+  if (!UUID_REGEX.test(value)) {
+    return res.status(400).json({ error: "Identifiant invalide." });
+  }
+  next();
+});
+
+function supprimerFichierTemporaire(fichier) {
+  if (!fichier?.path) return;
+  try {
+    if (fs.existsSync(fichier.path)) fs.unlinkSync(fichier.path);
+  } catch {
+    // Rien de bloquant : la suppression SQL reste prioritaire.
+  }
+}
 
 async function getMissionById(missionId) {
   const normalizedId = missionId?.replace(/^kaze-/i, "") || "";
@@ -1078,6 +1125,140 @@ router.get("/users", async (req, res, next) => {
   }
 });
 
+router.get("/users/:id/files", async (req, res, next) => {
+  try {
+    const { rows: cible } = await db.query(
+      "SELECT id, role FROM users WHERE id = $1",
+      [req.params.id],
+    );
+    if (cible.length === 0) {
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+    }
+    if (cible[0].role !== "client") {
+      return res.status(400).json({
+        error:
+          "Les documents complémentaires sont réservés aux comptes clients.",
+      });
+    }
+
+    const { rows } = await db.query(
+      `SELECT id, user_id, label, original_name, file_path, mime_type,
+              kind, source, source_ref,
+              uploaded_by, created_at, updated_at
+         FROM user_documents
+        WHERE user_id = $1
+        ORDER BY created_at DESC`,
+      [req.params.id],
+    );
+
+    res.json({ documents: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(
+  "/users/:id/files",
+  userDocumentUpload.single("document"),
+  async (req, res, next) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "Aucun fichier reçu." });
+      }
+
+      const label = String(req.body?.label || "").trim();
+      if (!label) {
+        supprimerFichierTemporaire(req.file);
+        return res.status(400).json({ error: "Le libellé est obligatoire." });
+      }
+      if (label.length > 120) {
+        supprimerFichierTemporaire(req.file);
+        return res
+          .status(400)
+          .json({ error: "Le libellé ne peut dépasser 120 caractères." });
+      }
+
+      const { rows: cible } = await db.query(
+        "SELECT id, role FROM users WHERE id = $1",
+        [req.params.id],
+      );
+      if (cible.length === 0) {
+        supprimerFichierTemporaire(req.file);
+        return res.status(404).json({ error: "Utilisateur introuvable." });
+      }
+      if (cible[0].role !== "client") {
+        supprimerFichierTemporaire(req.file);
+        return res.status(400).json({
+          error:
+            "Les documents complémentaires sont réservés aux comptes clients.",
+        });
+      }
+
+      const { rows } = await db.query(
+        `INSERT INTO user_documents
+           (user_id, label, original_name, file_path, mime_type, uploaded_by, kind)
+         VALUES ($1, $2, $3, $4, $5, $6, 'client_extra')
+         RETURNING id, user_id, label, original_name, file_path, mime_type,
+                   kind, source, source_ref,
+                   uploaded_by, created_at, updated_at`,
+        [
+          req.params.id,
+          label,
+          req.file.originalname,
+          `/uploads/documents/${req.file.filename}`,
+          req.file.mimetype,
+          req.user.id,
+        ],
+      );
+
+      auditLog("ADMIN_USER_DOCUMENT_UPLOADED", req.user.id, {
+        ip: req.ip,
+        targetUserId: req.params.id,
+        documentId: rows[0].id,
+      });
+
+      res.status(201).json({ document: rows[0] });
+    } catch (err) {
+      supprimerFichierTemporaire(req.file);
+      next(err);
+    }
+  },
+);
+
+router.delete("/users/:id/files/:fileId", async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `DELETE FROM user_documents
+        WHERE id = $1 AND user_id = $2
+        RETURNING id, file_path`,
+      [req.params.fileId, req.params.id],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Document introuvable." });
+    }
+
+    const disque = cheminDisque(rows[0].file_path);
+    if (disque && fs.existsSync(disque)) {
+      try {
+        fs.unlinkSync(disque);
+      } catch (err) {
+        console.error("⚠️ Suppression fichier document client :", err.message);
+      }
+    }
+
+    auditLog("ADMIN_USER_DOCUMENT_DELETED", req.user.id, {
+      ip: req.ip,
+      targetUserId: req.params.id,
+      documentId: rows[0].id,
+    });
+
+    res.json({ message: "Document supprimé." });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.patch("/users/:id/validate", async (req, res, next) => {
   try {
     const updated = await db.query(
@@ -1540,7 +1721,14 @@ router.get("/kaze/test", async (_req, res, next) => {
 router.get("/kaze/jobs", async (req, res, next) => {
   try {
     const days = req.query.days ? parseInt(req.query.days, 10) : 60;
-    const rawJobs = await kazeService.fetchRecentJobs(days);
+    let rawJobs = [];
+    let warning = null;
+    try {
+      rawJobs = await kazeService.fetchRecentJobs(days);
+    } catch (kazeErr) {
+      warning = `Kaze indisponible: ${kazeErr.message}`;
+      console.error("⚠️ Kaze jobs fetch:", kazeErr.message);
+    }
     const jobs = (rawJobs || []).map(kazeService.kazeJobToLocal);
     const { status } = req.query;
     const filtered = status
@@ -1553,7 +1741,7 @@ router.get("/kaze/jobs", async (req, res, next) => {
     // charge transférée. Aucun écran ne le lit ici.
     const allege = filtered.map(({ raw, ...job }) => job); // eslint-disable-line no-unused-vars
     res.json({
-      meta: { total_count: allege.length, days },
+      meta: { total_count: allege.length, days, warning },
       data: allege,
     });
   } catch (err) {

@@ -14,6 +14,7 @@
 
 const db = require("../db");
 const kazeService = require("./kaze.service");
+const { importerRecapMissionKaze } = require("./kaze-recap.service");
 const { isDemoMission, isDemoMissionPayload } = require("../lib/demo-mission");
 
 // Mapping simplifié : on ne gère que démarrage et fin
@@ -281,6 +282,25 @@ async function syncKazeStatusesInterne() {
         const datesMisesAJour =
           await appliquerSynchronisationDates(misesAJourDates);
 
+        const missionParId = new Map(linkedMissions.map((m) => [m.id, m]));
+        const transitionsLivrees = transitions.filter(
+          (t) => t.statut === "LIVREE",
+        );
+        for (const t of transitionsLivrees) {
+          const mission = missionParId.get(t.id);
+          if (!mission?.kaze_mission_id) continue;
+          try {
+            await importerRecapMissionKaze({
+              missionId: mission.id,
+              kazeMissionId: mission.kaze_mission_id,
+            });
+          } catch (errRecap) {
+            console.warn(
+              `⚠️  Sync Kaze: import récap impossible pour ${mission.id} : ${errRecap.message}`,
+            );
+          }
+        }
+
         if (misesAJour > 0) {
           console.log(
             `✅ Sync Kaze terminée: ${misesAJour} mission(s) mise(s) à jour sur ${linkedMissions.length} vérifiée(s)`,
@@ -325,6 +345,19 @@ async function syncKazeStatusesInterne() {
           console.log(
             `🔄 Sync Kaze: mission ${mission.id} → ${newLocalStatus} (Kaze: ${kazeStatus})`,
           );
+
+          if (newLocalStatus === "LIVREE") {
+            try {
+              await importerRecapMissionKaze({
+                missionId: mission.id,
+                kazeMissionId: mission.kaze_mission_id,
+              });
+            } catch (errRecap) {
+              console.warn(
+                `⚠️  Sync Kaze: import récap impossible pour ${mission.id} : ${errRecap.message}`,
+              );
+            }
+          }
         } else {
           // Tracer aussi l'inaction : une passe qui ne dit rien est
           // indiscernable d'une passe qui n'a pas tourné.

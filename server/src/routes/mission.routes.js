@@ -535,6 +535,36 @@ router.get("/mes-missions", authorize("client"), async (req, res, next) => {
 });
 
 // ═════════════════════════════════════════════════════════════
+// Client : Récapitulatifs Kaze déposés sur le compte
+// ═════════════════════════════════════════════════════════════
+router.get("/mes-recaps", authorize("client"), async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT ud.id,
+              ud.user_id,
+              ud.label,
+              ud.original_name,
+              ud.file_path,
+              ud.mime_type,
+              ud.kind,
+              ud.created_at,
+              u.company AS owner_company,
+              u.full_name AS owner_name
+         FROM user_documents ud
+         JOIN users u ON u.id = ud.user_id
+        WHERE ud.user_id = $1
+          AND ud.kind = 'kaze_recap'
+        ORDER BY ud.created_at DESC`,
+      [req.user.id],
+    );
+
+    res.json({ documents: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═════════════════════════════════════════════════════════════
 // Client : Détail d'une mission
 // ═════════════════════════════════════════════════════════════
 router.get("/:id", authorize("client", "admin"), async (req, res, next) => {

@@ -2066,7 +2066,7 @@ describe("Proxy Kaze", () => {
     const res = await auth(request(app).get("/api/admin/kaze/jobs"));
 
     expect(kazeService.fetchRecentJobs).toHaveBeenCalledWith(60);
-    expect(res.body.meta).toEqual({ total_count: 1, days: 60 });
+    expect(res.body.meta).toEqual({ total_count: 1, days: 60, warning: null });
   });
 
   it("filtre les jobs Kaze par statut", async () => {

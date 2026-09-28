@@ -167,12 +167,12 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px; /* cible tactile confortable (recommandation WCAG) */
-  padding: 0 20px;
+  min-height: 40px;
+  padding: 0 16px;
   border-radius: 8px;
   border: 1px solid transparent;
   font-family: "Inter", sans-serif;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.01em;
@@ -318,20 +318,20 @@
   border-radius: 7px;
 }
 .btn-sm {
-  min-height: 38px;
-  padding: 0 16px;
-  font-size: 13.5px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
   gap: 7px;
 }
 .btn-lg {
-  min-height: 52px;
-  padding: 0 30px;
-  font-size: 16px;
+  min-height: 48px;
+  padding: 0 24px;
+  font-size: 15px;
 }
 /* Bouton carré pour une icône seule. */
 .btn-icon {
   padding: 0;
-  width: 44px;
+  width: 40px;
 }
 .btn-icon.btn-xs {
   width: 34px;
@@ -401,12 +401,12 @@
   .btn-soft-danger,
   .btn-soft-warning,
   .btn-soft-success {
-    min-height: 46px;
+    min-height: 40px;
     font-size: 14px;
-    padding: 0 16px;
+    padding: 0 14px;
   }
   .btn-xs {
-    min-height: 36px;
+    min-height: 34px;
     font-size: 12.5px;
   }
   /* Groupe d'actions : empilé et pleine largeur sur mobile. */

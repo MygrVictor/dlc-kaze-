@@ -218,6 +218,11 @@ const migrate = async () => {
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS emergency_contact_name  VARCHAR(150);
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS emergency_contact_email VARCHAR(255);
 
+    -- Mission saisie en interne par l'administration.
+    -- Certaines analyses distinguent ces missions via ce champ : il doit
+    -- exister même si la migration dédiée n'a pas encore été rejouée.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL;
+
     -- Destinataire du récapitulatif de fin de mission émis par Kaze
     -- (PV, photos, réserves). Choisi par le client au tout début du
     -- formulaire, avec son adresse de compte proposée par défaut :
@@ -258,6 +263,41 @@ const migrate = async () => {
   await db.query(
     `ALTER TYPE mission_status ADD VALUE IF NOT EXISTS 'DEVIS_REFUSE'`,
   );
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS user_documents (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      label         VARCHAR(120) NOT NULL,
+      original_name VARCHAR(255) NOT NULL,
+      file_path     VARCHAR(500) NOT NULL,
+      mime_type     VARCHAR(100),
+      uploaded_by   UUID REFERENCES users(id) ON DELETE SET NULL,
+      kind          VARCHAR(40) NOT NULL DEFAULT 'client_extra',
+      source        VARCHAR(40),
+      source_ref    VARCHAR(255),
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    ALTER TABLE user_documents
+      ADD COLUMN IF NOT EXISTS kind VARCHAR(40) NOT NULL DEFAULT 'client_extra';
+    ALTER TABLE user_documents
+      ADD COLUMN IF NOT EXISTS source VARCHAR(40);
+    ALTER TABLE user_documents
+      ADD COLUMN IF NOT EXISTS source_ref VARCHAR(255);
+
+    UPDATE user_documents
+       SET kind = 'client_extra'
+     WHERE kind IS NULL OR kind = '';
+
+    CREATE INDEX IF NOT EXISTS idx_user_documents_user_date
+      ON user_documents(user_id, created_at DESC);
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_documents_source_unique
+      ON user_documents(user_id, source, source_ref)
+      WHERE source IS NOT NULL AND source_ref IS NOT NULL;
+  `);
 
   // Rattrapage historique : certaines missions ont pu rester en ACCEPTEE
   // alors qu'un convoyeur était déjà affecté. Elles doivent être en

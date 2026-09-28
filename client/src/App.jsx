@@ -27,6 +27,7 @@ const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
 const NewMission = lazy(() => import("./pages/client/NewMission"));
 const MissionDetail = lazy(() => import("./pages/client/MissionDetail"));
 const ClientFactures = lazy(() => import("./pages/client/ClientFactures"));
+const ClientRecaps = lazy(() => import("./pages/client/ClientRecaps"));
 
 // Pages Admin
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -36,7 +37,6 @@ const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminDemandes = lazy(() => import("./pages/admin/AdminDemandes"));
 const AdminMap = lazy(() => import("./pages/admin/AdminMap"));
 const AdminKaze = lazy(() => import("./pages/admin/AdminKaze"));
-const AdminFactures = lazy(() => import("./pages/admin/AdminFactures"));
 
 // Pages Convoyeur
 const ConvoyeurDashboard = lazy(
@@ -143,6 +143,7 @@ export default function App() {
           <Route path="nouvelle-mission" element={<NewMission />} />
           <Route path="missions/:id" element={<MissionDetail />} />
           <Route path="factures" element={<ClientFactures />} />
+          <Route path="recaps" element={<ClientRecaps />} />
         </Route>
 
         {/* ── Dashboard Admin ──────────────────── */}
@@ -163,7 +164,6 @@ export default function App() {
           <Route path="analyse" element={<AdminAnalyse />} />
           <Route path="utilisateurs" element={<AdminUsers />} />
           <Route path="demandes" element={<AdminDemandes />} />
-          <Route path="factures" element={<AdminFactures />} />
           <Route path="kaze" element={<AdminKaze />} />
         </Route>
 

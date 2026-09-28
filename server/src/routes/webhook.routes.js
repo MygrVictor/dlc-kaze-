@@ -32,6 +32,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const db = require("../db");
+const { importerRecapMissionKaze } = require("../services/kaze-recap.service");
 
 const router = express.Router();
 
@@ -126,12 +127,33 @@ router.post("/kaze", async (req, res) => {
       // 3. Mettre à jour la mission locale
       const result = await db.query(
         `UPDATE missions SET status = $1, updated_at = NOW()
-         WHERE kaze_mission_id = $2 RETURNING id, status`,
+         WHERE kaze_mission_id = $2 RETURNING id, status, kaze_mission_id`,
         [localStatus, kazeMissionId],
       );
 
       if (result.rows.length > 0) {
         console.log(`✅ Mission ${result.rows[0].id} → ${localStatus}`);
+        if (localStatus === "LIVREE") {
+          const mission = result.rows[0];
+          setImmediate(() => {
+            importerRecapMissionKaze({
+              missionId: mission.id,
+              kazeMissionId: mission.kaze_mission_id || kazeMissionId,
+            })
+              .then((stats) => {
+                if (stats.imported > 0) {
+                  console.log(
+                    `📎 Kaze recap: ${stats.imported} document(s) importé(s) pour la mission ${mission.id}.`,
+                  );
+                }
+              })
+              .catch((err) => {
+                console.warn(
+                  `⚠️ Kaze recap: échec d'import pour ${mission.id} : ${err.message}`,
+                );
+              });
+          });
+        }
       } else {
         console.warn(
           `⚠️ Aucune mission locale trouvée pour kaze_mission_id = ${kazeMissionId}`,

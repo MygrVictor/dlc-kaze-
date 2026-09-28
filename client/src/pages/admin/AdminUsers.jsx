@@ -31,6 +31,9 @@ import {
   Loader2,
   Building2,
   Network,
+  Upload,
+  ReceiptText,
+  Plus,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -40,6 +43,15 @@ import toast from "react-hot-toast";
 const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
 const getFileUrl = (filePath) => `${API_BASE}${filePath}`;
+const euros = (centimes) => {
+  if (centimes === null || centimes === undefined || centimes === "") {
+    return "—";
+  }
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(centimes) / 100);
+};
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -63,6 +75,27 @@ export default function AdminUsers() {
   const [docsLoading, setDocsLoading] = useState(false);
   const [docReviewing, setDocReviewing] = useState({});
   const [refuseNote, setRefuseNote] = useState({});
+
+  // ── Modal profil utilisateur (infos + factures + docs client) ─────
+  const [profileModal, setProfileModal] = useState(null);
+  const [profileTab, setProfileTab] = useState("infos");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileFactures, setProfileFactures] = useState([]);
+  const [profileDocs, setProfileDocs] = useState([]);
+  const [factureUploading, setFactureUploading] = useState(false);
+  const [docUploading, setDocUploading] = useState(false);
+  const [docDeleting, setDocDeleting] = useState({});
+  const [factureForm, setFactureForm] = useState({
+    numero: "",
+    libelle: "",
+    montant_ttc: "",
+    date_emission: "",
+    file: null,
+  });
+  const [clientDocForm, setClientDocForm] = useState({
+    label: "",
+    file: null,
+  });
 
   // ── Modal création utilisateur ──────────────────────────────
   const [createModal, setCreateModal] = useState(false);
@@ -252,6 +285,147 @@ export default function AdminUsers() {
     }
   };
 
+  const rechargerProfil = async (u = profileModal) => {
+    if (!u?.id) return;
+    setProfileLoading(true);
+    try {
+      const requetes = [api.get(`/factures?destinataire_id=${u.id}`)];
+      if (u.role === "client") {
+        requetes.push(api.get(`/admin/users/${u.id}/files`));
+      }
+      const [resFactures, resDocs] = await Promise.all(requetes);
+      setProfileFactures(resFactures.data || []);
+      setProfileDocs(resDocs?.data?.documents || []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Impossible de charger le profil utilisateur.");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const openProfileModal = (u, startTab = "infos") => {
+    setProfileModal(u);
+    setProfileTab(startTab);
+    setProfileFactures([]);
+    setProfileDocs([]);
+    setFactureForm({
+      numero: "",
+      libelle: "",
+      montant_ttc: "",
+      date_emission: "",
+      file: null,
+    });
+    setClientDocForm({ label: "", file: null });
+    rechargerProfil(u);
+  };
+
+  const handleUploadFactureProfil = async () => {
+    if (!profileModal?.id) return;
+    if (!factureForm.numero.trim()) {
+      toast.error("Le numéro de facture est obligatoire.");
+      return;
+    }
+    if (!factureForm.file) {
+      toast.error("Joignez un PDF de facture.");
+      return;
+    }
+    if (factureForm.file.type !== "application/pdf") {
+      toast.error("La facture doit être un PDF.");
+      return;
+    }
+
+    const donnees = new FormData();
+    donnees.append("facture", factureForm.file);
+    donnees.append("numero", factureForm.numero.trim());
+    if (factureForm.libelle.trim()) {
+      donnees.append("libelle", factureForm.libelle.trim());
+    }
+    if (factureForm.montant_ttc.trim()) {
+      donnees.append("montant_ttc", factureForm.montant_ttc.trim());
+    }
+    if (factureForm.date_emission) {
+      donnees.append("date_emission", factureForm.date_emission);
+    }
+
+    setFactureUploading(true);
+    try {
+      await api.post(`/factures/destinataires/${profileModal.id}`, donnees);
+      toast.success("Facture déposée.");
+      setFactureForm({
+        numero: "",
+        libelle: "",
+        montant_ttc: "",
+        date_emission: "",
+        file: null,
+      });
+      await rechargerProfil(profileModal);
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Erreur lors du dépôt de la facture.",
+      );
+    } finally {
+      setFactureUploading(false);
+    }
+  };
+
+  const handleUploadClientDoc = async () => {
+    if (!profileModal?.id || profileModal.role !== "client") return;
+    if (!clientDocForm.label.trim()) {
+      toast.error("Le libellé du document est obligatoire.");
+      return;
+    }
+    if (!clientDocForm.file) {
+      toast.error("Joignez un document.");
+      return;
+    }
+
+    const mimeAutorises = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+    if (!mimeAutorises.includes(clientDocForm.file.type)) {
+      toast.error("Formats acceptés : PDF, JPG, PNG, WEBP.");
+      return;
+    }
+
+    const donnees = new FormData();
+    donnees.append("label", clientDocForm.label.trim());
+    donnees.append("document", clientDocForm.file);
+
+    setDocUploading(true);
+    try {
+      await api.post(`/admin/users/${profileModal.id}/files`, donnees);
+      toast.success("Document ajouté.");
+      setClientDocForm({ label: "", file: null });
+      await rechargerProfil(profileModal);
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Erreur lors de l'ajout du document.",
+      );
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  const handleDeleteClientDoc = async (docId) => {
+    if (!profileModal?.id || !docId) return;
+    if (!confirm("Supprimer ce document ?")) return;
+
+    setDocDeleting((p) => ({ ...p, [docId]: true }));
+    try {
+      await api.delete(`/admin/users/${profileModal.id}/files/${docId}`);
+      toast.success("Document supprimé.");
+      await rechargerProfil(profileModal);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Suppression impossible.");
+    } finally {
+      setDocDeleting((p) => ({ ...p, [docId]: false }));
+    }
+  };
+
   const handleKazeLink = async (methodOverride) => {
     const method = methodOverride || kazeLinkMethod;
     if (method === "email" && !kazeEmailInput.trim()) {
@@ -396,218 +570,236 @@ export default function AdminUsers() {
       )}
 
       {!loading && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm table-stack">
-            <thead>
-              <tr className="border-b border-dark-700">
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Utilisateur
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Rôle
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Entreprise
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Téléphone
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Inscrit le
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Statut
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Groupe
-                </th>
-                <th className="text-left py-3 px-4 text-dark-400 font-medium">
-                  Kaze
-                </th>
-                <th className="text-right py-3 px-4 text-dark-400 font-medium">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => {
-                const RoleIcon = roleIcons[u.role] || Users;
-                return (
-                  <tr
-                    key={u.id}
-                    className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors"
-                  >
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-primary-700 rounded-full flex items-center justify-center text-xs font-bold">
-                          {u.full_name?.charAt(0)?.toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-medium">{u.full_name}</p>
-                          <p className="text-xs text-dark-500">{u.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`badge ${roleColors[u.role]}`}>
-                        <RoleIcon size={12} className="mr-1" />
-                        {u.role}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <button
+            onClick={openCreateModal}
+            className="card border border-dashed border-primary-500/40 hover:border-primary-400 transition-colors min-h-[220px] flex flex-col items-center justify-center gap-3 text-center"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary-500/15 text-primary-300 flex items-center justify-center">
+              <UserPlus size={24} />
+            </div>
+            <p className="font-semibold text-base">Ajouter un compte</p>
+            <p className="text-sm text-dark-400 max-w-xs">
+              Créer un client ou un convoyeur puis gérer ses factures et
+              documents depuis sa fiche.
+            </p>
+          </button>
+
+          {users.map((u) => {
+            const RoleIcon = roleIcons[u.role] || Users;
+            return (
+              <div
+                key={u.id}
+                className="card border border-dark-700 hover:border-dark-500 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-primary-700 rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+                      {u.full_name?.charAt(0)?.toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{u.full_name}</p>
+                      <p className="text-xs text-dark-500 truncate">
+                        {u.email}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`badge ${roleColors[u.role]} shrink-0`}>
+                    <RoleIcon size={12} className="mr-1" />
+                    {u.role}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-lg bg-dark-800/60 px-3 py-2">
+                    <p className="text-xs text-dark-500">Entreprise</p>
+                    <p className="text-dark-200 truncate">{u.company || "—"}</p>
+                  </div>
+                  <div className="rounded-lg bg-dark-800/60 px-3 py-2">
+                    <p className="text-xs text-dark-500">Téléphone</p>
+                    <p className="text-dark-200 truncate">{u.phone || "—"}</p>
+                  </div>
+                  <div className="rounded-lg bg-dark-800/60 px-3 py-2 sm:col-span-2">
+                    <p className="text-xs text-dark-500">Inscrit le</p>
+                    <p className="text-dark-200">{formatDate(u.created_at)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {u.is_validated ? (
+                    <span className="badge bg-green-500/10 text-green-400 border border-green-500/20">
+                      <CheckCircle2 size={12} className="mr-1" />
+                      Validé
+                    </span>
+                  ) : (
+                    <span className="badge bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                      <Clock size={12} className="mr-1" />
+                      En attente
+                    </span>
+                  )}
+
+                  {u.role === "client" ? (
+                    u.parent_id ? (
+                      <button
+                        onClick={() => openParentModal(u)}
+                        title={`Rattaché à ${u.parent_company || u.parent_name}`}
+                        className="badge bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 cursor-pointer hover:bg-indigo-500/20 transition-colors max-w-[14rem]"
+                      >
+                        <Building2 size={12} className="mr-1 shrink-0" />
+                        <span className="truncate">
+                          {u.parent_company || u.parent_name}
+                        </span>
+                      </button>
+                    ) : Number(u.rattachements) > 0 ? (
+                      <button
+                        onClick={() => openParentModal(u)}
+                        title="Ce compte est le siège d'un groupe"
+                        className="badge bg-violet-500/10 text-violet-400 border border-violet-500/20 cursor-pointer hover:bg-violet-500/20 transition-colors"
+                      >
+                        <Network size={12} className="mr-1" />
+                        Siège · {u.rattachements}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openParentModal(u)}
+                        className="badge bg-dark-700 text-dark-400 border border-dark-600 cursor-pointer hover:bg-dark-600 hover:text-dark-300 transition-colors"
+                      >
+                        Indépendant
+                      </button>
+                    )
+                  ) : null}
+
+                  {(u.role === "convoyeur" || u.role === "admin") &&
+                    (u.kaze_driver_id ? (
+                      <button
+                        onClick={() => openKazeModal(u)}
+                        className="badge bg-green-500/10 text-green-400 border border-green-500/20 cursor-pointer hover:bg-green-500/20 transition-colors"
+                      >
+                        <Link2 size={12} className="mr-1" />
+                        Kaze lié
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openKazeModal(u)}
+                        className="badge bg-dark-700 text-dark-400 border border-dark-600 cursor-pointer hover:bg-dark-600 hover:text-dark-300 transition-colors"
+                      >
+                        <Unlink size={12} className="mr-1" />
+                        Kaze non lié
+                      </button>
+                    ))}
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {(u.role === "client" || u.role === "convoyeur") && (
+                    <button
+                      onClick={() => openProfileModal(u)}
+                      title="Consulter la fiche"
+                      aria-label="Consulter la fiche"
+                      className="relative group p-1.5 rounded-lg text-dark-400 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
+                    >
+                      <Eye size={14} />
+                      <span className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-dark-800 text-dark-100 text-[11px] whitespace-nowrap border border-dark-600 z-20">
+                        Consulter la fiche
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-dark-400">
-                      {u.company || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-dark-400">
-                      {u.phone || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-dark-400">
-                      {formatDate(u.created_at)}
-                    </td>
-                    <td className="py-3 px-4">
-                      {u.is_validated ? (
-                        <span className="badge bg-green-500/10 text-green-400 border border-green-500/20">
-                          <CheckCircle2 size={12} className="mr-1" />
-                          Validé
-                        </span>
+                    </button>
+                  )}
+
+                  {(u.role === "client" || u.role === "convoyeur") && (
+                    <button
+                      onClick={() => openProfileModal(u, "factures")}
+                      title="Ajouter facture"
+                      aria-label="Ajouter facture"
+                      className="relative group p-1.5 rounded-lg text-dark-400 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
+                    >
+                      <ReceiptText size={14} />
+                      <span className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-dark-800 text-dark-100 text-[11px] whitespace-nowrap border border-dark-600 z-20">
+                        Ajouter facture
+                      </span>
+                    </button>
+                  )}
+
+                  {u.role === "client" && (
+                    <button
+                      onClick={() => openProfileModal(u, "docs")}
+                      title="Ajouter document"
+                      aria-label="Ajouter document"
+                      className="relative group p-1.5 rounded-lg text-dark-400 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
+                    >
+                      <Upload size={14} />
+                      <span className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-dark-800 text-dark-100 text-[11px] whitespace-nowrap border border-dark-600 z-20">
+                        Ajouter document
+                      </span>
+                    </button>
+                  )}
+
+                  {u.role === "convoyeur" && (
+                    <button
+                      onClick={() => openDocsModal(u)}
+                      title="Voir les justificatifs"
+                      aria-label="Voir les justificatifs"
+                      className="relative group p-1.5 rounded-lg text-dark-400 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
+                    >
+                      <ShieldCheck size={14} />
+                      <span className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 rounded-md bg-dark-800 text-dark-100 text-[11px] whitespace-nowrap border border-dark-600 z-20">
+                        Voir les justificatifs
+                      </span>
+                    </button>
+                  )}
+
+                  {(u.role === "client" || u.role === "convoyeur") &&
+                    !u.is_validated && (
+                      <button
+                        onClick={() => handleValidate(u.id)}
+                        className="btn-success btn-xs"
+                      >
+                        <UserCheck size={14} />
+                        Valider
+                      </button>
+                    )}
+
+                  {u.role !== "admin" && (
+                    <button
+                      onClick={() => openEmailModal(u)}
+                      className="p-1.5 rounded-lg text-dark-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                      title="Modifier l'email"
+                    >
+                      <Mail size={15} />
+                    </button>
+                  )}
+                  {u.role !== "admin" && (
+                    <button
+                      onClick={() => handleEnvoyerReset(u)}
+                      disabled={envoiReset[u.id]}
+                      className="p-1.5 rounded-lg text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
+                      title="Envoyer un lien de réinitialisation de mot de passe"
+                    >
+                      {envoiReset[u.id] ? (
+                        <Loader2 size={15} className="animate-spin" />
                       ) : (
-                        <span className="badge bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                          <Clock size={12} className="mr-1" />
-                          En attente
-                        </span>
+                        <KeyRound size={15} />
                       )}
-                    </td>
-                    <td className="py-3 px-4">
-                      {/* Rattachement de groupe : réservé aux clients.
-                          Un siège consulte l'activité de ses entités ;
-                          l'entité, elle, ignore que ce lien existe. */}
-                      {u.role === "client" ? (
-                        u.parent_id ? (
-                          <button
-                            onClick={() => openParentModal(u)}
-                            title={`Rattaché à ${u.parent_company || u.parent_name}`}
-                            className="badge bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 cursor-pointer hover:bg-indigo-500/20 transition-colors max-w-[11rem]"
-                          >
-                            <Building2 size={12} className="mr-1 shrink-0" />
-                            <span className="truncate">
-                              {u.parent_company || u.parent_name}
-                            </span>
-                          </button>
-                        ) : Number(u.rattachements) > 0 ? (
-                          <button
-                            onClick={() => openParentModal(u)}
-                            title="Ce compte est le siège d'un groupe"
-                            className="badge bg-violet-500/10 text-violet-400 border border-violet-500/20 cursor-pointer hover:bg-violet-500/20 transition-colors"
-                          >
-                            <Network size={12} className="mr-1" />
-                            Siège · {u.rattachements}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => openParentModal(u)}
-                            className="badge bg-dark-700 text-dark-400 border border-dark-600 cursor-pointer hover:bg-dark-600 hover:text-dark-300 transition-colors"
-                          >
-                            Indépendant
-                          </button>
-                        )
-                      ) : (
-                        <span className="text-dark-600">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      {/* L'administrateur convoie lui aussi et doit donc
-                          pouvoir être lié à son compte Kaze : sans cette
-                          liaison, les missions qu'il s'attribue partiraient
-                          chez Kaze sans intervenant. */}
-                      {u.role === "convoyeur" || u.role === "admin" ? (
-                        u.kaze_driver_id ? (
-                          <button
-                            onClick={() => openKazeModal(u)}
-                            className="badge bg-green-500/10 text-green-400 border border-green-500/20 cursor-pointer hover:bg-green-500/20 transition-colors"
-                          >
-                            <Link2 size={12} className="mr-1" />
-                            Lié
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => openKazeModal(u)}
-                            className="badge bg-dark-700 text-dark-400 border border-dark-600 cursor-pointer hover:bg-dark-600 hover:text-dark-300 transition-colors"
-                          >
-                            <Unlink size={12} className="mr-1" />
-                            Non lié
-                          </button>
-                        )
-                      ) : (
-                        <span className="text-dark-600">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center gap-2 justify-end">
-                        {" "}
-                        {u.role === "convoyeur" && (
-                          <button
-                            onClick={() => openDocsModal(u)}
-                            className="p-1.5 rounded-lg text-dark-400 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
-                            title="Voir les documents"
-                          >
-                            <FileText size={15} />
-                          </button>
-                        )}{" "}
-                        {(u.role === "client" || u.role === "convoyeur") &&
-                          !u.is_validated && (
-                            <button
-                              onClick={() => handleValidate(u.id)}
-                              className="btn-success btn-xs"
-                            >
-                              <UserCheck size={14} />
-                              Valider
-                            </button>
-                          )}
-                        {u.role !== "admin" && (
-                          <button
-                            onClick={() => openEmailModal(u)}
-                            className="p-1.5 rounded-lg text-dark-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
-                            title="Modifier l'email"
-                          >
-                            <Mail size={15} />
-                          </button>
-                        )}
-                        {u.role !== "admin" && (
-                          <button
-                            onClick={() => handleEnvoyerReset(u)}
-                            disabled={envoiReset[u.id]}
-                            className="p-1.5 rounded-lg text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
-                            title="Envoyer un lien de réinitialisation de mot de passe"
-                          >
-                            {envoiReset[u.id] ? (
-                              <Loader2 size={15} className="animate-spin" />
-                            ) : (
-                              <KeyRound size={15} />
-                            )}
-                          </button>
-                        )}
-                        {u.role !== "admin" && (
-                          <button
-                            onClick={() => setDeleteModal(u)}
-                            className="p-1.5 rounded-lg text-dark-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan="9" className="py-12 text-center text-dark-400">
-                    Aucun utilisateur trouvé.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </button>
+                  )}
+                  {u.role !== "admin" && (
+                    <button
+                      onClick={() => setDeleteModal(u)}
+                      className="p-1.5 rounded-lg text-dark-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {users.length === 0 && (
+            <div className="card text-center py-16 text-dark-400 lg:col-span-2">
+              <Users size={40} className="mx-auto mb-3 opacity-30" />
+              <p>Aucun utilisateur trouvé.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -1181,6 +1373,393 @@ export default function AdminUsers() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Profil utilisateur ─────────────────────── */}
+      {profileModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 border border-dark-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-6 border-b border-dark-700 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold">
+                  Profil — {profileModal.full_name}
+                </h3>
+                <p className="text-sm text-dark-400 mt-1">
+                  {profileModal.role === "client" ? "Client" : "Convoyeur"} ·{" "}
+                  {profileModal.email}
+                </p>
+              </div>
+              <button
+                onClick={() => setProfileModal(null)}
+                className="p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="px-6 pt-4">
+              <div className="flex gap-2">
+                {[
+                  { key: "infos", label: "Infos", icon: Users },
+                  { key: "factures", label: "Factures", icon: ReceiptText },
+                  ...(profileModal.role === "client"
+                    ? [{ key: "docs", label: "Documents", icon: FileText }]
+                    : []),
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setProfileTab(tab.key)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center gap-2 ${
+                        profileTab === tab.key
+                          ? "bg-primary-600 text-white border-primary-500"
+                          : "bg-dark-900 text-dark-300 border-dark-700 hover:bg-dark-700"
+                      }`}
+                    >
+                      <Icon size={14} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {profileLoading ? (
+                <div className="flex justify-center py-16">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500" />
+                </div>
+              ) : (
+                <>
+                  {profileTab === "infos" && (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                        <p className="text-xs text-dark-500 mb-1">Nom</p>
+                        <p className="font-medium">{profileModal.full_name}</p>
+                      </div>
+                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                        <p className="text-xs text-dark-500 mb-1">Email</p>
+                        <p className="font-medium break-all">
+                          {profileModal.email}
+                        </p>
+                      </div>
+                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                        <p className="text-xs text-dark-500 mb-1">Téléphone</p>
+                        <p className="font-medium">
+                          {profileModal.phone || "—"}
+                        </p>
+                      </div>
+                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                        <p className="text-xs text-dark-500 mb-1">Entreprise</p>
+                        <p className="font-medium">
+                          {profileModal.company || "—"}
+                        </p>
+                      </div>
+                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                        <p className="text-xs text-dark-500 mb-1">
+                          Inscription
+                        </p>
+                        <p className="font-medium">
+                          {formatDate(profileModal.created_at)}
+                        </p>
+                      </div>
+                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                        <p className="text-xs text-dark-500 mb-1">Statut</p>
+                        <p className="font-medium">
+                          {profileModal.is_validated ? "Validé" : "En attente"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {profileTab === "factures" && (
+                    <div className="space-y-4">
+                      <div className="border border-dark-700 rounded-xl p-4 bg-dark-900/60 space-y-3">
+                        <h4 className="font-medium">Ajouter une facture</h4>
+                        <div className="grid md:grid-cols-2 gap-3">
+                          <input
+                            value={factureForm.numero}
+                            onChange={(e) =>
+                              setFactureForm((p) => ({
+                                ...p,
+                                numero: e.target.value,
+                              }))
+                            }
+                            className="input-field"
+                            placeholder="Numéro de facture *"
+                          />
+                          <input
+                            value={factureForm.libelle}
+                            onChange={(e) =>
+                              setFactureForm((p) => ({
+                                ...p,
+                                libelle: e.target.value,
+                              }))
+                            }
+                            className="input-field"
+                            placeholder="Libellé"
+                          />
+                          <input
+                            value={factureForm.montant_ttc}
+                            onChange={(e) =>
+                              setFactureForm((p) => ({
+                                ...p,
+                                montant_ttc: e.target.value,
+                              }))
+                            }
+                            className="input-field"
+                            placeholder="Montant TTC (€)"
+                          />
+                          <input
+                            type="date"
+                            value={factureForm.date_emission}
+                            onChange={(e) =>
+                              setFactureForm((p) => ({
+                                ...p,
+                                date_emission: e.target.value,
+                              }))
+                            }
+                            className="input-field"
+                          />
+                        </div>
+
+                        <div
+                          className="border-2 border-dashed border-dark-600 rounded-xl p-4 text-sm text-dark-400"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const fichier = e.dataTransfer.files?.[0];
+                            if (fichier) {
+                              setFactureForm((p) => ({ ...p, file: fichier }));
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p>
+                              Glissez un PDF ici ou sélectionnez un fichier.
+                              {factureForm.file ? (
+                                <span className="block text-primary-300 mt-1">
+                                  {factureForm.file.name}
+                                </span>
+                              ) : null}
+                            </p>
+                            <label className="btn-secondary cursor-pointer inline-flex items-center gap-2">
+                              <Upload size={14} />
+                              Choisir
+                              <input
+                                type="file"
+                                accept="application/pdf"
+                                className="hidden"
+                                onChange={(e) =>
+                                  setFactureForm((p) => ({
+                                    ...p,
+                                    file: e.target.files?.[0] || null,
+                                  }))
+                                }
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={handleUploadFactureProfil}
+                          disabled={factureUploading}
+                          className="btn-primary"
+                        >
+                          {factureUploading ? "Envoi…" : "Déposer la facture"}
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {profileFactures.length === 0 ? (
+                          <div className="text-sm text-dark-400 border border-dark-700 rounded-xl p-4">
+                            Aucune facture déposée.
+                          </div>
+                        ) : (
+                          profileFactures.map((f) => (
+                            <div
+                              key={f.id}
+                              className="border border-dark-700 rounded-xl p-4 flex items-center justify-between gap-4"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium">{f.numero}</p>
+                                <p className="text-xs text-dark-400">
+                                  {f.libelle || "Sans libellé"} ·{" "}
+                                  {euros(f.montant_ttc)} ·{" "}
+                                  {formatDate(f.date_emission)}
+                                </p>
+                                <p className="text-xs text-dark-500 mt-1">
+                                  Statut : {f.statut}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <a
+                                  href={getFileUrl(f.file_path)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2 rounded-lg text-dark-300 hover:text-primary-300 hover:bg-primary-500/10"
+                                  title="Voir"
+                                >
+                                  <ExternalLink size={15} />
+                                </a>
+                                <a
+                                  href={getFileUrl(f.file_path)}
+                                  download={f.original_name}
+                                  className="p-2 rounded-lg text-dark-300 hover:text-green-300 hover:bg-green-500/10"
+                                  title="Télécharger"
+                                >
+                                  <Download size={15} />
+                                </a>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {profileTab === "docs" && profileModal.role === "client" && (
+                    <div className="space-y-4">
+                      <div className="border border-dark-700 rounded-xl p-4 bg-dark-900/60 space-y-3">
+                        <h4 className="font-medium">
+                          Ajouter un document complémentaire
+                        </h4>
+                        <input
+                          value={clientDocForm.label}
+                          onChange={(e) =>
+                            setClientDocForm((p) => ({
+                              ...p,
+                              label: e.target.value,
+                            }))
+                          }
+                          className="input-field"
+                          placeholder="Libellé du document (ex: Bon de commande)"
+                        />
+                        <div
+                          className="border-2 border-dashed border-dark-600 rounded-xl p-4 text-sm text-dark-400"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const fichier = e.dataTransfer.files?.[0];
+                            if (fichier) {
+                              setClientDocForm((p) => ({
+                                ...p,
+                                file: fichier,
+                              }));
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p>
+                              Glissez un document (PDF/JPG/PNG/WEBP) ici.
+                              {clientDocForm.file ? (
+                                <span className="block text-primary-300 mt-1">
+                                  {clientDocForm.file.name}
+                                </span>
+                              ) : null}
+                            </p>
+                            <label className="btn-secondary cursor-pointer inline-flex items-center gap-2">
+                              <Upload size={14} />
+                              Choisir
+                              <input
+                                type="file"
+                                accept="application/pdf,image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) =>
+                                  setClientDocForm((p) => ({
+                                    ...p,
+                                    file: e.target.files?.[0] || null,
+                                  }))
+                                }
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={handleUploadClientDoc}
+                          disabled={docUploading}
+                          className="btn-primary"
+                        >
+                          {docUploading ? "Envoi…" : "Ajouter le document"}
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {profileDocs.length === 0 ? (
+                          <div className="text-sm text-dark-400 border border-dark-700 rounded-xl p-4">
+                            Aucun document complémentaire.
+                          </div>
+                        ) : (
+                          profileDocs.map((d) => (
+                            <div
+                              key={d.id}
+                              className="border border-dark-700 rounded-xl p-4 flex items-center justify-between gap-4"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium">{d.label}</p>
+                                <p className="text-xs text-dark-400 truncate">
+                                  {d.original_name}
+                                </p>
+                                <p className="text-xs text-dark-500 mt-1">
+                                  Ajouté le {formatDate(d.created_at)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <a
+                                  href={getFileUrl(d.file_path)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-2 rounded-lg text-dark-300 hover:text-primary-300 hover:bg-primary-500/10"
+                                  title="Voir"
+                                >
+                                  <ExternalLink size={15} />
+                                </a>
+                                <a
+                                  href={getFileUrl(d.file_path)}
+                                  download={d.original_name}
+                                  className="p-2 rounded-lg text-dark-300 hover:text-green-300 hover:bg-green-500/10"
+                                  title="Télécharger"
+                                >
+                                  <Download size={15} />
+                                </a>
+                                <button
+                                  onClick={() => handleDeleteClientDoc(d.id)}
+                                  disabled={docDeleting[d.id]}
+                                  className="p-2 rounded-lg text-dark-300 hover:text-red-300 hover:bg-red-500/10 disabled:opacity-60"
+                                  title="Supprimer"
+                                >
+                                  {docDeleting[d.id] ? (
+                                    <Loader2
+                                      size={15}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <Trash2 size={15} />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-dark-700 flex justify-end">
+              <button
+                onClick={() => setProfileModal(null)}
+                className="btn-secondary"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}

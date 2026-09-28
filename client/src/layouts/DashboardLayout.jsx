@@ -33,6 +33,11 @@ const NAV_ITEMS = {
       path: "/client/nouvelle-mission",
       icon: PlusCircle,
     },
+    {
+      label: "Récapitulatifs",
+      path: "/client/recaps",
+      icon: FileText,
+    },
     { label: "Mes factures", path: "/client/factures", icon: Receipt },
   ],
   admin: [
@@ -42,7 +47,6 @@ const NAV_ITEMS = {
     { label: "Carte", path: "/admin/carte", icon: MapPin },
     { label: "Utilisateurs", path: "/admin/utilisateurs", icon: Users },
     { label: "Demandes", path: "/admin/demandes", icon: Inbox },
-    { label: "Factures", path: "/admin/factures", icon: Receipt },
     { label: "Gestion Kaze", path: "/admin/kaze", icon: Zap },
   ],
   convoyeur: [

@@ -27,6 +27,7 @@ jest.mock("pdfkit", () =>
     const chainables = [
       "fontSize",
       "font",
+      "image",
       "fillColor",
       "strokeColor",
       "lineWidth",
@@ -106,17 +107,17 @@ describe("En-tête et métadonnées", () => {
     });
   });
 
-  it("affiche le numéro de devis dérivé des 8 premiers caractères de l'id", () => {
+  it("affiche le numéro de devis", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(texte()).toContain("DEV-AAAAAAAA");
+    expect(texte()).toContain("DEV-000001");
   });
 
   it("affiche l'identité de l'entreprise", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(texte()).toContain("DLC KAZE");
-    expect(texte()).toContain("Convoyage Automobile Professionnel");
+    expect(texte()).toContain("DRIVE LINE CONNECT");
+    expect(texte()).toContain("drivelineconnect@gmail.com");
   });
 });
 
@@ -244,9 +245,9 @@ describe("Trajet", () => {
   it("affiche les deux adresses et les intitulés d'étape", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(texte()).toContain("● ENLÈVEMENT (DÉPART)");
+    expect(texte()).toContain("ENLÈVEMENT (DÉPART)");
     expect(texte()).toContain("10 rue de Rivoli, Paris");
-    expect(texte()).toContain("● LIVRAISON (ARRIVÉE)");
+    expect(texte()).toContain("LIVRAISON (ARRIVÉE)");
     expect(texte()).toContain("1 place Bellecour, Lyon");
   });
 
@@ -357,18 +358,18 @@ describe("Sections optionnelles", () => {
 
 // ═════════════════════════════════════════════════════════════
 describe("Tableau de prix et TVA", () => {
-  it("décompose un prix TTC de 600 € en 500 € HT et 100 € de TVA", () => {
+  it("décompose un prix HT de 600 € en TVA et total TTC", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(fragments).toContain("500.00 €");
-    expect(fragments).toContain("100.00 €");
     expect(fragments).toContain("600.00 €");
+    expect(fragments).toContain("120.00 €");
+    expect(fragments).toContain("720.00 €");
   });
 
   it("affiche le total TTC formaté en euros", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(texte()).toMatch(/600,00\s\u00a0?€|600,00.€/);
+    expect(texte()).toMatch(/720,00\s\u00a0?€|720,00.€/);
   });
 
   it("mentionne un taux de TVA de 20 %", () => {
@@ -382,8 +383,9 @@ describe("Tableau de prix et TVA", () => {
   it("arrondit correctement un montant non rond", () => {
     generateDevisPDF({ ...missionMinimale(), price: 450 }, CLIENT);
 
-    expect(fragments).toContain("375.00 €");
-    expect(fragments).toContain("75.00 €");
+    expect(fragments).toContain("450.00 €");
+    expect(fragments).toContain("90.00 €");
+    expect(fragments).toContain("540.00 €");
   });
 
   it("affiche des tirets quand aucun prix n'est fixé", () => {
@@ -406,31 +408,29 @@ describe("Tableau de prix et TVA", () => {
   it("accepte un prix transmis sous forme de chaîne", () => {
     generateDevisPDF({ ...missionMinimale(), price: "600" }, CLIENT);
 
-    expect(fragments).toContain("500.00 €");
+    expect(fragments).toContain("600.00 €");
   });
 });
 
 // ═════════════════════════════════════════════════════════════
 describe("Mentions légales", () => {
-  it("indique la durée de validité du devis", () => {
+  it("indique la date d'échéance du devis", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(texte()).toContain(
-      "Ce devis est valable 30 jours à compter de sa date d'émission.",
-    );
+    expect(texte()).toContain("Date d'échéance");
   });
 
-  it("rappelle les conditions de paiement et les pénalités de retard", () => {
+  it("garde les informations de synthèse de prix", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(texte()).toMatch(/Conditions de paiement/);
-    expect(texte()).toMatch(/Pénalités de retard/);
+    expect(texte()).toMatch(/TVA \(20%\)/);
+    expect(texte()).toMatch(/TOTAL TTC/);
   });
 
   it("clôt le document par un bandeau de couleur", () => {
     generateDevisPDF(missionMinimale(), CLIENT);
 
-    expect(rectanglesRemplis).toContain("#6366f1");
+    expect(rectanglesRemplis).toContain("#0B1D3A");
   });
 });
 

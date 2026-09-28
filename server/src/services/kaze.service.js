@@ -1432,6 +1432,63 @@ const updateKazeJob = async (jobId, jobData) => {
   );
 };
 
+/**
+ * Télécharge un fichier Kaze en binaire.
+ *
+ * Accepte une URL absolue (https://...) ou un chemin relatif (/api/...).
+ * Tente d'abord avec authentification Kaze, puis sans auth si la ressource
+ * est déjà signée publiquement.
+ */
+const downloadFile = async (fileUrl) => {
+  if (!fileUrl) throw new Error("URL de fichier Kaze manquante.");
+
+  return withRetry(
+    async () => {
+      const cible = String(fileUrl).trim();
+
+      // Chemin relatif API Kaze
+      if (cible.startsWith("/")) {
+        const { data, headers } = await kazeClient.get(cible, {
+          responseType: "arraybuffer",
+          timeout: 20000,
+        });
+        return {
+          data,
+          mimeType: headers?.["content-type"] || null,
+        };
+      }
+
+      // URL absolue : d'abord avec token Kaze
+      const authHeaders = await getAuthHeaders();
+      try {
+        const { data, headers } = await axios.get(cible, {
+          responseType: "arraybuffer",
+          headers: authHeaders,
+          timeout: 20000,
+        });
+        return {
+          data,
+          mimeType: headers?.["content-type"] || null,
+        };
+      } catch (err) {
+        const st = err.response?.status;
+        if (![401, 403].includes(st)) throw err;
+      }
+
+      // Fallback : URL signée publique
+      const { data, headers } = await axios.get(cible, {
+        responseType: "arraybuffer",
+        timeout: 20000,
+      });
+      return {
+        data,
+        mimeType: headers?.["content-type"] || null,
+      };
+    },
+    { label: "downloadFile" },
+  );
+};
+
 module.exports = {
   authenticate,
   testConnection,
@@ -1456,6 +1513,7 @@ module.exports = {
   unassignDriver,
   updateMissionStatus,
   updateKazeJob,
+  downloadFile,
   KAZE_TO_LOCAL_STATUS,
   LOCAL_TO_KAZE_STATUS,
   // Helpers purs exposés pour les tests unitaires
