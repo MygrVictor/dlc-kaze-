@@ -901,7 +901,7 @@ router.get("/missions/:id", async (req, res, next) => {
 router.get("/documents", async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      `SELECT id, type, original_name, mime_type, status, admin_note, created_at, updated_at
+      `SELECT id, type, original_name, file_path, mime_type, status, admin_note, created_at, updated_at
        FROM convoyeur_documents
        WHERE convoyeur_id = $1
        ORDER BY type ASC`,

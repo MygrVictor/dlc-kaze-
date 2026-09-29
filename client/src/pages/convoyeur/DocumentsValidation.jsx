@@ -23,7 +23,10 @@ import toast from "react-hot-toast";
 const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
 const getFileUrl = (filePath) => {
-  return `${API_BASE}${filePath}`;
+  if (!filePath) return "";
+  if (/^https?:\/\//i.test(filePath)) return filePath;
+  const normalized = filePath.startsWith("/") ? filePath : `/${filePath}`;
+  return `${API_BASE}${normalized}`;
 };
 
 const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
@@ -295,6 +298,7 @@ export default function DocumentsValidation() {
       {DOCUMENT_TYPES.map(
         ({ key, label, description, icon: Icon, color, bg }) => {
           const doc = documents[key];
+          const fileUrl = doc ? getFileUrl(doc.file_path) : "";
           const statusCfg = doc ? STATUS_CONFIG[doc.status] : null;
           const StatusIcon = statusCfg?.icon;
           const isUploading = uploading[key];
@@ -334,16 +338,22 @@ export default function DocumentsValidation() {
                       <span className="truncate text-dark-300 flex-1">
                         {doc.original_name}
                       </span>
-                      <a
-                        href={getFileUrl(doc.file_path)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary-400 hover:text-primary-300 transition-colors flex-shrink-0"
-                        title="Voir le fichier"
-                      >
-                        <Eye size={15} />
-                        <span className="hidden sm:inline">Voir</span>
-                      </a>
+                      {fileUrl ? (
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-primary-400 hover:text-primary-300 transition-colors flex-shrink-0"
+                          title="Voir le fichier"
+                        >
+                          <Eye size={15} />
+                          <span className="hidden sm:inline">Voir</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-red-400 flex-shrink-0">
+                          Fichier indisponible
+                        </span>
+                      )}
                     </div>
                   )}
 
