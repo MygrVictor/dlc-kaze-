@@ -95,6 +95,7 @@ export default function AdminMissions() {
   const [selectedConvoyeur, setSelectedConvoyeur] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [retraitId, setRetraitId] = useState(null);
+  const [recotationId, setRecotationId] = useState(null);
 
   const chargerConvoyeurs = async () => {
     try {
@@ -383,12 +384,46 @@ export default function AdminMissions() {
     )
       return;
 
+    const recoter = window.confirm(
+      "Souhaitez-vous recoter le prix convoyeur avant de relancer la mission dans Telegram ?",
+    );
+
+    let priceConvoyeur;
+    if (recoter) {
+      const saisie = window.prompt(
+        "Nouveau prix convoyeur (€)",
+        mission.price_convoyeur != null ? String(mission.price_convoyeur) : "",
+      );
+      if (saisie === null) return;
+      const valeur = Number(String(saisie).replace(",", "."));
+      if (!Number.isFinite(valeur) || valeur <= 0) {
+        toast.error("Prix convoyeur invalide.");
+        return;
+      }
+      if (mission.price != null && valeur > Number(mission.price)) {
+        toast.error("Le prix convoyeur ne peut pas dépasser le prix client.");
+        return;
+      }
+      priceConvoyeur = valeur;
+    }
+
     setRetraitId(mission.id);
     try {
       const res = await api.post(
         `/admin/missions/${mission.id}/retirer-convoyeur`,
+        {
+          relancerTelegram: true,
+          ...(priceConvoyeur !== undefined ? { priceConvoyeur } : {}),
+        },
       );
-      toast.success("Convoyeur retiré de la mission.");
+      toast.success(
+        priceConvoyeur !== undefined
+          ? "Convoyeur retiré, mission recotée et relancée."
+          : "Convoyeur retiré de la mission.",
+      );
+      if (res.data?.telegram?.error) {
+        toast.error(`Telegram : ${res.data.telegram.error}`);
+      }
       if (res.data?.kazeSync?.error && res.data.kazeSync.synced === false) {
         toast.error(`Kaze : ${res.data.kazeSync.error}`);
       }
@@ -398,6 +433,54 @@ export default function AdminMissions() {
       toast.error(err.response?.data?.error || "Erreur lors du retrait.");
     } finally {
       setRetraitId(null);
+    }
+  };
+
+  const handleRecoterMissionAcceptee = async (mission) => {
+    const saisie = window.prompt(
+      "Nouveau prix convoyeur (€)",
+      mission.price_convoyeur != null ? String(mission.price_convoyeur) : "",
+    );
+    if (saisie === null) return;
+
+    const valeur = Number(String(saisie).replace(",", "."));
+    if (!Number.isFinite(valeur) || valeur <= 0) {
+      toast.error("Prix convoyeur invalide.");
+      return;
+    }
+    if (mission.price != null && valeur > Number(mission.price)) {
+      toast.error("Le prix convoyeur ne peut pas dépasser le prix client.");
+      return;
+    }
+
+    const relancerTelegram = window.confirm(
+      "Relancer la mission dans le groupe Telegram convoyeurs ?",
+    );
+
+    setRecotationId(mission.id);
+    try {
+      const res = await api.post(
+        `/admin/missions/${mission.id}/recoter-convoyeur`,
+        {
+          priceConvoyeur: valeur,
+          relancerTelegram,
+        },
+      );
+
+      toast.success(
+        relancerTelegram ? "Mission recotée et relancée." : "Mission recotée.",
+      );
+
+      if (res.data?.telegram?.error) {
+        toast.error(`Telegram : ${res.data.telegram.error}`);
+      }
+
+      fetchMissions();
+      fetchKazeJobs();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur lors de la recotation.");
+    } finally {
+      setRecotationId(null);
     }
   };
 
@@ -828,6 +911,16 @@ export default function AdminMissions() {
                           >
                             <UserCheck size={14} />
                             {m.convoyeur_name ? "Réassigner" : "Assigner"}
+                          </button>
+                        )}
+                        {m.source === "dlc" && m.status === "ACCEPTEE" && (
+                          <button
+                            onClick={() => handleRecoterMissionAcceptee(m)}
+                            disabled={recotationId === m.id}
+                            className="btn-warning btn-xs"
+                          >
+                            <Euro size={14} />
+                            {recotationId === m.id ? "…" : "Recoter"}
                           </button>
                         )}
                         {m.source === "dlc" &&

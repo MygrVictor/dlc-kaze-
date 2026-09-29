@@ -51,6 +51,14 @@ jest.mock("../services/geocoding.service", () => ({
   geocodeDepuisCache: jest.fn(),
 }));
 
+jest.mock("../services/telegram.service", () => ({
+  annoncerMissionDisponible: jest.fn().mockResolvedValue({
+    publie: true,
+    messageId: 77,
+  }),
+  supprimerMessageAnnonce: jest.fn().mockResolvedValue({ supprime: true }),
+}));
+
 jest.mock("../services/devis.service", () => ({ generateDevisPDF: jest.fn() }));
 
 const db = require("../db");
@@ -58,6 +66,7 @@ const kazeService = require("../services/kaze.service");
 const syncService = require("../services/sync.service");
 const emailService = require("../services/email.service");
 const geocodingService = require("../services/geocoding.service");
+const telegramService = require("../services/telegram.service");
 const app = require("./app.test-setup");
 
 const ADMIN = {
@@ -119,6 +128,11 @@ beforeEach(() => {
   emailService.notifyAccountValidated.mockResolvedValue(undefined);
   emailService.notifyDevisPropose.mockResolvedValue(undefined);
   emailService.notifyMissionAssignee.mockResolvedValue(undefined);
+  telegramService.annoncerMissionDisponible.mockResolvedValue({
+    publie: true,
+    messageId: 77,
+  });
+  telegramService.supprimerMessageAnnonce.mockResolvedValue({ supprime: true });
 
   consoleSpies = [
     jest.spyOn(console, "log").mockImplementation(() => {}),
@@ -1616,13 +1630,91 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
 });
 
 // ═════════════════════════════════════════════════════════════
+describe("POST /api/admin/missions/:id/recoter-convoyeur", () => {
+  const recoter = (payload) =>
+    auth(
+      request(app).post(`/api/admin/missions/${MISSION_ID}/recoter-convoyeur`),
+    ).send(payload);
+
+  it("retourne 404 si la mission n'existe pas", async () => {
+    mockDb(ADMIN, () => ({ rows: [] }));
+
+    const res = await recoter({ priceConvoyeur: 350 });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("refuse hors statut ACCEPTEE", async () => {
+    mockDb(ADMIN, (sql) => {
+      if (isGetMissionById(sql)) {
+        return { rows: [{ id: MISSION_ID, status: "ASSIGNEE", price: 500 }] };
+      }
+    });
+
+    const res = await recoter({ priceConvoyeur: 350 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/statut actuel/i);
+  });
+
+  it("recote la mission acceptee et relance Telegram", async () => {
+    let updateParams;
+    mockDb(ADMIN, (sql, params) => {
+      if (isGetMissionById(sql)) {
+        return {
+          rows: [
+            {
+              id: MISSION_ID,
+              status: "ACCEPTEE",
+              price: 560,
+              price_convoyeur: 300,
+              telegram_message_id: 41,
+              telegram_chat_id: "-1004297371257",
+              departure_address: "Paris",
+              arrival_address: "Lyon",
+            },
+          ],
+        };
+      }
+      if (/SET price_convoyeur = \$2/i.test(sql)) {
+        updateParams = params;
+        return {
+          rows: [
+            {
+              id: MISSION_ID,
+              status: "ACCEPTEE",
+              price_convoyeur: params?.[1],
+              departure_address: "Paris",
+              arrival_address: "Lyon",
+            },
+          ],
+        };
+      }
+      if (/SET telegram_message_id = \$1/i.test(sql)) return { rows: [] };
+    });
+
+    const res = await recoter({ priceConvoyeur: 350, relancerTelegram: true });
+
+    expect(res.status).toBe(200);
+    expect(updateParams?.[1]).toBe(350);
+    expect(telegramService.supprimerMessageAnnonce).toHaveBeenCalledWith(
+      41,
+      "-1004297371257",
+    );
+    expect(telegramService.annoncerMissionDisponible).toHaveBeenCalled();
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
 describe("POST /api/admin/missions/:id/retirer-convoyeur", () => {
   const CONVOYEUR_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd";
 
-  const retirer = () =>
-    auth(
+  const retirer = (payload) => {
+    const req = auth(
       request(app).post(`/api/admin/missions/${MISSION_ID}/retirer-convoyeur`),
     );
+    return payload ? req.send(payload) : req;
+  };
 
   /** Simule une mission assignée, avec ou sans lien Kaze. */
   const mockMissionAssignee = (mission = {}, convoyeur = {}) => {
@@ -1696,6 +1788,68 @@ describe("POST /api/admin/missions/:id/retirer-convoyeur", () => {
     // Le retrait ne doit jamais désigner un remplaçant au passage.
     const update = requetes.find((r) => /SET convoyeur_id = NULL/i.test(r.sql));
     expect(update.sql).toMatch(/status = 'ACCEPTEE'/i);
+    expect(telegramService.annoncerMissionDisponible).toHaveBeenCalled();
+  });
+
+  it("permet de recoter puis relance la mission dans Telegram", async () => {
+    let updateParams;
+    mockDb(ADMIN, (sql, params) => {
+      if (isGetMissionById(sql)) {
+        return {
+          rows: [
+            {
+              id: MISSION_ID,
+              status: "ASSIGNEE",
+              convoyeur_id: CONVOYEUR_ID,
+              kaze_mission_id: "kz-job-1",
+              price: 560,
+              price_convoyeur: 300,
+              departure_address: "Paris",
+              arrival_address: "Lyon",
+            },
+          ],
+        };
+      }
+      if (/SELECT kaze_driver_id FROM users/i.test(sql)) {
+        return { rows: [{ kaze_driver_id: "kz-driver-1" }] };
+      }
+      if (/SET convoyeur_id = NULL/i.test(sql)) {
+        updateParams = params;
+        return {
+          rows: [
+            {
+              id: MISSION_ID,
+              status: "ACCEPTEE",
+              price_convoyeur: params?.[1],
+              departure_address: "Paris",
+              arrival_address: "Lyon",
+            },
+          ],
+        };
+      }
+      if (/SET telegram_message_id = \$1/i.test(sql)) return { rows: [] };
+    });
+
+    const res = await retirer({ priceConvoyeur: 350 });
+
+    expect(res.status).toBe(200);
+    expect(updateParams?.[1]).toBe(350);
+    const [missionAnnoncee, lien] =
+      telegramService.annoncerMissionDisponible.mock.calls[0];
+    expect(missionAnnoncee).toEqual(
+      expect.objectContaining({ id: MISSION_ID, status: "ACCEPTEE" }),
+    );
+    if (typeof lien === "string") {
+      expect(lien).toMatch(/\/convoyeur\/missions-disponibles$/);
+    } else {
+      expect(lien).toBeUndefined();
+    }
+  });
+
+  it("refuse une recotation convoyeur invalide", async () => {
+    const res = await retirer({ priceConvoyeur: 0 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/prix convoyeur invalide/i);
   });
 
   it("retire quand même en local si Kaze refuse", async () => {

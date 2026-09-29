@@ -6,6 +6,7 @@ const { authenticate, authorize } = require("../middleware/auth.middleware");
 const kazeService = require("../services/kaze.service");
 const syncService = require("../services/sync.service");
 const emailService = require("../services/email.service");
+const telegramService = require("../services/telegram.service");
 const geocodingService = require("../services/geocoding.service");
 const { auditLog, isValidEmail } = require("../middleware/security.middleware");
 const { creerLienReinitialisation } = require("../lib/password-reset");
@@ -111,6 +112,56 @@ async function getMissionById(missionId) {
     [missionId, normalizedId, normalizedId],
   );
   return rows[0] || null;
+}
+
+function normaliserPrixConvoyeur(valeur) {
+  if (valeur === undefined || valeur === null || valeur === "") return null;
+  const nombre = Number(valeur);
+  if (!Number.isFinite(nombre) || nombre <= 0) return NaN;
+  return Math.round(nombre * 100) / 100;
+}
+
+async function memoriserAnnonceTelegram(missionId, messageId) {
+  const idMessage = Number(messageId);
+  if (!missionId || !Number.isInteger(idMessage) || idMessage <= 0) return;
+
+  await db.query(
+    `UPDATE missions
+        SET telegram_message_id = $1,
+            telegram_chat_id = $2,
+            updated_at = NOW()
+      WHERE id = $3`,
+    [idMessage, process.env.TELEGRAM_CHAT_ID || null, missionId],
+  );
+}
+
+async function relancerAnnonceTelegram(mission) {
+  const telegram = { relancee: false, error: null };
+  if (!mission?.id) return telegram;
+
+  try {
+    if (mission.telegram_message_id) {
+      await telegramService.supprimerMessageAnnonce(
+        mission.telegram_message_id,
+        mission.telegram_chat_id || process.env.TELEGRAM_CHAT_ID,
+      );
+    }
+
+    const lienMission = process.env.CLIENT_URL
+      ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+      : undefined;
+
+    const annonce = await telegramService.annoncerMissionDisponible(
+      mission,
+      lienMission,
+    );
+    await memoriserAnnonceTelegram(mission.id, annonce?.messageId);
+    telegram.relancee = Boolean(annonce?.publie);
+  } catch (err) {
+    telegram.error = err.message;
+  }
+
+  return telegram;
 }
 
 /**
@@ -2665,6 +2716,72 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
 });
 
 /**
+ * Recote la rémunération convoyeur d'une mission déjà ACCEPTÉE.
+ *
+ * Cas d'usage : mission difficile à pourvoir (accès complexe, distance,
+ * contraintes d'horaires). L'admin augmente la rémunération et peut
+ * relancer l'annonce Telegram immédiatement.
+ */
+router.post("/missions/:id/recoter-convoyeur", async (req, res, next) => {
+  try {
+    const recotation = normaliserPrixConvoyeur(req.body?.priceConvoyeur);
+    if (Number.isNaN(recotation) || recotation === null) {
+      return res
+        .status(400)
+        .json({ error: "Prix convoyeur invalide. Indiquez un montant > 0." });
+    }
+
+    const mission = await getMissionById(req.params.id);
+    if (!mission) {
+      return res.status(404).json({ error: "Mission introuvable." });
+    }
+
+    if (mission.status !== "ACCEPTEE") {
+      return res.status(400).json({
+        error: `Recotation impossible : statut actuel "${mission.status}".`,
+      });
+    }
+
+    if (
+      mission.price !== null &&
+      mission.price !== undefined &&
+      recotation > Number(mission.price)
+    ) {
+      return res.status(400).json({
+        error: "Le prix convoyeur ne peut pas dépasser le prix client.",
+      });
+    }
+
+    const { rows } = await db.query(
+      `UPDATE missions
+          SET price_convoyeur = $2,
+              updated_at = NOW()
+        WHERE id = $1
+        RETURNING *`,
+      [mission.id, recotation],
+    );
+
+    const missionRecotee = rows[0];
+    const relancerTelegram = req.body?.relancerTelegram !== false;
+    const telegram = relancerTelegram
+      ? await relancerAnnonceTelegram({
+          ...missionRecotee,
+          telegram_message_id: mission.telegram_message_id,
+          telegram_chat_id: mission.telegram_chat_id,
+        })
+      : { relancee: false, error: null };
+
+    res.json({
+      mission: missionRecotee,
+      telegram,
+      message: "Prix convoyeur recoté.",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * Retire le convoyeur d'une mission sans en désigner un autre.
  *
  * La mission retourne en ACCEPTEE, convoyeur_id vidé : elle réapparaît
@@ -2676,9 +2793,27 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
  */
 router.post("/missions/:id/retirer-convoyeur", async (req, res, next) => {
   try {
+    const recotation = normaliserPrixConvoyeur(req.body?.priceConvoyeur);
+    if (Number.isNaN(recotation)) {
+      return res
+        .status(400)
+        .json({ error: "Prix convoyeur invalide. Indiquez un montant > 0." });
+    }
+
     const mission = await getMissionById(req.params.id);
     if (!mission) {
       return res.status(404).json({ error: "Mission introuvable." });
+    }
+
+    if (
+      recotation !== null &&
+      mission.price !== null &&
+      mission.price !== undefined &&
+      recotation > Number(mission.price)
+    ) {
+      return res.status(400).json({
+        error: "Le prix convoyeur ne peut pas dépasser le prix client.",
+      });
     }
 
     if (!mission.convoyeur_id) {
@@ -2701,13 +2836,20 @@ router.post("/missions/:id/retirer-convoyeur", async (req, res, next) => {
     );
     const ancienKazeDriverId = convoyeurRows[0]?.kaze_driver_id || null;
 
+    const prixConvoyeur = recotation ?? mission.price_convoyeur;
+
     const updated = await db.query(
       `UPDATE missions
-          SET convoyeur_id = NULL, status = 'ACCEPTEE', updated_at = NOW()
+          SET convoyeur_id = NULL,
+              status = 'ACCEPTEE',
+              price_convoyeur = $2,
+              updated_at = NOW()
         WHERE id = $1
         RETURNING *`,
-      [mission.id],
+      [mission.id, prixConvoyeur],
     );
+
+    const missionRelancee = updated.rows[0];
 
     const kazeSync = { synced: false, error: null };
     if (
@@ -2732,11 +2874,17 @@ router.post("/missions/:id/retirer-convoyeur", async (req, res, next) => {
       kazeSync.error = "Aucune assignation Kaze à retirer.";
     }
 
-    res.json({
-      mission: updated.rows[0],
-      kazeSync,
-      message: "Convoyeur retiré. La mission attend une nouvelle assignation.",
-    });
+    const relancerTelegram = req.body?.relancerTelegram !== false;
+    const telegram = relancerTelegram
+      ? await relancerAnnonceTelegram(missionRelancee)
+      : { relancee: false, error: null };
+
+    const message =
+      recotation !== null
+        ? "Convoyeur retiré, prix convoyeur recoté et mission relancée."
+        : "Convoyeur retiré. La mission attend une nouvelle assignation.";
+
+    res.json({ mission: missionRelancee, kazeSync, telegram, message });
   } catch (err) {
     next(err);
   }
