@@ -41,6 +41,26 @@ const missionPourUtilisateur = (mission, user) => {
   return copie;
 };
 
+async function memoriserAnnonceTelegram(missionId, messageId) {
+  const idMessage = Number(messageId);
+  if (!missionId || !Number.isInteger(idMessage) || idMessage <= 0) return;
+
+  try {
+    await db.query(
+      `UPDATE missions
+          SET telegram_message_id = $1,
+              telegram_chat_id = $2,
+              updated_at = NOW()
+        WHERE id = $3`,
+      [idMessage, process.env.TELEGRAM_CHAT_ID || null, missionId],
+    );
+  } catch (err) {
+    console.warn(
+      `⚠️ Impossible de mémoriser l'annonce Telegram pour la mission ${missionId} : ${err.message}`,
+    );
+  }
+}
+
 // ── Toutes les routes nécessitent une authentification ───────
 router.use(authenticate);
 
@@ -438,6 +458,9 @@ router.post(
 
           telegramService
             .annoncerMissionDisponible(mission, lienMission)
+            .then((retour) =>
+              memoriserAnnonceTelegram(mission.id, retour?.messageId),
+            )
             .catch((err) => {
               console.error(
                 "⚠️ Erreur lors de l'annonce Telegram :",
@@ -796,6 +819,9 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
 
           telegramService
             .annoncerMissionDisponible(fullMission[0], lienMission)
+            .then((retour) =>
+              memoriserAnnonceTelegram(fullMission[0].id, retour?.messageId),
+            )
             .catch((err) => {
               console.error(
                 "⚠️ Erreur lors de l'annonce Telegram :",

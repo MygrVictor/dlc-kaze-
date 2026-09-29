@@ -240,6 +240,11 @@ const migrate = async () => {
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS refus_motif  TEXT;
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS refused_at   TIMESTAMPTZ;
 
+    -- Traces d'annonce Telegram pour retirer le message quand la mission
+    -- est prise par un convoyeur.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(32);
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS telegram_message_id BIGINT;
+
     -- ──────────────────────────────────────────────────────────
     -- Téléphones : 30 caractères se sont révélés trop courts.
     --

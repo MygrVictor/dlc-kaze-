@@ -6,6 +6,7 @@ const multer = require("multer");
 const db = require("../db");
 const { authenticate, authorize } = require("../middleware/auth.middleware");
 const kazeService = require("../services/kaze.service");
+const telegramService = require("../services/telegram.service");
 const syncService = require("../services/sync.service");
 const {
   auditLog,
@@ -69,6 +70,31 @@ const DOCUMENTS_REQUIS = [
 ];
 
 const DOSSIER_INCOMPLET = `Votre dossier est incomplet : déposez vos ${DOCUMENTS_REQUIS.length} documents obligatoires avant de prendre une mission.`;
+
+async function effacerAnnonceTelegramSiBesoin(mission) {
+  if (!mission?.id || !mission?.telegram_message_id) return;
+
+  try {
+    const suppression = await telegramService.supprimerMessageAnnonce(
+      mission.telegram_message_id,
+      mission.telegram_chat_id || process.env.TELEGRAM_CHAT_ID,
+    );
+    if (!suppression?.supprime) return;
+
+    await db.query(
+      `UPDATE missions
+          SET telegram_message_id = NULL,
+              telegram_chat_id = NULL,
+              updated_at = NOW()
+        WHERE id = $1`,
+      [mission.id],
+    );
+  } catch (err) {
+    console.warn(
+      `⚠️ Impossible d'effacer l'annonce Telegram de la mission ${mission.id} : ${err.message}`,
+    );
+  }
+}
 
 /**
  * État du dossier d'un convoyeur.
@@ -756,6 +782,11 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
     }
 
     const updatedMission = updated.rows[0];
+
+    // Une mission prise ne doit plus rester affichée dans le salon.
+    // Effacement best-effort : un échec Telegram n'empêche jamais la prise.
+    await effacerAnnonceTelegramSiBesoin(mission);
+
     const missionDemo =
       isDemoMissionPayload(updatedMission) ||
       (await isDemoMission(db, updatedMission));

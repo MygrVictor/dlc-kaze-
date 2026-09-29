@@ -112,6 +112,7 @@ node server/src/db/migrate-index-tri.js
 node server/src/db/migrate-structure-assureur.js
 node server/src/db/migrate-comptes-rattaches.js
 node server/src/db/migrate-kaze-driver-unique.js
+node server/src/db/migrate-telegram-messages.js
 
 etape "Vérification du démarrage"
 # On lance l'application quelques secondes : mieux vaut détecter ici un module

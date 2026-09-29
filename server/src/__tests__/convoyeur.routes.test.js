@@ -32,6 +32,11 @@ jest.mock("../services/sync.service", () => ({
   ensureKazeMission: jest.fn(),
 }));
 
+jest.mock("../services/telegram.service", () => ({
+  annoncerMissionDisponible: jest.fn().mockResolvedValue({ publie: true }),
+  supprimerMessageAnnonce: jest.fn().mockResolvedValue({ supprime: true }),
+}));
+
 jest.mock("../services/email.service", () => ({
   notifyMissionDisponible: jest.fn().mockResolvedValue(undefined),
 }));
@@ -41,6 +46,7 @@ jest.mock("../services/devis.service", () => ({ generateDevisPDF: jest.fn() }));
 const db = require("../db");
 const kazeService = require("../services/kaze.service");
 const syncService = require("../services/sync.service");
+const telegramService = require("../services/telegram.service");
 const app = require("./app.test-setup");
 
 const CONVOYEUR = {
@@ -121,6 +127,7 @@ beforeEach(() => {
   kazeService.fetchJob.mockResolvedValue(null);
   kazeService.assignDriver.mockResolvedValue(undefined);
   syncService.ensureKazeMission.mockResolvedValue(null);
+  telegramService.supprimerMessageAnnonce.mockResolvedValue({ supprime: true });
 
   consoleSpies = [
     jest.spyOn(console, "log").mockImplementation(() => {}),
@@ -189,7 +196,9 @@ describe("GET /api/convoyeur/profil", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.kazeLinked).toBe(true);
-    expect(res.body.kazeDriverInfo).toEqual({ id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" });
+    expect(res.body.kazeDriverInfo).toEqual({
+      id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    });
   });
 });
 
@@ -655,6 +664,25 @@ describe("POST /api/convoyeur/missions/:id/prendre", () => {
     expect(kazeService.assignDriver).toHaveBeenCalledWith(
       "kz-created-1",
       "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    );
+  });
+
+  it("supprime l'annonce Telegram quand la mission est prise", async () => {
+    mockPriseDeMission({
+      mission: {
+        ...disponible,
+        telegram_message_id: 42,
+        telegram_chat_id: "-1004297371257",
+      },
+      updated: { ...disponible, status: "ASSIGNEE" },
+    });
+
+    const res = await prendre();
+
+    expect(res.status).toBe(200);
+    expect(telegramService.supprimerMessageAnnonce).toHaveBeenCalledWith(
+      42,
+      "-1004297371257",
     );
   });
 

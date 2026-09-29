@@ -146,7 +146,9 @@ describe("annoncerMissionDisponible", () => {
     axios.post.mockRejectedValue(new Error("réseau indisponible"));
 
     // Une annonce manquée ne doit pas faire échouer l'acceptation du devis.
-    await expect(telegram.annoncerMissionDisponible(MISSION)).resolves.toEqual({
+    await expect(
+      telegram.annoncerMissionDisponible(MISSION),
+    ).resolves.toMatchObject({
       publie: true,
     });
   });

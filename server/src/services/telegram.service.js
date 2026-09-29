@@ -149,11 +149,43 @@ async function annoncerMissionDisponible(mission, lienMission) {
   if (!mission) return { publie: false };
 
   try {
-    await publier(composerAnnonce(mission, lienMission));
-    return { publie: true };
+    const { messageId } = await publier(composerAnnonce(mission, lienMission));
+    return { publie: true, messageId: messageId || null };
   } catch (err) {
     console.error("⚠️ Telegram non publié :", messageErreur(err));
     return { publie: false };
+  }
+}
+
+/**
+ * Supprime une annonce déjà publiée dans le salon convoyeurs.
+ *
+ * @param {number|string} messageId
+ * @param {string} [chatId] Identifiant du salon ; défaut: TELEGRAM_CHAT_ID.
+ * @returns {Promise<{supprime: boolean}>}
+ */
+async function supprimerMessageAnnonce(messageId, chatId = SALON) {
+  const id = Number(messageId);
+  if (!Number.isInteger(id) || id <= 0) return { supprime: false };
+
+  if (!actif) {
+    console.log(`📣 [DEV] Telegram suppression ignorée (message ${id})`);
+    return { supprime: false };
+  }
+
+  try {
+    await axios.post(
+      `https://api.telegram.org/bot${JETON}/deleteMessage`,
+      {
+        chat_id: chatId,
+        message_id: id,
+      },
+      { timeout: 10_000 },
+    );
+    return { supprime: true };
+  } catch (err) {
+    console.error("⚠️ Telegram non supprimé :", messageErreur(err));
+    return { supprime: false };
   }
 }
 
@@ -186,6 +218,7 @@ async function verifierConfiguration() {
 
 module.exports = {
   annoncerMissionDisponible,
+  supprimerMessageAnnonce,
   verifierConfiguration,
   // Exportés pour les tests
   composerAnnonce,
