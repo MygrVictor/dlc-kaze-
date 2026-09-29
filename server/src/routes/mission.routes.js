@@ -421,9 +421,30 @@ router.post(
           }
         }
 
-        // Phase de test sans convoyeurs actifs dans l'application :
-        // aucune mission créée par l'administration n'est diffusée dans
-        // le groupe Telegram, même sans pré-affectation.
+        // Une mission non pré-affectée doit être visible immédiatement
+        // par les convoyeurs : diffusion asynchrone dans le salon
+        // Telegram, sans bloquer la création.
+        for (const mission of createdMissions) {
+          if (isDemoMissionPayload(mission, clientEmail)) {
+            continue;
+          }
+          if (mission.convoyeur_id) {
+            continue;
+          }
+
+          const lienMission = process.env.CLIENT_URL
+            ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+            : undefined;
+
+          telegramService
+            .annoncerMissionDisponible(mission, lienMission)
+            .catch((err) => {
+              console.error(
+                "⚠️ Erreur lors de l'annonce Telegram :",
+                err.message,
+              );
+            });
+        }
       } else {
         // Alerter l'admin : une mission non cotée n'avance pas tant que
         // personne ne l'a vue. L'échec d'envoi ne doit pas annuler la

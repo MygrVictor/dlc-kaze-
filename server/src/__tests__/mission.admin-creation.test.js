@@ -205,13 +205,26 @@ describe("POST /api/missions — saisie administrative", () => {
     expect(res.status).toBe(404);
   });
 
-  it("n'annonce pas la mission dans le groupe Telegram (phase de test)", async () => {
+  it("annonce la mission dans le groupe Telegram quand elle est ouverte", async () => {
     preparerBase(ADMIN);
 
     await creer({ ...corpsMinimal, priceConvoyeur: 180 });
     await viderTachesDeFond();
 
-    expect(telegramService.annoncerMissionDisponible).not.toHaveBeenCalled();
+    expect(telegramService.annoncerMissionDisponible).toHaveBeenCalledTimes(1);
+    const [missionAnnoncee, lien] =
+      telegramService.annoncerMissionDisponible.mock.calls[0];
+    expect(missionAnnoncee).toEqual(
+      expect.objectContaining({
+        id: MISSION_ID,
+      }),
+    );
+
+    if (typeof lien === "string") {
+      expect(lien).toMatch(/\/convoyeur\/missions-disponibles$/);
+    } else {
+      expect(lien).toBeUndefined();
+    }
   });
 
   it("n'annonce pas dans le groupe Telegram si un convoyeur est pré-assigné", async () => {
