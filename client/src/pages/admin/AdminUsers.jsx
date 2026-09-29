@@ -83,6 +83,8 @@ export default function AdminUsers() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileFactures, setProfileFactures] = useState([]);
   const [profileDocs, setProfileDocs] = useState([]);
+  const [profileMissionSummary, setProfileMissionSummary] = useState(null);
+  const [profileRecentMissions, setProfileRecentMissions] = useState([]);
   const [factureUploading, setFactureUploading] = useState(false);
   const [docUploading, setDocUploading] = useState(false);
   const [docDeleting, setDocDeleting] = useState({});
@@ -293,10 +295,13 @@ export default function AdminUsers() {
       const requetes = [api.get(`/factures?destinataire_id=${u.id}`)];
       if (u.role === "client") {
         requetes.push(api.get(`/admin/users/${u.id}/files`));
+        requetes.push(api.get(`/admin/users/${u.id}/mission-summary`));
       }
-      const [resFactures, resDocs] = await Promise.all(requetes);
+      const [resFactures, resDocs, resMissions] = await Promise.all(requetes);
       setProfileFactures(resFactures.data || []);
       setProfileDocs(resDocs?.data?.documents || []);
+      setProfileMissionSummary(resMissions?.data?.summary || null);
+      setProfileRecentMissions(resMissions?.data?.recent_missions || []);
     } catch (err) {
       console.error(err);
       toast.error("Impossible de charger le profil utilisateur.");
@@ -310,6 +315,8 @@ export default function AdminUsers() {
     setProfileTab(startTab);
     setProfileFactures([]);
     setProfileDocs([]);
+    setProfileMissionSummary(null);
+    setProfileRecentMissions([]);
     setFactureForm({
       numero: "",
       libelle: "",
@@ -527,6 +534,17 @@ export default function AdminUsers() {
     client: "bg-primary-500/10 text-primary-400 border border-primary-500/20",
     convoyeur: "bg-accent-500/10 text-accent-400 border border-accent-500/20",
     admin: "bg-red-500/10 text-red-400 border border-red-500/20",
+  };
+
+  const missionStatusLabel = {
+    EN_ATTENTE_DE_COTATION: "En attente",
+    DEVIS_PROPOSE: "Devis proposé",
+    DEVIS_REFUSE: "Devis refusé",
+    ACCEPTEE: "Acceptée",
+    ASSIGNEE: "Assignée",
+    EN_COURS: "En cours",
+    LIVREE: "Livrée",
+    ANNULEE: "Annulée",
   };
 
   const usersFiltres = useMemo(() => {
@@ -1465,43 +1483,158 @@ export default function AdminUsers() {
               ) : (
                 <>
                   {profileTab === "infos" && (
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                        <p className="text-xs text-dark-500 mb-1">Nom</p>
-                        <p className="font-medium">{profileModal.full_name}</p>
+                    <div className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                          <p className="text-xs text-dark-500 mb-1">Nom</p>
+                          <p className="font-medium">
+                            {profileModal.full_name}
+                          </p>
+                        </div>
+                        <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                          <p className="text-xs text-dark-500 mb-1">Email</p>
+                          <p className="font-medium break-all">
+                            {profileModal.email}
+                          </p>
+                        </div>
+                        <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                          <p className="text-xs text-dark-500 mb-1">
+                            Téléphone
+                          </p>
+                          <p className="font-medium">
+                            {profileModal.phone || "—"}
+                          </p>
+                        </div>
+                        <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                          <p className="text-xs text-dark-500 mb-1">
+                            Entreprise
+                          </p>
+                          <p className="font-medium">
+                            {profileModal.company || "—"}
+                          </p>
+                        </div>
+                        <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                          <p className="text-xs text-dark-500 mb-1">
+                            Inscription
+                          </p>
+                          <p className="font-medium">
+                            {formatDate(profileModal.created_at)}
+                          </p>
+                        </div>
+                        <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
+                          <p className="text-xs text-dark-500 mb-1">Statut</p>
+                          <p className="font-medium">
+                            {profileModal.is_validated
+                              ? "Validé"
+                              : "En attente"}
+                          </p>
+                        </div>
                       </div>
-                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                        <p className="text-xs text-dark-500 mb-1">Email</p>
-                        <p className="font-medium break-all">
-                          {profileModal.email}
-                        </p>
-                      </div>
-                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                        <p className="text-xs text-dark-500 mb-1">Téléphone</p>
-                        <p className="font-medium">
-                          {profileModal.phone || "—"}
-                        </p>
-                      </div>
-                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                        <p className="text-xs text-dark-500 mb-1">Entreprise</p>
-                        <p className="font-medium">
-                          {profileModal.company || "—"}
-                        </p>
-                      </div>
-                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                        <p className="text-xs text-dark-500 mb-1">
-                          Inscription
-                        </p>
-                        <p className="font-medium">
-                          {formatDate(profileModal.created_at)}
-                        </p>
-                      </div>
-                      <div className="bg-dark-900 border border-dark-700 rounded-xl p-4">
-                        <p className="text-xs text-dark-500 mb-1">Statut</p>
-                        <p className="font-medium">
-                          {profileModal.is_validated ? "Validé" : "En attente"}
-                        </p>
-                      </div>
+
+                      {profileModal.role === "client" &&
+                        profileMissionSummary && (
+                          <div className="border border-dark-700 rounded-xl p-4 bg-dark-900/60 space-y-3">
+                            <h4 className="font-medium">Résumé des missions</h4>
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                              <div className="bg-dark-900 border border-dark-700 rounded-lg p-3">
+                                <p className="text-xs text-dark-500">Total</p>
+                                <p className="font-semibold text-lg">
+                                  {profileMissionSummary.missions_total}
+                                </p>
+                              </div>
+                              <div className="bg-dark-900 border border-dark-700 rounded-lg p-3">
+                                <p className="text-xs text-dark-500">Livrées</p>
+                                <p className="font-semibold text-lg text-emerald-400">
+                                  {profileMissionSummary.missions_livrees}
+                                </p>
+                              </div>
+                              <div className="bg-dark-900 border border-dark-700 rounded-lg p-3">
+                                <p className="text-xs text-dark-500">
+                                  CA livré
+                                </p>
+                                <p className="font-semibold text-lg">
+                                  {euros(profileMissionSummary.ca_realise)}
+                                </p>
+                              </div>
+                              <div className="bg-dark-900 border border-dark-700 rounded-lg p-3">
+                                <p className="text-xs text-dark-500">Marge</p>
+                                <p className="font-semibold text-lg text-accent-400">
+                                  {euros(profileMissionSummary.marge_realisee)}
+                                  <span className="text-xs text-dark-500 font-normal ml-1">
+                                    (
+                                    {(
+                                      profileMissionSummary.taux_marge || 0
+                                    ).toFixed(1)}
+                                    %)
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid sm:grid-cols-3 gap-3 text-xs text-dark-300">
+                              <p>
+                                Engagées :
+                                <span className="text-dark-100 font-medium ml-1">
+                                  {profileMissionSummary.missions_engagees}
+                                </span>
+                              </p>
+                              <p>
+                                Devis refusés :
+                                <span className="text-dark-100 font-medium ml-1">
+                                  {profileMissionSummary.devis_refuses}
+                                </span>
+                              </p>
+                              <p>
+                                Annulées :
+                                <span className="text-dark-100 font-medium ml-1">
+                                  {profileMissionSummary.annulees}
+                                </span>
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-dark-700/70">
+                              <p className="text-xs text-dark-500 mb-2">
+                                Dernières missions
+                              </p>
+                              {profileRecentMissions.length === 0 ? (
+                                <p className="text-sm text-dark-400">
+                                  Aucune mission pour ce client.
+                                </p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {profileRecentMissions.map((m) => (
+                                    <div
+                                      key={m.id}
+                                      className="border border-dark-700 rounded-lg p-2.5"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-medium truncate">
+                                          {m.departure_address?.split(",")[0] ||
+                                            "Mission"}
+                                          {m.arrival_address
+                                            ? ` → ${m.arrival_address.split(",")[0]}`
+                                            : ""}
+                                        </p>
+                                        <span className="text-[11px] px-2 py-0.5 rounded bg-dark-700 text-dark-300 shrink-0">
+                                          {missionStatusLabel[m.status] ||
+                                            m.status}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-dark-500 mt-1">
+                                        {formatDate(
+                                          m.departure_date || m.created_at,
+                                        )}
+                                        {m.convoyeur_name
+                                          ? ` · ${m.convoyeur_name}`
+                                          : ""}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                     </div>
                   )}
 

@@ -1126,6 +1126,80 @@ router.get("/users", async (req, res, next) => {
   }
 });
 
+router.get("/users/:id/mission-summary", async (req, res, next) => {
+  try {
+    const { rows: users } = await db.query(
+      "SELECT id, role FROM users WHERE id = $1",
+      [req.params.id],
+    );
+    if (users.length === 0) {
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+    }
+
+    // Le profil mission de cette route vise le commanditaire.
+    if (users[0].role !== "client") {
+      return res.status(400).json({ error: "Réservé aux comptes clients." });
+    }
+
+    const [{ rows: statsRows }, { rows: recentRows }] = await Promise.all([
+      db.query(
+        `SELECT
+           COUNT(*) AS missions_total,
+           COUNT(*) FILTER (WHERE m.status = 'LIVREE') AS missions_livrees,
+           COUNT(*) FILTER (WHERE m.status = ANY($2)) AS missions_engagees,
+           COUNT(*) FILTER (WHERE m.status = 'DEVIS_REFUSE') AS devis_refuses,
+           COUNT(*) FILTER (WHERE m.status = 'ANNULEE') AS annulees,
+           COALESCE(SUM(m.price) FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
+           COALESCE(SUM(${COUT_ANALYTIQUE_EXPR}) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise,
+           MAX(m.created_at) AS derniere_mission_at
+         FROM missions m
+         LEFT JOIN users conv ON conv.id = m.convoyeur_id
+         LEFT JOIN users u ON u.id = m.client_id
+         WHERE m.client_id = $1
+           ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}`,
+        [req.params.id, STATUTS_ENGAGES],
+      ),
+      db.query(
+        `SELECT
+           m.id, m.status, m.price, m.price_convoyeur,
+           m.departure_address, m.arrival_address, m.departure_date,
+           m.created_at, m.updated_at,
+           c.full_name AS convoyeur_name
+         FROM missions m
+         LEFT JOIN users c ON c.id = m.convoyeur_id
+         LEFT JOIN users u ON u.id = m.client_id
+         WHERE m.client_id = $1
+           ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
+         ORDER BY m.created_at DESC
+         LIMIT 5`,
+        [req.params.id],
+      ),
+    ]);
+
+    const stats = statsRows[0] || {};
+    const ca = nombre(stats.ca_realise);
+    const cout = nombre(stats.cout_realise);
+
+    res.json({
+      summary: {
+        missions_total: nombre(stats.missions_total),
+        missions_livrees: nombre(stats.missions_livrees),
+        missions_engagees: nombre(stats.missions_engagees),
+        devis_refuses: nombre(stats.devis_refuses),
+        annulees: nombre(stats.annulees),
+        ca_realise: ca,
+        cout_realise: cout,
+        marge_realisee: ca - cout,
+        taux_marge: ca > 0 ? ((ca - cout) / ca) * 100 : 0,
+        derniere_mission_at: stats.derniere_mission_at,
+      },
+      recent_missions: recentRows,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/users/:id/files", async (req, res, next) => {
   try {
     const { rows: cible } = await db.query(
