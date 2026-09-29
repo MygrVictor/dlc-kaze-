@@ -31,6 +31,6 @@ migrate()
     console.error("❌ Erreur migration Telegram:", err);
     process.exit(1);
   })
-  .finally(() => db.end());
+  .finally(() => db.pool.end());
 
 module.exports = migrate;
