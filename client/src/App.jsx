@@ -26,6 +26,7 @@ const EtreRappelePage = lazy(() => import("./pages/EtreRappelePage"));
 const ClientDashboard = lazy(() => import("./pages/client/ClientDashboard"));
 const NewMission = lazy(() => import("./pages/client/NewMission"));
 const MissionDetail = lazy(() => import("./pages/client/MissionDetail"));
+const ClientDevis = lazy(() => import("./pages/client/ClientDevis"));
 const ClientFactures = lazy(() => import("./pages/client/ClientFactures"));
 const ClientRecaps = lazy(() => import("./pages/client/ClientRecaps"));
 
@@ -142,6 +143,7 @@ export default function App() {
           <Route index element={<ClientDashboard />} />
           <Route path="nouvelle-mission" element={<NewMission />} />
           <Route path="missions/:id" element={<MissionDetail />} />
+          <Route path="devis" element={<ClientDevis />} />
           <Route path="factures" element={<ClientFactures />} />
           <Route path="recaps" element={<ClientRecaps />} />
         </Route>

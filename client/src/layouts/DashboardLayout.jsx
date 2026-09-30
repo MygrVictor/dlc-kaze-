@@ -38,7 +38,11 @@ const NAV_ITEMS = {
       path: "/client/recaps",
       icon: FileText,
     },
-    { label: "Mes factures", path: "/client/factures", icon: Receipt },
+    {
+      label: "Mes factures et devis",
+      path: "/client/devis",
+      icon: Receipt,
+    },
   ],
   admin: [
     { label: "Tableau de bord", path: "/admin", icon: BarChart3 },
