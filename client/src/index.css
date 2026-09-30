@@ -217,24 +217,24 @@
 
 .btn-success,
 .btn-accent {
-  background: #15803d;
-  border-color: #15803d;
-  color: white;
+  background: #1f5b49;
+  border-color: #2a6e58;
+  color: #e9f6ef;
 }
 .btn-success:hover:not(:disabled),
 .btn-accent:hover:not(:disabled) {
-  background: #166534;
-  border-color: #166534;
+  background: #255f4d;
+  border-color: #317963;
 }
 
 .btn-warning {
-  background: #c2410c;
-  border-color: #c2410c;
-  color: white;
+  background: #6b4a2f;
+  border-color: #7b5738;
+  color: #f5eee8;
 }
 .btn-warning:hover:not(:disabled) {
-  background: #9a3412;
-  border-color: #9a3412;
+  background: #755036;
+  border-color: #886044;
 }
 
 .btn-danger {
@@ -280,33 +280,33 @@
 
 /* ── Variantes discrètes (contour teinté) ── */
 .btn-soft-success {
-  background: rgba(22, 163, 74, 0.08);
-  border-color: rgba(22, 163, 74, 0.35);
-  color: #4ade80;
+  background: rgba(42, 110, 88, 0.12);
+  border-color: rgba(74, 144, 120, 0.38);
+  color: #9ed7c4;
 }
 .btn-soft-success:hover:not(:disabled) {
-  background: rgba(22, 163, 74, 0.18);
-  border-color: rgba(22, 163, 74, 0.6);
+  background: rgba(42, 110, 88, 0.2);
+  border-color: rgba(95, 170, 144, 0.5);
 }
 
 .btn-soft-warning {
-  background: rgba(234, 88, 12, 0.08);
-  border-color: rgba(234, 88, 12, 0.35);
-  color: #fb923c;
+  background: rgba(123, 87, 56, 0.12);
+  border-color: rgba(161, 122, 83, 0.38);
+  color: #dfbe9d;
 }
 .btn-soft-warning:hover:not(:disabled) {
-  background: rgba(234, 88, 12, 0.18);
-  border-color: rgba(234, 88, 12, 0.6);
+  background: rgba(123, 87, 56, 0.2);
+  border-color: rgba(177, 136, 95, 0.5);
 }
 
 .btn-soft-danger {
-  background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.35);
-  color: #f87171;
+  background: rgba(127, 61, 61, 0.12);
+  border-color: rgba(166, 86, 86, 0.38);
+  color: #e2b0b0;
 }
 .btn-soft-danger:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.18);
-  border-color: rgba(220, 38, 38, 0.6);
+  background: rgba(127, 61, 61, 0.2);
+  border-color: rgba(184, 101, 101, 0.5);
 }
 
 /* ── Tailles ── */

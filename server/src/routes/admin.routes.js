@@ -2223,7 +2223,14 @@ router.post("/missions", async (req, res, next) => {
 
 router.post("/missions/:id/proposer-prix", async (req, res, next) => {
   try {
-    const { price, price_convoyeur, assignerAdmin, convoyeurId } = req.body;
+    const {
+      price,
+      price_convoyeur,
+      assignerAdmin,
+      convoyeurId,
+      convoyeur_comments,
+      comments,
+    } = req.body;
     if (!price || isNaN(price) || Number(price) <= 0) {
       return res
         .status(400)
@@ -2289,17 +2296,31 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
     const convoyeurRetenu =
       convoyeurPreassigneId || (assignerAdmin ? req.user.id : null);
 
+    const commentaireConvoyeur =
+      typeof convoyeur_comments === "string"
+        ? convoyeur_comments.trim() || null
+        : typeof comments === "string"
+          ? comments.trim() || null
+          : mission.convoyeur_comments;
+
     const updated = await db.query(
       `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
+              convoyeur_comments = $4,
               status = 'DEVIS_PROPOSE', updated_at = NOW()
-       WHERE id = $4 RETURNING *`,
+       WHERE id = $5 RETURNING *`,
       // Cocher « je prends cette mission » retient le convoyeur dès la
       // cotation. La mission n'est pas encore assignée — le client n'a rien
       // accepté — mais à sa validation elle ira droit à l'administrateur
       // sans passer par la bourse aux missions. Décocher lors d'une
       // recotation libère la mission, sans quoi un choix ne se reprendrait
       // plus.
-      [price, price_convoyeur, convoyeurRetenu, mission.id],
+      [
+        price,
+        price_convoyeur,
+        convoyeurRetenu,
+        commentaireConvoyeur,
+        mission.id,
+      ],
     );
 
     try {
@@ -2411,6 +2432,7 @@ const CHAMPS_MODIFIABLES = [
   "desired_delivery_date",
   "is_urgent",
   "comments",
+  "convoyeur_comments",
   "price",
   "price_convoyeur",
 ];

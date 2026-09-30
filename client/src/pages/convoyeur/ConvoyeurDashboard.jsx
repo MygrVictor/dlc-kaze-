@@ -25,9 +25,7 @@ import {
   Package,
   ArrowRight,
   Flag,
-  MessageSquare,
   Key,
-  Fuel,
   Sparkles,
   Droplets,
   KeyRound,
@@ -563,7 +561,6 @@ export default function ConvoyeurDashboard() {
                     {/* Services */}
                     {(mission.service_wash_exterior ||
                       mission.service_clean_interior ||
-                      mission.service_refuel ||
                       mission.service_handover) && (
                       <div className="p-3 bg-dark-700/30 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
@@ -583,11 +580,6 @@ export default function ConvoyeurDashboard() {
                               <Sparkles size={11} /> Nettoyage intérieur
                             </span>
                           )}
-                          {mission.service_refuel && (
-                            <span className="text-xs flex items-center gap-1 px-2 py-1 bg-amber-500/10 text-amber-400 rounded-full">
-                              <Fuel size={11} /> Plein de carburant
-                            </span>
-                          )}
                           {mission.service_handover && (
                             <span className="text-xs flex items-center gap-1 px-2 py-1 bg-primary-500/10 text-primary-400 rounded-full">
                               <KeyRound size={11} /> Mise en main
@@ -597,7 +589,7 @@ export default function ConvoyeurDashboard() {
                       </div>
                     )}
 
-                    {/* Emergency + Comments */}
+                    {/* Emergency */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {mission.emergency_phone && (
                         <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-lg">
@@ -614,22 +606,6 @@ export default function ConvoyeurDashboard() {
                             <Phone size={12} />
                             {mission.emergency_phone}
                           </a>
-                        </div>
-                      )}
-                      {mission.comments && (
-                        <div className="p-3 bg-dark-700/30 rounded-lg">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MessageSquare
-                              size={14}
-                              className="text-primary-400"
-                            />
-                            <h4 className="text-sm font-semibold">
-                              Commentaires
-                            </h4>
-                          </div>
-                          <p className="text-sm text-dark-300 whitespace-pre-wrap">
-                            {mission.comments}
-                          </p>
                         </div>
                       )}
                     </div>

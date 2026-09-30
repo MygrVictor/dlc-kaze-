@@ -21,7 +21,6 @@ import {
   Phone,
   User,
   Key,
-  Fuel,
   Sparkles,
   Droplets,
   ShieldAlert,
@@ -76,6 +75,7 @@ export default function AdminMissions() {
   const [lectureSeule, setLectureSeule] = useState(false);
   const [priceValue, setPriceValue] = useState("");
   const [priceConvoyeurValue, setPriceConvoyeurValue] = useState("");
+  const [adminCommentValue, setAdminCommentValue] = useState("");
   // L'administrateur convoie lui-même une partie des missions : cocher
   // retient celle-ci pour lui dès la cotation.
   const [prendreLaMission, setPrendreLaMission] = useState(false);
@@ -306,6 +306,23 @@ export default function AdminMissions() {
     }
   };
 
+  const ouvrirMissionLecture = (mission) => {
+    setPriceModal(mission);
+    setLectureSeule(true);
+    setAdminCommentValue(mission.convoyeur_comments || "");
+  };
+
+  const ouvrirMissionCotation = (mission) => {
+    setPriceModal(mission);
+    setLectureSeule(false);
+    setPriceValue("");
+    setPriceConvoyeurValue("");
+    setAdminCommentValue(mission.convoyeur_comments || "");
+    setPrendreLaMission(false);
+    setConvoyeurCotationId("");
+    chargerConvoyeurs();
+  };
+
   const handleProposerPrix = async () => {
     if (!priceValue || isNaN(priceValue) || Number(priceValue) <= 0) {
       return toast.error("Veuillez saisir un prix client valide.");
@@ -327,6 +344,7 @@ export default function AdminMissions() {
       await api.post(`/admin/missions/${priceModal.id}/proposer-prix`, {
         price: Number(priceValue),
         price_convoyeur: Number(priceConvoyeurValue),
+        convoyeur_comments: adminCommentValue.trim() || null,
         assignerAdmin: prendreLaMission,
         convoyeurId: convoyeurCotationId || undefined,
       });
@@ -338,6 +356,7 @@ export default function AdminMissions() {
       setPriceModal(null);
       setPriceValue("");
       setPriceConvoyeurValue("");
+      setAdminCommentValue("");
       setPrendreLaMission(false);
       setConvoyeurCotationId("");
       fetchMissions();
@@ -712,11 +731,7 @@ export default function AdminMissions() {
                 {displayMissions.map((m) => (
                   <tr
                     key={m.id}
-                    onClick={() => {
-                      setPriceModal(m);
-                      setLectureSeule(true);
-                    }}
-                    className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors cursor-pointer"
+                    className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors"
                   >
                     <td className="py-3 px-4" data-label="Source">
                       {m.source === "kaze" ? (
@@ -870,16 +885,13 @@ export default function AdminMissions() {
                             m.status,
                           ) && (
                             <button
-                              onClick={() => {
-                                setPriceModal(m);
-                                setLectureSeule(false);
-                                setPriceValue("");
-                                setPriceConvoyeurValue("");
-                                setPrendreLaMission(false);
-                                setConvoyeurCotationId("");
-                                chargerConvoyeurs();
-                              }}
-                              className="btn-primary btn-xs"
+                              onClick={() => ouvrirMissionLecture(m)}
+                              className="btn-soft-warning btn-xs"
+                              title={
+                                m.status === "DEVIS_REFUSE"
+                                  ? "Recoter la mission"
+                                  : "Coter la mission"
+                              }
                             >
                               <Euro size={14} />
                               {m.status === "DEVIS_REFUSE"
@@ -898,29 +910,47 @@ export default function AdminMissions() {
                               onClick={() => handleDeleteMission(m)}
                               disabled={deletingId === m.id}
                               title="Supprimer définitivement"
-                              className="btn-soft-danger btn-xs"
+                              className="btn-soft-danger btn-icon btn-xs"
+                              aria-label="Supprimer définitivement"
                             >
-                              <Trash2 size={14} />
-                              {deletingId === m.id ? "…" : "Supprimer"}
+                              {deletingId === m.id ? (
+                                <RefreshCw size={14} className="animate-spin" />
+                              ) : (
+                                <Trash2 size={14} />
+                              )}
                             </button>
                           )}
                         {canAssign(m) && (
                           <button
                             onClick={() => openAssignModal(m)}
-                            className="btn-success btn-xs"
+                            className="btn-soft-success btn-icon btn-xs"
+                            title={
+                              m.convoyeur_name
+                                ? "Réassigner un convoyeur"
+                                : "Assigner un convoyeur"
+                            }
+                            aria-label={
+                              m.convoyeur_name
+                                ? "Réassigner un convoyeur"
+                                : "Assigner un convoyeur"
+                            }
                           >
                             <UserCheck size={14} />
-                            {m.convoyeur_name ? "Réassigner" : "Assigner"}
                           </button>
                         )}
                         {m.source === "dlc" && m.status === "ACCEPTEE" && (
                           <button
                             onClick={() => handleRecoterMissionAcceptee(m)}
                             disabled={recotationId === m.id}
-                            className="btn-warning btn-xs"
+                            className="btn-soft-warning btn-icon btn-xs"
+                            title="Recoter la mission"
+                            aria-label="Recoter la mission"
                           >
-                            <Euro size={14} />
-                            {recotationId === m.id ? "…" : "Recoter"}
+                            {recotationId === m.id ? (
+                              <RefreshCw size={14} className="animate-spin" />
+                            ) : (
+                              <Euro size={14} />
+                            )}
                           </button>
                         )}
                         {m.source === "dlc" &&
@@ -930,10 +960,14 @@ export default function AdminMissions() {
                               onClick={() => handleRetirerConvoyeur(m)}
                               disabled={retraitId === m.id}
                               title="Retirer le convoyeur sans en assigner un autre"
-                              className="btn-soft-danger btn-xs"
+                              className="btn-soft-danger btn-icon btn-xs"
+                              aria-label="Retirer le convoyeur"
                             >
-                              <UserX size={14} />
-                              {retraitId === m.id ? "…" : "Retirer"}
+                              {retraitId === m.id ? (
+                                <RefreshCw size={14} className="animate-spin" />
+                              ) : (
+                                <UserX size={14} />
+                              )}
                             </button>
                           )}
                       </div>
@@ -1199,14 +1233,12 @@ export default function AdminMissions() {
               {/* Services + Urgence */}
               {(priceModal.service_wash_exterior ||
                 priceModal.service_clean_interior ||
-                priceModal.service_refuel ||
                 priceModal.service_handover ||
                 priceModal.emergency_phone) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Services */}
                   {(priceModal.service_wash_exterior ||
                     priceModal.service_clean_interior ||
-                    priceModal.service_refuel ||
                     priceModal.service_handover) && (
                     <div className="p-3 bg-dark-700/50 rounded-lg">
                       <div className="flex items-center gap-2 mb-3">
@@ -1224,11 +1256,6 @@ export default function AdminMissions() {
                         {priceModal.service_clean_interior && (
                           <div className="flex items-center gap-2 text-emerald-400">
                             <Sparkles size={13} /> Nettoyage intérieur
-                          </div>
-                        )}
-                        {priceModal.service_refuel && (
-                          <div className="flex items-center gap-2 text-amber-400">
-                            <Fuel size={13} /> Plein de carburant
                           </div>
                         )}
                         {priceModal.service_handover && (
@@ -1277,15 +1304,32 @@ export default function AdminMissions() {
                 </div>
               )}
 
-              {/* Commentaires */}
+              {/* Observations client internes */}
               {priceModal.comments && (
                 <div className="p-3 bg-dark-700/50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <MessageSquare size={16} className="text-primary-400" />
-                    <h4 className="text-sm font-semibold">Commentaires</h4>
+                    <h4 className="text-sm font-semibold">
+                      Observations client (admin only)
+                    </h4>
                   </div>
                   <p className="text-sm text-dark-300 whitespace-pre-wrap">
                     {priceModal.comments}
+                  </p>
+                </div>
+              )}
+
+              {/* Consignes convoyeur filtrées par l'admin */}
+              {priceModal.convoyeur_comments && (
+                <div className="p-3 bg-primary-500/10 border border-primary-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare size={16} className="text-primary-300" />
+                    <h4 className="text-sm font-semibold text-primary-200">
+                      Consignes convoyeur diffusées
+                    </h4>
+                  </div>
+                  <p className="text-sm text-primary-100 whitespace-pre-wrap">
+                    {priceModal.convoyeur_comments}
                   </p>
                 </div>
               )}
@@ -1306,12 +1350,26 @@ export default function AdminMissions() {
                       )}
                     </p>
                   </div>
-                  <button
-                    onClick={() => setPriceModal(null)}
-                    className="btn-secondary"
-                  >
-                    Fermer
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {priceModal.source === "dlc" &&
+                      ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
+                        priceModal.status,
+                      ) && (
+                        <button
+                          onClick={() => ouvrirMissionCotation(priceModal)}
+                          className="btn-soft-warning"
+                        >
+                          <Euro size={16} />
+                          Coter
+                        </button>
+                      )}
+                    <button
+                      onClick={() => setPriceModal(null)}
+                      className="btn-secondary"
+                    >
+                      Fermer
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -1394,6 +1452,23 @@ export default function AdminMissions() {
                         )}
                       </div>
                     )}
+
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Commentaires mission (visibles convoyeur)
+                    </label>
+                    <textarea
+                      value={adminCommentValue}
+                      onChange={(e) => setAdminCommentValue(e.target.value)}
+                      rows={4}
+                      className="input-field resize-none"
+                      placeholder="Renseignez uniquement les consignes nécessaires au convoyeur."
+                    />
+                    <p className="text-xs text-dark-500 mt-1">
+                      Vous filtrez ici les infos client pour ne transmettre que
+                      l'essentiel opérationnel.
+                    </p>
+                  </div>
 
                   {/* Une mission retenue ici ne paraîtra jamais dans la
                       bourse aux missions : elle passe directement en

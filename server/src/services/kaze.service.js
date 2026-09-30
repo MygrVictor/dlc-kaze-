@@ -981,7 +981,7 @@ const createMission = async (mission) => {
           ? `Gabarit : ${libelleVehicule(mission.vehicle_type)} — péage classe ${classeDePeage(mission.vehicle_type)}.`
           : null,
         mission.service_handover ? "Mise en main du véhicule demandée." : null,
-        mission.comments || null,
+        mission.convoyeur_comments || null,
       ]
         .filter(Boolean)
         .join("\n");
@@ -1114,11 +1114,7 @@ const createMission = async (mission) => {
         "85ea9290-9232-4066-bf87-2a481e85e43a",
         mission.retribution_details || "",
       );
-      setWidgetData(
-        workflow,
-        "09014fe6-e71f-4c8e-b559-f65ee52a3c1c",
-        mission.service_refuel ? "OUI" : "NON",
-      );
+      setWidgetData(workflow, "09014fe6-e71f-4c8e-b559-f65ee52a3c1c", "NON");
       setWidgetData(
         workflow,
         "448e194d-82aa-4acb-8a71-e3dc747de6e5",

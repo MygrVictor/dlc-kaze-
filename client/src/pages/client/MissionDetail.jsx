@@ -15,11 +15,9 @@ import {
   Euro,
   CheckCircle2,
   Clock,
-  MessageSquare,
   Phone,
   User,
   Key,
-  Fuel,
   Sparkles,
   Droplets,
   ShieldAlert,
@@ -145,7 +143,6 @@ export default function MissionDetail() {
   const hasServices =
     mission.service_wash_exterior ||
     mission.service_clean_interior ||
-    mission.service_refuel ||
     mission.service_handover;
 
   return (
@@ -274,11 +271,13 @@ export default function MissionDetail() {
             <h3 className="font-semibold">Véhicule</h3>
           </div>
           <div className="space-y-2 text-sm">
-            {mission.vehicle_brand && (
+            {(mission.vehicle_brand || mission.vehicle_model) && (
               <div className="flex justify-between">
-                <span className="text-dark-400">Marque / Modèle</span>
+                <span className="text-dark-400">Véhicule</span>
                 <span>
-                  {mission.vehicle_brand} {mission.vehicle_model}
+                  {[mission.vehicle_brand, mission.vehicle_model]
+                    .filter(Boolean)
+                    .join(" ")}
                 </span>
               </div>
             )}
@@ -291,13 +290,7 @@ export default function MissionDetail() {
             {mission.vehicle_vin && (
               <div className="flex justify-between">
                 <span className="text-dark-400">VIN</span>
-                <span className="font-mono text-xs">{mission.vehicle_vin}</span>
-              </div>
-            )}
-            {mission.vehicle_finish && (
-              <div className="flex justify-between">
-                <span className="text-dark-400">Finition</span>
-                <span>{mission.vehicle_finish}</span>
+                <span className="font-mono">{mission.vehicle_vin}</span>
               </div>
             )}
             {mission.vehicle_energy && (
@@ -419,12 +412,6 @@ export default function MissionDetail() {
                   <span>Nettoyage intérieur</span>
                 </div>
               )}
-              {mission.service_refuel && (
-                <div className="flex items-center gap-2 text-amber-400">
-                  <Fuel size={14} />
-                  <span>Plein de carburant</span>
-                </div>
-              )}
               {mission.service_handover && (
                 <div className="flex items-center gap-2 text-primary-400">
                   <KeyRound size={14} />
@@ -460,19 +447,6 @@ export default function MissionDetail() {
           </div>
         )}
       </div>
-
-      {/* Commentaires */}
-      {mission.comments && (
-        <div className="card mt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageSquare size={18} className="text-primary-400" />
-            <h3 className="font-semibold">Commentaires</h3>
-          </div>
-          <p className="text-dark-300 text-sm whitespace-pre-wrap">
-            {mission.comments}
-          </p>
-        </div>
-      )}
 
       {/* Timeline */}
       <div className="card mt-6">

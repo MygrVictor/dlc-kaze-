@@ -124,7 +124,11 @@ export default function DashboardLayout() {
   const Sidebar = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-5 border-b border-slate-800">
+      <div
+        className={`p-5 border-b ${
+          theme === "light" ? "border-slate-200" : "border-slate-800"
+        }`}
+      >
         <Link to="/" className="flex flex-col items-center gap-3">
           <div className="w-full flex justify-center">
             <img
@@ -146,7 +150,11 @@ export default function DashboardLayout() {
             </div>
           </div>
         </Link>
-        <p className="text-xs mt-2 text-center text-slate-400">
+        <p
+          className={`text-xs mt-2 text-center ${
+            theme === "light" ? "text-slate-500" : "text-slate-400"
+          }`}
+        >
           {roleLabel[user?.role]}
         </p>
       </div>
@@ -169,8 +177,12 @@ export default function DashboardLayout() {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative
                 ${
                   isActive
-                    ? "bg-primary-600 text-white shadow-lg shadow-primary-600/20"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    ? theme === "light"
+                      ? "bg-primary-100 text-primary-700 border border-primary-200"
+                      : "bg-primary-600 text-white shadow-lg shadow-primary-600/20"
+                    : theme === "light"
+                      ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
                 }`}
             >
               <Icon size={18} />
@@ -187,22 +199,46 @@ export default function DashboardLayout() {
       </nav>
 
       {/* User info & logout */}
-      <div className="p-4 border-t border-slate-800">
+      <div
+        className={`p-4 border-t ${
+          theme === "light" ? "border-slate-200" : "border-slate-800"
+        }`}
+      >
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold bg-primary-600/20 text-primary-400">
+          <div
+            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold ${
+              theme === "light"
+                ? "bg-primary-100 text-primary-700"
+                : "bg-primary-600/20 text-primary-400"
+            }`}
+          >
             {user?.full_name?.charAt(0)?.toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-100 truncate">
+            <p
+              className={`text-sm font-medium truncate ${
+                theme === "light" ? "text-slate-900" : "text-slate-100"
+              }`}
+            >
               {user?.full_name}
             </p>
-            <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+            <p
+              className={`text-xs truncate ${
+                theme === "light" ? "text-slate-500" : "text-slate-500"
+              }`}
+            >
+              {user?.email}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all ${
+              theme === "light"
+                ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
             title={theme === "dark" ? "Mode clair" : "Mode sombre"}
           >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -212,7 +248,11 @@ export default function DashboardLayout() {
           </button>
           <button
             onClick={handleLogout}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all"
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all ${
+              theme === "light"
+                ? "text-slate-600 hover:text-red-700 hover:bg-red-50"
+                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+            }`}
             title="Déconnexion"
           >
             <LogOut size={16} />
@@ -234,7 +274,13 @@ export default function DashboardLayout() {
           côté de la conversation. */}
       {user?.role === "client" && <CrispChat user={user} />}
       {/* ── Sidebar desktop ──────────────────── */}
-      <aside className="hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-30 bg-slate-900 border-r border-slate-800">
+      <aside
+        className={`hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-30 border-r ${
+          theme === "light"
+            ? "bg-white border-slate-200"
+            : "bg-slate-900 border-slate-800"
+        }`}
+      >
         <Sidebar />
       </aside>
 
@@ -245,7 +291,13 @@ export default function DashboardLayout() {
             className="absolute inset-0 bg-black/60"
             onClick={() => setSidebarOpen(false)}
           />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 z-50 bg-slate-900 border-r border-slate-800">
+          <aside
+            className={`absolute left-0 top-0 bottom-0 w-64 z-50 border-r ${
+              theme === "light"
+                ? "bg-white border-slate-200"
+                : "bg-slate-900 border-slate-800"
+            }`}
+          >
             <Sidebar />
           </aside>
         </div>
@@ -258,10 +310,20 @@ export default function DashboardLayout() {
          clair du `body` sur la droite. */}
       <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
         {/* Top bar mobile */}
-        <header className="lg:hidden flex items-center justify-between px-4 h-14 bg-slate-900 border-b border-slate-800 text-slate-100">
+        <header
+          className={`lg:hidden flex items-center justify-between px-4 h-14 border-b ${
+            theme === "light"
+              ? "bg-white border-slate-200 text-slate-900"
+              : "bg-slate-900 border-slate-800 text-slate-100"
+          }`}
+        >
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-slate-400 hover:text-white"
+            className={
+              theme === "light"
+                ? "text-slate-600 hover:text-slate-900"
+                : "text-slate-400 hover:text-white"
+            }
           >
             <Menu size={24} />
           </button>
@@ -271,7 +333,11 @@ export default function DashboardLayout() {
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label={theme === "dark" ? "Mode clair" : "Mode sombre"}
-            className="text-slate-400 hover:text-white p-1"
+            className={
+              theme === "light"
+                ? "text-slate-600 hover:text-slate-900 p-1"
+                : "text-slate-400 hover:text-white p-1"
+            }
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>

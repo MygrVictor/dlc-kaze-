@@ -18,7 +18,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Send,
-  Fuel,
   Phone,
   User,
   Building2,
@@ -26,6 +25,7 @@ import {
   ShieldAlert,
   Sparkles,
   Check,
+  Fuel,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ChampAdresse from "../../components/ChampAdresse";
@@ -206,7 +206,6 @@ export default function NewMission() {
   });
 
   const [services, setServices] = useState({
-    refuel: false,
     documentManagement: "",
     handover: false,
     retributionDetails: "",
@@ -321,7 +320,6 @@ export default function NewMission() {
         arrivalContactPhone: arrival.contactPhone || null,
         arrivalContactEmail: arrival.contactEmail || null,
         arrivalInstructions: arrival.instructions || null,
-        serviceRefuel: services.refuel,
         serviceDocumentManagement: services.documentManagement || null,
         serviceHandover: services.handover,
         retributionDetails: services.retributionDetails || null,
@@ -330,6 +328,7 @@ export default function NewMission() {
         emergencyContactEmail:
           emergency.contactEmail || URGENCE_DLC.contactEmail,
         comments: observations || null,
+        purchaseOrderNumber: purchaseOrderNumber.trim() || null,
         // Souhait du client : conservé côté DLC, non transmis à Kaze.
         desiredDeliveryDate: arrival.date || null,
         isUrgent: arrival.isUrgent || false,
@@ -339,7 +338,6 @@ export default function NewMission() {
           convoyeurId: convoyeurId || null,
           priceConvoyeur: priceConvoyeur || null,
           priceClient: priceClient || null,
-          purchaseOrderNumber: purchaseOrderNumber.trim() || null,
         }),
       };
 
@@ -586,6 +584,24 @@ export default function NewMission() {
               départ et à l&apos;arrivée. Ils servent au convoyeur pour les
               joindre et ne reçoivent pas ce récapitulatif.
             </p>
+
+            {!estAdmin && (
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                  N° commande / N° bon de commande
+                </label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={purchaseOrderNumber}
+                  onChange={(e) => setPurchaseOrderNumber(e.target.value)}
+                  placeholder="Ex. BC-2026-1042"
+                />
+                <p className="text-xs text-dark-500 mt-2">
+                  Référence interne, non transmise au convoyeur.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1144,29 +1160,6 @@ export default function NewMission() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                  <Fuel size={14} className="inline mr-1" />
-                  Carburant
-                </label>
-                <select
-                  value={services.refuel ? "OUI" : "NON"}
-                  onChange={(e) =>
-                    setServices({
-                      ...services,
-                      refuel: e.target.value === "OUI",
-                    })
-                  }
-                  className="input-field"
-                >
-                  {OUI_NON.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-dark-300 mb-1.5">
                   Gestion documentaire
                 </label>
                 <input
@@ -1291,14 +1284,14 @@ export default function NewMission() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Observations / instructions particulières
+                Observations internes (équipe admin uniquement)
               </label>
               <textarea
                 value={observations}
                 onChange={(e) => setObservations(e.target.value)}
                 rows={5}
                 className="input-field resize-none"
-                placeholder="Merci de mettre toutes les informations nécessaires au bon déroulement de la mission"
+                placeholder="Ces informations ne sont pas envoyées automatiquement au convoyeur. L'équipe admin filtre puis transmet uniquement le nécessaire."
               />
             </div>
           </div>

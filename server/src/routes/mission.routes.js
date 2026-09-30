@@ -32,7 +32,11 @@ const { isDemoMission, isDemoMissionPayload } = require("../lib/demo-mission");
 const router = express.Router();
 const ROLES_CONVOYABLES = ["convoyeur", "admin"];
 
-const ADMIN_ONLY_MISSION_FIELDS = ["purchase_order_number"];
+const ADMIN_ONLY_MISSION_FIELDS = [
+  "purchase_order_number",
+  "comments",
+  "convoyeur_comments",
+];
 
 const missionPourUtilisateur = (mission, user) => {
   if (!mission || user?.role === "admin") return mission;
@@ -144,9 +148,7 @@ router.post(
       const convoyeurPreassigneId = estAdmin
         ? req.body.convoyeurId || null
         : null;
-      const purchaseOrderNumber = estAdmin
-        ? req.body.purchaseOrderNumber || null
-        : null;
+      const purchaseOrderNumber = req.body.purchaseOrderNumber || null;
       let clientEmail = estAdmin ? null : req.user.email || null;
       let convoyeurPreassigne = null;
 

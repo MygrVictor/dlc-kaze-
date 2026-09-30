@@ -180,6 +180,7 @@ const migrate = async () => {
 
       -- Méta
       comments        TEXT,
+      convoyeur_comments TEXT,
       price           NUMERIC(10, 2),
       price_convoyeur NUMERIC(10, 2),
       status          mission_status NOT NULL DEFAULT 'EN_ATTENTE_DE_COTATION',
@@ -234,6 +235,10 @@ const migrate = async () => {
     -- Référence interne administration (numéro de commande / bon de
     -- commande). Ce champ n'est pas destiné aux convoyeurs.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS purchase_order_number VARCHAR(150);
+
+    -- Consignes opérationnelles filtrées par l'admin, seules destinées
+    -- aux convoyeurs et au workflow Kaze.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS convoyeur_comments TEXT;
 
     -- Refus de devis : motif saisi par le client + horodatage, pour que
     -- l'équipe puisse le rappeler et ajuster la proposition.
