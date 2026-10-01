@@ -41,7 +41,6 @@ jest.mock("../services/sync.service", () => ({
 jest.mock("../services/email.service", () => ({
   notifyAccountValidated: jest.fn().mockResolvedValue(undefined),
   notifyDevisPropose: jest.fn().mockResolvedValue(undefined),
-  notifyMissionAssignee: jest.fn().mockResolvedValue(undefined),
   notifyMissionDisponible: jest.fn().mockResolvedValue(undefined),
   notifyPasswordReset: jest.fn().mockResolvedValue(undefined),
 }));
@@ -127,7 +126,6 @@ beforeEach(() => {
   syncService.ensureKazeMission.mockResolvedValue(null);
   emailService.notifyAccountValidated.mockResolvedValue(undefined);
   emailService.notifyDevisPropose.mockResolvedValue(undefined);
-  emailService.notifyMissionAssignee.mockResolvedValue(undefined);
   telegramService.annoncerMissionDisponible.mockResolvedValue({
     publie: true,
     messageId: 77,
@@ -1555,8 +1553,6 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
             },
           ],
         };
-      if (/SELECT email, full_name FROM users/i.test(sql))
-        return { rows: [{ email: CLIENT.email, full_name: CLIENT.full_name }] };
     });
     syncService.ensureKazeMission.mockResolvedValue("kz-job-1");
     kazeService.assignDriver.mockResolvedValue(true);
@@ -1570,7 +1566,6 @@ describe("POST /api/admin/missions/:id/attribuer-convoyeur", () => {
       "kz-job-1",
       "kz-driver-1",
     );
-    expect(emailService.notifyMissionAssignee).toHaveBeenCalled();
   });
 
   it("signale un convoyeur sans compte Kaze sans bloquer l'attribution", async () => {

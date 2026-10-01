@@ -242,38 +242,6 @@ async function notifyDevisPropose(clientEmail, clientName, mission, price) {
 }
 
 /**
- * Notifier le client que sa mission a été acceptée et un convoyeur assigné.
- */
-async function notifyMissionAssignee(
-  clientEmail,
-  clientName,
-  mission,
-  convoyeurName,
-) {
-  const html = baseTemplate(`
-    <h2>Bonjour ${clientName},</h2>
-    <p>Bonne nouvelle ! Un convoyeur a été assigné à votre mission :</p>
-    <div class="info-box">
-      <div class="info-row"><span class="info-label">Convoyeur</span><span class="info-value">${convoyeurName}</span></div>
-      <div class="info-row"><span class="info-label">Véhicule</span><span class="info-value">${mission.vehicle_brand || ""} ${mission.vehicle_model || ""}</span></div>
-      <div class="info-row"><span class="info-label">Départ</span><span class="info-value">${mission.departure_address}</span></div>
-      <div class="info-row"><span class="info-label">Arrivée</span><span class="info-value">${mission.arrival_address}</span></div>
-      <div class="info-row"><span class="info-label">Statut</span><span class="info-value"><span class="badge badge-info">Convoyeur assigné</span></span></div>
-    </div>
-    <p style="text-align: center;">
-      <a href="${process.env.CLIENT_URL}/client/missions/${mission.id}" class="btn">Suivre ma mission</a>
-    </p>
-  `);
-
-  return transporter.sendMail({
-    from: FROM,
-    to: clientEmail,
-    subject: `Mission en préparation — Convoyeur assigné — ${mission.vehicle_brand || "Véhicule"}`,
-    html,
-  });
-}
-
-/**
  * Notifier le client que la mission est en cours.
  */
 async function notifyMissionEnCours(clientEmail, clientName, mission) {
@@ -689,7 +657,6 @@ async function notifyPasswordChanged(email, nom) {
 
 module.exports = {
   notifyDevisPropose,
-  notifyMissionAssignee,
   notifyMissionEnCours,
   notifyMissionLivree,
   notifyNewRegistration,

@@ -97,6 +97,26 @@ async function effacerAnnonceTelegramSiBesoin(mission) {
 }
 
 /**
+ * Les convoyeurs ne doivent jamais recevoir les commentaires généraux client
+ * (`comments`). Seules les consignes opérationnelles filtrées
+ * (`convoyeur_comments`) sont exposées après attribution.
+ */
+function missionPourConvoyeur(mission) {
+  if (!mission || typeof mission !== "object") return mission;
+
+  const copie = { ...mission };
+  delete copie.comments;
+
+  if (copie.raw && typeof copie.raw === "object") {
+    const brut = { ...copie.raw };
+    delete brut.comments;
+    copie.raw = brut;
+  }
+
+  return copie;
+}
+
+/**
  * État du dossier d'un convoyeur.
  *
  * Un document refusé compte comme absent : il devra être redéposé. Un
@@ -412,6 +432,7 @@ router.get("/missions", async (req, res, next) => {
                     m.vehicle_type, m.vehicle_toll_class, m.vehicle_utility_12m3,
                     m.service_wash_exterior, m.service_clean_interior,
                     m.service_refuel, m.service_handover,
+                    m.convoyeur_comments,
                     m.emergency_phone,
                     m.price_convoyeur AS price,
                     u.full_name AS client_name
@@ -438,7 +459,10 @@ router.get("/missions", async (req, res, next) => {
           return fusion;
         });
 
-        return res.json({ source: "kaze", missions: enrichies });
+        return res.json({
+          source: "kaze",
+          missions: enrichies.map(missionPourConvoyeur),
+        });
       } catch (kazeErr) {
         console.error(
           "⚠️ Kaze indisponible, fallback sur la base locale :",
@@ -457,6 +481,7 @@ router.get("/missions", async (req, res, next) => {
               m.departure_instructions, m.arrival_address, m.arrival_date, m.arrival_contact_name,
               m.arrival_contact_phone, m.service_wash_exterior, m.service_clean_interior, m.service_refuel,
               m.service_handover,
+              m.convoyeur_comments,
               m.emergency_phone, m.price_convoyeur AS price, m.status, m.kaze_mission_id,
               m.convoyeur_id, m.created_at, m.updated_at,
               u.full_name AS client_name
@@ -472,7 +497,7 @@ router.get("/missions", async (req, res, next) => {
       [req.user.id],
     );
 
-    res.json({ source: "local", missions: rows });
+    res.json({ source: "local", missions: rows.map(missionPourConvoyeur) });
   } catch (err) {
     next(err);
   }
@@ -520,7 +545,7 @@ router.get("/historique", async (req, res, next) => {
     );
 
     res.json({
-      missions: rows,
+      missions: rows.map(missionPourConvoyeur),
       total: totalRows[0].total,
       revenus: totalRows[0].revenus,
       page,
@@ -901,6 +926,7 @@ router.get("/missions/:id", async (req, res, next) => {
               m.service_wash_exterior, m.service_clean_interior,
               m.service_refuel, m.service_document_management, m.service_handover,
               m.retribution_details,
+              m.convoyeur_comments,
               m.emergency_contact_name, m.emergency_phone, m.emergency_contact_email,
               m.desired_delivery_date, m.is_urgent,
               m.batch_id, m.recap_email,
@@ -920,7 +946,7 @@ router.get("/missions/:id", async (req, res, next) => {
         .json({ error: "Mission introuvable ou non attribuée." });
     }
 
-    res.json({ mission: rows[0] });
+    res.json({ mission: missionPourConvoyeur(rows[0]) });
   } catch (err) {
     next(err);
   }

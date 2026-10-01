@@ -242,30 +242,6 @@ describe("notifyDevisPropose", () => {
 });
 
 // ═════════════════════════════════════════════════════════════
-describe("notifyMissionAssignee", () => {
-  it("nomme le convoyeur assigné", async () => {
-    await emailService.notifyMissionAssignee(
-      "client@test.com",
-      "Jean",
-      MISSION,
-      "Paul Convoyeur",
-    );
-
-    const { html, subject, to } = dernierEnvoi();
-    expect(to).toBe("client@test.com");
-    expect(html).toContain("Paul Convoyeur");
-    expect(html).toContain("Convoyeur assigné");
-    expect(subject).toMatch(/Mission en préparation/);
-  });
-
-  it("affiche le badge d'information", async () => {
-    await emailService.notifyMissionAssignee("c@t.fr", "Jean", MISSION, "Paul");
-
-    expect(dernierEnvoi().html).toContain("badge-info");
-  });
-});
-
-// ═════════════════════════════════════════════════════════════
 describe("notifyMissionEnCours", () => {
   it("annonce le convoyage en cours avec le badge d'avertissement", async () => {
     await emailService.notifyMissionEnCours("client@test.com", "Jean", MISSION);
@@ -379,7 +355,9 @@ describe("notifyAccountCreated", () => {
   it("pointe vers la page de connexion", async () => {
     await envoyer();
 
-    expect(dernierEnvoi().html).toContain("https://app.drivelineconnect.com/login");
+    expect(dernierEnvoi().html).toContain(
+      "https://app.drivelineconnect.com/login",
+    );
   });
 });
 
@@ -404,7 +382,9 @@ describe("notifyAccountValidated", () => {
     const { subject, html } = dernierEnvoi();
     expect(subject).toMatch(/Compte Drive Line Connect validé/);
     expect(html).toContain("validé par un administrateur");
-    expect(html).toContain("https://app.drivelineconnect.com/client/nouvelle-mission");
+    expect(html).toContain(
+      "https://app.drivelineconnect.com/client/nouvelle-mission",
+    );
   });
 });
 
@@ -554,7 +534,9 @@ describe("Transporteur Resend", () => {
 
     await service.notifyAccountValidated("c@t.fr", "Client");
 
-    expect(charge().from).toBe("Drive Line Connect <bonjour@drivelineconnect.com>");
+    expect(charge().from).toBe(
+      "Drive Line Connect <bonjour@drivelineconnect.com>",
+    );
   });
 
   it("retombe sur le domaine de test de Resend sans expéditeur configuré", async () => {

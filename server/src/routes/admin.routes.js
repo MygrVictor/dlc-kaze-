@@ -2296,12 +2296,16 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
     const convoyeurRetenu =
       convoyeurPreassigneId || (assignerAdmin ? req.user.id : null);
 
-    const commentaireConvoyeur =
-      typeof convoyeur_comments === "string"
+    const aFourniCommentaireConvoyeur = Object.prototype.hasOwnProperty.call(
+      req.body,
+      "convoyeur_comments",
+    );
+
+    const commentaireConvoyeur = aFourniCommentaireConvoyeur
+      ? typeof convoyeur_comments === "string"
         ? convoyeur_comments.trim() || null
-        : typeof comments === "string"
-          ? comments.trim() || null
-          : mission.convoyeur_comments;
+        : null
+      : mission.convoyeur_comments;
 
     const updated = await db.query(
       `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
@@ -2690,23 +2694,6 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
       return res.status(404).json({ error: "Mission introuvable." });
 
     const mission = updated.rows[0];
-
-    try {
-      const { rows: clientRows } = await db.query(
-        "SELECT email, full_name FROM users WHERE id = $1",
-        [mission.client_id],
-      );
-      if (clientRows[0]) {
-        await emailService.notifyMissionAssignee(
-          clientRows[0].email,
-          clientRows[0].full_name,
-          mission,
-          convoyeur.rows[0].full_name || "Un convoyeur",
-        );
-      }
-    } catch (emailErr) {
-      console.error("⚠️ Email assignation non envoyé :", emailErr.message);
-    }
 
     const missionDemo = await isDemoMission(db, mission);
     const kazeSync = { synced: false, error: null };
