@@ -82,6 +82,7 @@ export default function AdminUsers() {
   const [profileTab, setProfileTab] = useState("infos");
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileFactures, setProfileFactures] = useState([]);
+  const [factureStatusUpdating, setFactureStatusUpdating] = useState({});
   const [profileDocs, setProfileDocs] = useState([]);
   const [profileMissionSummary, setProfileMissionSummary] = useState(null);
   const [profileRecentMissions, setProfileRecentMissions] = useState([]);
@@ -377,6 +378,29 @@ export default function AdminUsers() {
     }
   };
 
+  const handleFactureStatutChange = async (facture, nouveauStatut) => {
+    if (!facture?.id) return;
+    if (!nouveauStatut || nouveauStatut === facture.statut) return;
+
+    setFactureStatusUpdating((p) => ({ ...p, [facture.id]: true }));
+    try {
+      const { data } = await api.patch(`/factures/${facture.id}/statut`, {
+        statut: nouveauStatut,
+      });
+      setProfileFactures((prev) =>
+        prev.map((f) => (f.id === facture.id ? { ...f, ...data } : f)),
+      );
+      toast.success("Statut de facture mis à jour.");
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error ||
+          "Impossible de mettre à jour le statut de la facture.",
+      );
+    } finally {
+      setFactureStatusUpdating((p) => ({ ...p, [facture.id]: false }));
+    }
+  };
+
   const handleUploadClientDoc = async () => {
     if (!profileModal?.id || profileModal.role !== "client") return;
     if (!clientDocForm.label.trim()) {
@@ -545,6 +569,12 @@ export default function AdminUsers() {
     EN_COURS: "En cours",
     LIVREE: "Livrée",
     ANNULEE: "Annulée",
+  };
+
+  const factureStatusLabel = {
+    emise: "Émise",
+    payee: "Payée",
+    annulee: "Annulée",
   };
 
   const usersFiltres = useMemo(() => {
@@ -1754,8 +1784,37 @@ export default function AdminUsers() {
                                   {euros(f.montant_ttc)} ·{" "}
                                   {formatDate(f.date_emission)}
                                 </p>
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="text-xs text-dark-500">
+                                    Statut :
+                                  </span>
+                                  <select
+                                    value={f.statut || "emise"}
+                                    disabled={
+                                      Boolean(factureStatusUpdating[f.id]) ||
+                                      f.statut === "annulee"
+                                    }
+                                    onChange={(e) =>
+                                      handleFactureStatutChange(
+                                        f,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="text-xs rounded-lg border border-dark-600 bg-dark-900 px-2 py-1"
+                                  >
+                                    <option value="emise">Émise</option>
+                                    <option value="payee">Payée</option>
+                                    <option value="annulee">Annulée</option>
+                                  </select>
+                                  {factureStatusUpdating[f.id] ? (
+                                    <Loader2
+                                      size={13}
+                                      className="text-primary-300 animate-spin"
+                                    />
+                                  ) : null}
+                                </div>
                                 <p className="text-xs text-dark-500 mt-1">
-                                  Statut : {f.statut}
+                                  {factureStatusLabel[f.statut] || "Émise"}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">

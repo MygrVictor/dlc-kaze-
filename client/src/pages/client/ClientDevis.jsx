@@ -54,6 +54,20 @@ const formaterMontantFacture = (centimes) => {
   }).format(centimes / 100);
 };
 
+const extraireNomFichier = (contentDisposition) => {
+  if (!contentDisposition) return null;
+  const utf8 = contentDisposition.match(/filename\*=UTF-8''([^;\n]+)/i);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      return utf8[1];
+    }
+  }
+  const classique = contentDisposition.match(/filename="?([^";\n]+)"?/i);
+  return classique?.[1] || null;
+};
+
 export default function ClientDevis() {
   const [missions, setMissions] = useState([]);
   const [factures, setFactures] = useState([]);
@@ -91,9 +105,12 @@ export default function ClientDevis() {
       );
       const link = document.createElement("a");
       link.href = url;
+      const nomServeur = extraireNomFichier(
+        response.headers?.["content-disposition"],
+      );
       link.setAttribute(
         "download",
-        `devis-DEV-${missionId.substring(0, 8).toUpperCase()}.pdf`,
+        nomServeur || `devis-${missionId.substring(0, 8).toUpperCase()}.pdf`,
       );
       document.body.appendChild(link);
       link.click();
