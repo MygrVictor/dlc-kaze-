@@ -1324,7 +1324,7 @@ export default function AdminMissions() {
             </div>
 
             {/* Sticky bottom: price input + buttons */}
-            <div className="flex-shrink-0 border-t border-dark-600 pt-4">
+            <div className="flex-shrink-0 border-t border-dark-600 pt-4 max-h-[60vh] overflow-y-auto">
               {lectureSeule ? (
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -1505,7 +1505,7 @@ export default function AdminMissions() {
                     </span>
                   </label>
 
-                  <div className="flex gap-3">
+                  <div className="sticky bottom-0 flex gap-3 pt-3 pb-1 bg-dark-800">
                     <button
                       onClick={() => setPriceModal(null)}
                       className="btn-secondary flex-1"
