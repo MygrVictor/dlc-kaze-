@@ -386,7 +386,11 @@ export default function NewMission() {
             fd.append("label", p.label.trim());
             fd.append("document", fichiers[i]);
             try {
-              await api.post(`/mission-documents/mission/${m.id}`, fd);
+              // Envoi d'un fichier : le délai global de 30 s est trop court
+              // sur une connexion lente (gros PDF, photos).
+              await api.post(`/mission-documents/mission/${m.id}`, fd, {
+                timeout: 5 * 60 * 1000,
+              });
             } catch {
               echecs += 1;
             }
