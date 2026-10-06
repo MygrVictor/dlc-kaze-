@@ -456,10 +456,11 @@ export default function AdminMap() {
           resume: `Départ · ${resume}`,
           radius: cfg.rayon,
           pathOptions: {
-            fillColor: cfg.color,
+            // Point vert = départ ; la bordure garde la couleur de phase.
+            fillColor: "#16a34a",
             fillOpacity: terminee ? 0.5 : 1,
-            color: "#0f172a",
-            weight: 2,
+            color: cfg.color,
+            weight: 3,
           },
           popup: <MissionPopup mission={m} type="departure" />,
         });
@@ -473,10 +474,11 @@ export default function AdminMap() {
           phase,
           color: cfg.color,
           resume: `Arrivée · ${resume}`,
-          radius: cfg.rayon - 2,
+          radius: cfg.rayon,
           pathOptions: {
-            fillColor: "#ffffff",
-            fillOpacity: terminee ? 0.5 : 0.95,
+            // Point rouge = arrivée.
+            fillColor: "#dc2626",
+            fillOpacity: terminee ? 0.5 : 1,
             color: cfg.color,
             weight: 3,
           },
@@ -828,15 +830,18 @@ export default function AdminMap() {
         <p className="text-sm font-medium text-dark-300 mb-3">Légende</p>
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-dark-400">
           <div className="flex items-center gap-2">
-            <span className="w-3.5 h-3.5 rounded-full bg-white border-2 border-primary-400" />
-            Gros cercle = Départ
+            <span
+              className="w-3.5 h-3.5 rounded-full"
+              style={{ backgroundColor: "#16a34a" }}
+            />
+            Point vert = Départ
           </div>
           <div className="flex items-center gap-2">
             <span
-              className="w-3 h-3 rounded-full border-2 border-dashed border-primary-400"
-              style={{ borderStyle: "dashed" }}
+              className="w-3.5 h-3.5 rounded-full"
+              style={{ backgroundColor: "#dc2626" }}
             />
-            Petit cercle = Arrivée
+            Point rouge = Arrivée
           </div>
           <div className="flex items-center gap-2">
             <span className="w-6 border-t-2 border-dashed border-primary-400" />
