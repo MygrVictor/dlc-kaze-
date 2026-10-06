@@ -8,6 +8,7 @@ import {
   estUtilitaire12m3,
 } from "../../lib/vehicules";
 import { emailValide, telephoneValide } from "../../lib/validation";
+import { compresserImage } from "../../lib/compresserImage";
 import {
   Car,
   MapPin,
@@ -241,8 +242,8 @@ export default function NewMission() {
     for (const f of Array.from(fichiers || [])) {
       if (!FORMATS_PIECES.includes(f.type)) {
         toast.error(`${f.name} : formats acceptés PDF, JPG, PNG, WEBP.`);
-      } else if (f.size > 10 * 1024 * 1024) {
-        toast.error(`${f.name} : 10 Mo maximum.`);
+      } else if (f.size > 25 * 1024 * 1024) {
+        toast.error(`${f.name} : 25 Mo maximum.`);
       } else {
         valides.push({ file: f, label: f.name.replace(/\.[^.]+$/, "") });
       }
@@ -376,11 +377,14 @@ export default function NewMission() {
       // une mission). Un échec n'annule pas la mission déjà enregistrée.
       if (pieces.length && data.missions?.length) {
         let echecs = 0;
+        const fichiers = await Promise.all(
+          pieces.map((p) => compresserImage(p.file)),
+        );
         for (const m of data.missions) {
-          for (const p of pieces) {
+          for (const [i, p] of pieces.entries()) {
             const fd = new FormData();
             fd.append("label", p.label.trim());
-            fd.append("document", p.file);
+            fd.append("document", fichiers[i]);
             try {
               await api.post(`/mission-documents/mission/${m.id}`, fd);
             } catch {
@@ -1317,7 +1321,7 @@ export default function NewMission() {
               }}
             >
               <span>
-                Glissez vos fichiers ici (PDF, JPG, PNG, WEBP — 10 Mo max).
+                Glissez vos fichiers ici (PDF, JPG, PNG, WEBP — 25 Mo max).
               </span>
               <label className="btn-secondary cursor-pointer inline-flex items-center gap-2 shrink-0">
                 <Upload size={14} />

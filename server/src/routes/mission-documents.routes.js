@@ -40,7 +40,7 @@ const upload = multer({
         `${crypto.randomBytes(16).toString("hex")}${MIMES[file.mimetype]}`,
       ),
   }),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) =>
     MIMES[file.mimetype]
       ? cb(null, true)
@@ -147,7 +147,7 @@ router.post(
       res.status(err.status || 400).json({
         error:
           err.code === "LIMIT_FILE_SIZE"
-            ? "Fichier trop volumineux (10 Mo maximum)."
+            ? "Fichier trop volumineux (25 Mo maximum)."
             : err.message,
       });
     }),
