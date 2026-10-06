@@ -308,7 +308,7 @@ router.post(
             emergency_contact_name, emergency_phone, emergency_contact_email,
             comments, desired_delivery_date, is_urgent, batch_id, status,
             recap_email, price, price_convoyeur, created_by,
-            purchase_order_number
+            purchase_order_number, desired_pickup_date
           ) VALUES (
             $1,
             $2, $3, $4, $5, $6,
@@ -325,7 +325,7 @@ router.post(
             $31, $32, $33,
             $34, $35, $36, $37, $39,
             $38, $40, $41, $42,
-            $45
+            $45, $46
           ) RETURNING *`,
           [
             clientId,
@@ -379,6 +379,7 @@ router.post(
             arrivalStructure || null,
             arrivalStructureName || null,
             purchaseOrderNumber ? String(purchaseOrderNumber).trim() : null,
+            departureDate || null,
           ],
         );
 
@@ -601,6 +602,30 @@ router.get("/mes-recaps", authorize("client"), async (req, res, next) => {
         WHERE ud.user_id = $1
           AND ud.kind = 'kaze_recap'
         ORDER BY ud.created_at DESC`,
+      [req.user.id],
+    );
+
+    res.json({ documents: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═════════════════════════════════════════════════════════════
+// Client : Documents administratifs déposés par l'administration
+//
+// Pendant de `POST /admin/users/:id/files` : l'admin dépose une pièce
+// (contrat, Kbis, attestation…) dans la fiche du client, qui la retrouve
+// ici. L'identifiant vient du jeton, jamais de la requête.
+// ═════════════════════════════════════════════════════════════
+router.get("/mes-documents", authorize("client"), async (req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, label, original_name, file_path, mime_type, created_at
+         FROM user_documents
+        WHERE user_id = $1
+          AND kind = 'client_extra'
+        ORDER BY created_at DESC`,
       [req.user.id],
     );
 

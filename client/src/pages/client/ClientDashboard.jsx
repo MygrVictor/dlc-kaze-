@@ -221,9 +221,14 @@ export default function ClientDashboard() {
                     </p>
                   )}
                   <p className="text-dark-500 text-xs mt-1">
-                    Créée le {formatDate(mission.created_at)}
-                    {mission.departure_date &&
-                      ` • Départ le ${formatDate(mission.departure_date)}`}
+                    Enlèvement souhaité :{" "}
+                    {mission.desired_pickup_date
+                      ? formatDate(mission.desired_pickup_date)
+                      : "—"}
+                    {" • Livraison souhaitée : "}
+                    {mission.desired_delivery_date
+                      ? formatDate(mission.desired_delivery_date)
+                      : "—"}
                   </p>
                 </div>
               </div>

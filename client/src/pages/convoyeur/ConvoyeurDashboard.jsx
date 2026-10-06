@@ -609,18 +609,6 @@ export default function ConvoyeurDashboard() {
                         </div>
                       )}
                     </div>
-
-                    {/* Client info */}
-                    {mission.client_name && (
-                      <div className="text-xs text-dark-500 pt-2 border-t border-dark-700/50">
-                        Client : {mission.client_name}
-                        {mission.kaze_job_id && (
-                          <span className="ml-3 text-orange-400/60 font-mono">
-                            Kaze: {mission.kaze_job_id.substring(0, 8)}…
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
               </div>

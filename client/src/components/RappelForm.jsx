@@ -72,7 +72,8 @@ export default function RappelForm() {
     // standard, ligne étrangère…).
     if (form.phone.replace(/\D/g, "").length < 9)
       return "Le numéro de téléphone semble incomplet.";
-    if (form.email.trim() && !EMAIL_VALIDE.test(form.email.trim()))
+    if (!form.email.trim()) return "Indiquez votre adresse email.";
+    if (!EMAIL_VALIDE.test(form.email.trim()))
       return "L'adresse email saisie est invalide.";
     return null;
   };
@@ -90,12 +91,13 @@ export default function RappelForm() {
     try {
       await api.post("/auth/demande", {
         type: "client",
+        source: "rappel",
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         company: form.company.trim(),
         jobTitle: form.jobTitle.trim() || null,
         phone: form.phone.trim(),
-        email: form.email.trim() || null,
+        email: form.email.trim(),
         message: form.message.trim() || "Demande de rappel depuis le site.",
       });
       setEnvoye(true);
@@ -240,6 +242,7 @@ export default function RappelForm() {
         <div>
           <label style={labelStyle} htmlFor="rappel-email">
             Email professionnel
+            <Requis />
           </label>
           <input
             id="rappel-email"
@@ -249,6 +252,7 @@ export default function RappelForm() {
             onChange={handleChange}
             style={champStyle}
             autoComplete="email"
+            required
             placeholder="camille.dupont@entreprise.fr"
           />
         </div>

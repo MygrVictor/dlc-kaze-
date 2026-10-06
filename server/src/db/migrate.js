@@ -175,6 +175,9 @@ const migrate = async () => {
       -- Date souhaitée par le client. Interne à DLC : arrival_date porte
       -- la date opérationnelle (lundi) transmise à Kaze.
       desired_delivery_date TIMESTAMPTZ,
+      -- Date d'enlèvement souhaitée par le client (departure_date porte
+      -- la date opérationnelle transmise à Kaze).
+      desired_pickup_date TIMESTAMPTZ,
       -- Coché par le client lui-même, sans seuil automatique.
       is_urgent       BOOLEAN NOT NULL DEFAULT false,
 
@@ -273,6 +276,11 @@ const migrate = async () => {
   await db.query(
     `ALTER TYPE mission_status ADD VALUE IF NOT EXISTS 'DEVIS_REFUSE'`,
   );
+
+  await db.query(`
+    ALTER TABLE missions
+      ADD COLUMN IF NOT EXISTS desired_pickup_date TIMESTAMPTZ;
+  `);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS user_documents (

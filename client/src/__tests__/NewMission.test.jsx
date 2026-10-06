@@ -86,9 +86,7 @@ describe("NewMission", () => {
     await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() =>
-      expect(
-        screen.getByLabelText("Adresse d'enlèvement"),
-      ).toBeInTheDocument(),
+      expect(screen.getByLabelText("Adresse d'enlèvement")).toBeInTheDocument(),
     );
   });
 
@@ -103,9 +101,7 @@ describe("NewMission", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() =>
-      expect(
-        screen.getByLabelText("Adresse de livraison"),
-      ).toBeInTheDocument(),
+      expect(screen.getByLabelText("Adresse de livraison")).toBeInTheDocument(),
     );
   });
 
@@ -137,11 +133,8 @@ describe("NewMission", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => screen.getByLabelText("Adresse de livraison"));
-    await userEvent.type(
-      screen.getByLabelText("Adresse de livraison"),
-      "Lyon",
-    );
-    // Étape Services / Rétribution / Urgence
+    await userEvent.type(screen.getByLabelText("Adresse de livraison"), "Lyon");
+    // Étape Services / Urgence
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => screen.getByText(/gestion documentaire/i));
     // Étape Observations
@@ -170,10 +163,7 @@ describe("NewMission", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => screen.getByLabelText("Adresse de livraison"));
-    await userEvent.type(
-      screen.getByLabelText("Adresse de livraison"),
-      "Lyon",
-    );
+    await userEvent.type(screen.getByLabelText("Adresse de livraison"), "Lyon");
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
     await waitFor(() => screen.getByText(/gestion documentaire/i));
     fireEvent.click(screen.getByRole("button", { name: /suivant/i }));

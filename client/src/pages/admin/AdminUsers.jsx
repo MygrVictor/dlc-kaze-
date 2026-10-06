@@ -99,6 +99,7 @@ export default function AdminUsers() {
   const [clientDocForm, setClientDocForm] = useState({
     label: "",
     file: null,
+    kind: "client_extra",
   });
 
   // ── Modal création utilisateur ──────────────────────────────
@@ -325,7 +326,7 @@ export default function AdminUsers() {
       date_emission: "",
       file: null,
     });
-    setClientDocForm({ label: "", file: null });
+    setClientDocForm({ label: "", file: null, kind: "client_extra" });
     rechargerProfil(u);
   };
 
@@ -426,12 +427,17 @@ export default function AdminUsers() {
     const donnees = new FormData();
     donnees.append("label", clientDocForm.label.trim());
     donnees.append("document", clientDocForm.file);
+    donnees.append("kind", clientDocForm.kind);
 
     setDocUploading(true);
     try {
       await api.post(`/admin/users/${profileModal.id}/files`, donnees);
-      toast.success("Document ajouté.");
-      setClientDocForm({ label: "", file: null });
+      toast.success(
+        clientDocForm.kind === "kaze_recap"
+          ? "Récapitulatif ajouté."
+          : "Document ajouté.",
+      );
+      setClientDocForm({ label: "", file: null, kind: "client_extra" });
       await rechargerProfil(profileModal);
     } catch (err) {
       toast.error(
@@ -1846,9 +1852,31 @@ export default function AdminUsers() {
                   {profileTab === "docs" && profileModal.role === "client" && (
                     <div className="space-y-4">
                       <div className="border border-dark-700 rounded-xl p-4 bg-dark-900/60 space-y-3">
-                        <h4 className="font-medium">
-                          Ajouter un document complémentaire
-                        </h4>
+                        <h4 className="font-medium">Ajouter un document</h4>
+                        <div className="flex gap-2">
+                          {[
+                            { v: "client_extra", l: "Document administratif" },
+                            {
+                              v: "kaze_recap",
+                              l: "Récapitulatif de mission Kaze",
+                            },
+                          ].map((o) => (
+                            <button
+                              key={o.v}
+                              type="button"
+                              onClick={() =>
+                                setClientDocForm((p) => ({ ...p, kind: o.v }))
+                              }
+                              className={`px-3 py-1.5 rounded-lg text-sm border transition ${
+                                clientDocForm.kind === o.v
+                                  ? "border-primary-500 bg-primary-500/10 text-primary-300"
+                                  : "border-dark-600 text-dark-400 hover:bg-dark-700"
+                              }`}
+                            >
+                              {o.l}
+                            </button>
+                          ))}
+                        </div>
                         <input
                           value={clientDocForm.label}
                           onChange={(e) =>
@@ -1858,7 +1886,11 @@ export default function AdminUsers() {
                             }))
                           }
                           className="input-field"
-                          placeholder="Libellé du document (ex: Bon de commande)"
+                          placeholder={
+                            clientDocForm.kind === "kaze_recap"
+                              ? "Libellé (ex: Récap mission Lyon → Marseille du 03/10)"
+                              : "Libellé du document (ex: Bon de commande)"
+                          }
                         />
                         <div
                           className="border-2 border-dashed border-dark-600 rounded-xl p-4 text-sm text-dark-400"
@@ -1922,7 +1954,14 @@ export default function AdminUsers() {
                               className="border border-dark-700 rounded-xl p-4 flex items-center justify-between gap-4"
                             >
                               <div className="min-w-0">
-                                <p className="font-medium">{d.label}</p>
+                                <p className="font-medium">
+                                  {d.label}
+                                  {d.kind === "kaze_recap" && (
+                                    <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/30">
+                                      Récap Kaze
+                                    </span>
+                                  )}
+                                </p>
                                 <p className="text-xs text-dark-400 truncate">
                                   {d.original_name}
                                 </p>

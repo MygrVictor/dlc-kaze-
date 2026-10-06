@@ -1124,33 +1124,9 @@ export default function NewMission() {
         </div>
       )}
 
-      {/* ═══════════ ÉTAPE 4 : SERVICES / RÉTRIBUTION / URGENCE ═══════════ */}
+      {/* ═══════════ ÉTAPE 4 : SERVICES / URGENCE ═══════════ */}
       {step === 4 && (
         <div className="space-y-4">
-          {/* Rétribution */}
-          <div className="card">
-            <div className="flex items-center gap-2 mb-5">
-              <FileText size={20} className="text-primary-400" />
-              <h2 className="text-lg font-semibold">Rétribution</h2>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Détails
-              </label>
-              <input
-                value={services.retributionDetails}
-                onChange={(e) =>
-                  setServices({
-                    ...services,
-                    retributionDetails: e.target.value,
-                  })
-                }
-                className="input-field"
-                placeholder="Frais de péage, carburant à avancer…"
-              />
-            </div>
-          </div>
-
           {/* Services */}
           <div className="card">
             <div className="flex items-center gap-2 mb-5">

@@ -239,7 +239,11 @@ export default function MissionsDisponibles() {
                     ? "Déposez vos documents obligatoires pour prendre une mission."
                     : undefined
                 }
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors ${
+                  dossierBloque
+                    ? "bg-red-600 disabled:bg-red-600"
+                    : "bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800"
+                }`}
               >
                 {taking === mission.id ? (
                   <>

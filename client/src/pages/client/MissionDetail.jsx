@@ -180,7 +180,14 @@ export default function MissionDetail() {
             {mission.departure_address} → {mission.arrival_address}
           </h1>
           <p className="text-dark-400 text-sm mt-1">
-            Créée le {formatDate(mission.created_at)}
+            Enlèvement souhaité :{" "}
+            {mission.desired_pickup_date
+              ? formatDate(mission.desired_pickup_date)
+              : "—"}
+            {" • Livraison souhaitée : "}
+            {mission.desired_delivery_date
+              ? formatDate(mission.desired_delivery_date)
+              : "—"}
           </p>
         </div>
         <span
@@ -350,10 +357,10 @@ export default function MissionDetail() {
               <p className="text-dark-400 text-xs">Adresse</p>
               <p className="font-medium">{mission.departure_address}</p>
             </div>
-            {mission.departure_date && (
+            {mission.desired_pickup_date && (
               <div>
-                <p className="text-dark-400 text-xs">Date / heure</p>
-                <p>{formatDate(mission.departure_date)}</p>
+                <p className="text-dark-400 text-xs">Enlèvement souhaité</p>
+                <p>{formatDate(mission.desired_pickup_date)}</p>
               </div>
             )}
             {mission.departure_contact_name && (
@@ -388,10 +395,10 @@ export default function MissionDetail() {
               <p className="text-dark-400 text-xs">Adresse</p>
               <p className="font-medium">{mission.arrival_address}</p>
             </div>
-            {mission.arrival_date && (
+            {mission.desired_delivery_date && (
               <div>
-                <p className="text-dark-400 text-xs">Date / heure</p>
-                <p>{formatDate(mission.arrival_date)}</p>
+                <p className="text-dark-400 text-xs">Livraison souhaitée</p>
+                <p>{formatDate(mission.desired_delivery_date)}</p>
               </div>
             )}
             {mission.arrival_contact_name && (

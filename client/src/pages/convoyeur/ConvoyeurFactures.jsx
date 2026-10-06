@@ -11,6 +11,7 @@ export default function ConvoyeurFactures() {
       sousTitre="Les relevés de vos prestations déposés par Drive Line Connect."
       libelleTotal="En attente de règlement"
       libelleDefaut="Relevé de prestations"
+      filtrePeriode
     />
   );
 }

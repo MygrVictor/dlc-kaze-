@@ -1320,10 +1320,15 @@ router.post(
         });
       }
 
+      // Type de pièce : document administratif (par défaut) ou
+      // récapitulatif Kaze déposé à la main en attendant l'automatisation.
+      const kind =
+        req.body?.kind === "kaze_recap" ? "kaze_recap" : "client_extra";
+
       const { rows } = await db.query(
         `INSERT INTO user_documents
            (user_id, label, original_name, file_path, mime_type, uploaded_by, kind)
-         VALUES ($1, $2, $3, $4, $5, $6, 'client_extra')
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id, user_id, label, original_name, file_path, mime_type,
                    kind, source, source_ref,
                    uploaded_by, created_at, updated_at`,
@@ -1334,6 +1339,7 @@ router.post(
           `/uploads/documents/${req.file.filename}`,
           req.file.mimetype,
           req.user.id,
+          kind,
         ],
       );
 

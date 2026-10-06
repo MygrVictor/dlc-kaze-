@@ -501,6 +501,7 @@ router.post(
         message,
         typeIdentite,
         assureurRc,
+        source,
       } = req.body;
 
       const refuser = (error) => {
@@ -518,6 +519,11 @@ router.post(
 
       if (mail && !isValidEmail(mail)) {
         return refuser("Adresse email invalide.");
+      }
+
+      // Formulaire « Faites-vous rappeler » : l'email y est obligatoire.
+      if (source === "rappel" && !mail) {
+        return refuser("Adresse email obligatoire.");
       }
 
       // Longueurs bornées : ces valeurs sont réaffichées dans l'espace admin.

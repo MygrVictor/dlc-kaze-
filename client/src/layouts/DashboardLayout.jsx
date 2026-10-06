@@ -17,6 +17,7 @@ import {
   Zap,
   Inbox,
   Receipt,
+  FolderOpen,
   History,
   TrendingUp,
   Sun,
@@ -42,6 +43,11 @@ const NAV_ITEMS = {
       label: "Mes factures et devis",
       path: "/client/devis",
       icon: Receipt,
+    },
+    {
+      label: "Mes documents",
+      path: "/client/documents",
+      icon: FolderOpen,
     },
   ],
   admin: [
