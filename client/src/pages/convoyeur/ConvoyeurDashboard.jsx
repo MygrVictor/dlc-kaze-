@@ -29,6 +29,7 @@ import {
   Sparkles,
   Droplets,
   KeyRound,
+  MessageSquare,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import BandeauDossier from "../../components/BandeauDossier";
@@ -590,6 +591,21 @@ export default function ConvoyeurDashboard() {
                             </span>
                           )}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Consignes de l'admin pour le convoyeur */}
+                    {mission.convoyeur_comments && (
+                      <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <MessageSquare size={14} className="text-amber-400" />
+                          <h4 className="text-sm font-semibold text-amber-300">
+                            Commentaire mission
+                          </h4>
+                        </div>
+                        <p className="text-sm text-gray-300 whitespace-pre-line">
+                          {mission.convoyeur_comments}
+                        </p>
                       </div>
                     )}
 
