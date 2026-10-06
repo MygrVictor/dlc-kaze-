@@ -30,6 +30,8 @@ import {
   KeyRound,
   Loader2,
   Building2,
+  Phone,
+  CalendarDays,
   Network,
   Upload,
   ReceiptText,
@@ -674,11 +676,11 @@ export default function AdminUsers() {
             return (
               <div
                 key={u.id}
-                className="card border border-dark-700 hover:border-dark-500 transition-colors"
+                className={`card user-card user-card--${u.role} border border-dark-700 hover:border-dark-500 transition-colors`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 bg-primary-700 rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+                    <div className="user-card__avatar w-12 h-12 bg-primary-700 rounded-full flex items-center justify-center text-base font-bold shrink-0">
                       {u.full_name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div className="min-w-0">
@@ -695,17 +697,36 @@ export default function AdminUsers() {
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-lg bg-dark-800/60 px-3 py-2">
-                    <p className="text-xs text-dark-500">Entreprise</p>
-                    <p className="text-dark-200 truncate">{u.company || "—"}</p>
+                  <div className="user-card__tile rounded-lg bg-dark-800/60 px-3 py-2 flex items-center gap-2.5">
+                    <span className="user-card__ico">
+                      <Building2 size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-dark-500">Entreprise</p>
+                      <p className="text-dark-200 truncate">
+                        {u.company || "—"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-dark-800/60 px-3 py-2">
-                    <p className="text-xs text-dark-500">Téléphone</p>
-                    <p className="text-dark-200 truncate">{u.phone || "—"}</p>
+                  <div className="user-card__tile rounded-lg bg-dark-800/60 px-3 py-2 flex items-center gap-2.5">
+                    <span className="user-card__ico">
+                      <Phone size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-dark-500">Téléphone</p>
+                      <p className="text-dark-200 truncate">{u.phone || "—"}</p>
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-dark-800/60 px-3 py-2 sm:col-span-2">
-                    <p className="text-xs text-dark-500">Inscrit le</p>
-                    <p className="text-dark-200">{formatDate(u.created_at)}</p>
+                  <div className="user-card__tile rounded-lg bg-dark-800/60 px-3 py-2 sm:col-span-2 flex items-center gap-2.5">
+                    <span className="user-card__ico">
+                      <CalendarDays size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-dark-500">Inscrit le</p>
+                      <p className="text-dark-200">
+                        {formatDate(u.created_at)}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -773,7 +794,7 @@ export default function AdminUsers() {
                     ))}
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="user-card__actions mt-4 flex flex-wrap items-center gap-2">
                   {(u.role === "client" || u.role === "convoyeur") && (
                     <button
                       onClick={() => openProfileModal(u)}

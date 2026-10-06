@@ -315,3 +315,68 @@ body:has(.theme-light) {
   background: rgb(255 255 255 / 0.1);
   color: #ffffff;
 }
+
+/* ── Cartes utilisateurs ─────────────────────────
+   Un liseré de couleur par rôle, un avatar teinté, des icônes sur les
+   informations et une barre d'actions séparée donnent du relief à la
+   carte, surtout en mode clair où elle n'était qu'un rectangle blanc. */
+.user-card {
+  --role: var(--mat-blue);
+  --role-soft: rgb(47 79 127 / 0.1);
+  position: relative;
+  overflow: hidden;
+  border-top: 3px solid var(--role) !important;
+}
+.user-card--convoyeur {
+  --role: var(--mat-green);
+  --role-soft: rgb(47 107 85 / 0.1);
+}
+.user-card--admin {
+  --role: var(--mat-orange);
+  --role-soft: rgb(165 98 46 / 0.1);
+}
+.dash .user-card .user-card__avatar {
+  background: var(--role);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--role-soft);
+}
+.user-card .user-card__ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--role-soft);
+  color: var(--role);
+}
+.user-card .user-card__actions {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+}
+.dash .user-card:hover {
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+}
+
+/* Mode clair */
+.theme-light .user-card {
+  background: linear-gradient(180deg, var(--role-soft) 0, #ffffff 72px);
+  box-shadow: 0 1px 3px rgb(31 39 51 / 0.07);
+}
+.theme-light .user-card:hover {
+  box-shadow: 0 6px 18px rgb(31 39 51 / 0.1);
+  border-color: var(--l-line-strong);
+}
+.theme-light .user-card .user-card__tile {
+  background: var(--l-subtle);
+  border: 1px solid var(--l-line);
+}
+.theme-light .user-card .user-card__actions {
+  border-top-color: var(--l-line);
+}
+.theme-light .user-card .user-card__actions > button:not([class*="btn-"]) {
+  border: 1px solid var(--l-line);
+  background: #fff;
+}
