@@ -732,7 +732,9 @@ export default function AdminMissions() {
                 {displayMissions.map((m) => (
                   <tr
                     key={m.id}
-                    className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors"
+                    onClick={() => ouvrirMissionLecture(m)}
+                    title="Voir le détail de la mission"
+                    className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors cursor-pointer"
                   >
                     <td className="py-3 px-4" data-label="Source">
                       {m.source === "kaze" ? (
@@ -837,29 +839,6 @@ export default function AdminMissions() {
                             {STATUS_LABELS[m.status]}
                           </span>
                         )}
-
-                        {(() => {
-                          if (!m.kaze_mission_id) return null;
-                          const progress = inferStepProgress(m);
-                          const currentStepName = getKazeCurrentStepName(
-                            m.kaze_steps,
-                          );
-                          if (!progress && !currentStepName) return null;
-                          return (
-                            <div className="space-y-0.5">
-                              {progress && (
-                                <p className="text-[11px] text-dark-500">
-                                  Kaze : {progress.done}/{progress.total} étapes
-                                </p>
-                              )}
-                              {currentStepName && (
-                                <p className="text-[11px] text-dark-500 truncate max-w-[220px]">
-                                  Étape en cours : {currentStepName}
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })()}
                       </div>
                     </td>
                     <td className="py-3 px-4" data-label="Convoyeur">

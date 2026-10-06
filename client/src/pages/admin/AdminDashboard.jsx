@@ -2540,53 +2540,6 @@ function MissionsTab({
                             {STATUS_LABELS[m.status]}
                           </span>
                         )}
-
-                        {(() => {
-                          const progress = getKazeStepProgress(
-                            m.kaze_steps,
-                            m.kaze_status,
-                          );
-                          const stepLabel = getKazeCurrentStepLabel(
-                            m.kaze_steps,
-                          );
-                          if (!progress && !stepLabel) return null;
-
-                          return (
-                            <div className="space-y-1">
-                              {progress && (
-                                <p className="text-[11px] text-dark-500 truncate max-w-[170px]">
-                                  Kaze : {progress.done}/{progress.total} étape
-                                  {progress.total > 1 ? "s" : ""}
-                                  {progress.inferred ? " (estimé)" : ""}
-                                </p>
-                              )}
-
-                              {progress?.dots?.length > 0 &&
-                                progress.total === KAZE_EXPECTED_STEPS && (
-                                  <div className="flex items-center gap-1">
-                                    {progress.dots.map((state, idx) => (
-                                      <span
-                                        key={idx}
-                                        className={`h-1.5 w-1.5 rounded-full ${
-                                          state === "done"
-                                            ? "bg-emerald-400"
-                                            : state === "current"
-                                              ? "bg-orange-400"
-                                              : "bg-dark-600"
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-
-                              {stepLabel && (
-                                <p className="text-[11px] text-dark-500 truncate max-w-[170px]">
-                                  Étape en cours : {stepLabel}
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })()}
                       </div>
                     </td>
                     {/* Convoyeur */}
