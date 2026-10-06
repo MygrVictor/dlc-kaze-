@@ -258,3 +258,60 @@ body:has(.theme-light) {
 .theme-light [class*="text-red-3"] {
   color: var(--mat-red);
 }
+
+/* ── Barre latérale ──────────────────────────────
+   Bleu marine de la marque (celui du logo), identique dans les deux
+   thèmes : elle encadre l'interface au lieu de se fondre dans un gris.
+   Les sélecteurs sont préfixés par `.dash` pour l'emporter sur les
+   remappages du mode clair. */
+.dash .dash-sidebar,
+.dash.theme-light .dash-sidebar {
+  background-color: #14213a;
+  border-color: #1f2e4a;
+  color: #dbe3ef;
+}
+.dash .dash-sidebar > div > div:first-child,
+.dash .dash-sidebar [class*="border-t"],
+.dash .dash-sidebar [class*="border-b"] {
+  border-color: rgb(255 255 255 / 0.08);
+}
+.dash .dash-sidebar img[src*="logo"] {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+.dash .dash-sidebar p,
+.dash .dash-sidebar span {
+  color: inherit;
+}
+.dash .dash-sidebar p[class*="text-xs"] {
+  color: #93a3bb;
+}
+/* Liens de navigation */
+.dash .dash-sidebar nav a,
+.dash .dash-sidebar button {
+  color: #b9c5d6;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.dash .dash-sidebar nav a:hover,
+.dash .dash-sidebar button:hover {
+  color: #ffffff;
+  background: rgb(255 255 255 / 0.07);
+}
+.dash .dash-sidebar nav a[class*="bg-primary"] {
+  color: #ffffff;
+  background: var(--mat-blue);
+  border-color: transparent;
+  box-shadow: none;
+}
+.dash .dash-sidebar nav a [class*="bg-red-5"] {
+  background: var(--mat-red);
+  color: #fff;
+}
+/* Pastille d'initiale de l'utilisateur */
+.dash .dash-sidebar div[class*="rounded-full"] {
+  background: rgb(255 255 255 / 0.1);
+  color: #ffffff;
+}

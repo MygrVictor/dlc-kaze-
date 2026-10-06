@@ -285,7 +285,7 @@ export default function DashboardLayout() {
       {user?.role === "client" && <CrispChat user={user} />}
       {/* ── Sidebar desktop ──────────────────── */}
       <aside
-        className={`hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-30 border-r ${
+        className={`dash-sidebar hidden lg:flex w-64 flex-col fixed inset-y-0 left-0 z-30 border-r ${
           theme === "light"
             ? "bg-white border-slate-200"
             : "bg-slate-900 border-slate-800"
@@ -302,7 +302,7 @@ export default function DashboardLayout() {
             onClick={() => setSidebarOpen(false)}
           />
           <aside
-            className={`absolute left-0 top-0 bottom-0 w-64 z-50 border-r ${
+            className={`dash-sidebar absolute left-0 top-0 bottom-0 w-64 z-50 border-r ${
               theme === "light"
                 ? "bg-white border-slate-200"
                 : "bg-slate-900 border-slate-800"
