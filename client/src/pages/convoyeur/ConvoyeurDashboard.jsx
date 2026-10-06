@@ -603,7 +603,7 @@ export default function ConvoyeurDashboard() {
                             Commentaire mission
                           </h4>
                         </div>
-                        <p className="text-sm text-gray-300 whitespace-pre-line">
+                        <p className="text-sm text-dark-200 whitespace-pre-line">
                           {mission.convoyeur_comments}
                         </p>
                       </div>

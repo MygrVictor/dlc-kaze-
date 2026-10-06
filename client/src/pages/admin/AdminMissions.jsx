@@ -812,7 +812,10 @@ export default function AdminMissions() {
                     <td className="py-3 px-4 text-dark-400" data-label="Date">
                       {formatDate(m.departure_date || m.created_at)}
                     </td>
-                    <td className="price-cell py-3 px-4 font-semibold" data-label="Prix">
+                    <td
+                      className="price-cell py-3 px-4 font-semibold"
+                      data-label="Prix"
+                    >
                       {m.price ? (
                         <div>
                           {formatPrice(m.price)}
@@ -1308,12 +1311,12 @@ export default function AdminMissions() {
               {priceModal.convoyeur_comments && (
                 <div className="p-3 bg-primary-500/10 border border-primary-500/20 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <MessageSquare size={16} className="text-primary-300" />
-                    <h4 className="text-sm font-semibold text-primary-200">
+                    <MessageSquare size={16} className="text-primary-400" />
+                    <h4 className="text-sm font-semibold text-dark-100">
                       Consignes convoyeur diffusées
                     </h4>
                   </div>
-                  <p className="text-sm text-primary-100 whitespace-pre-wrap">
+                  <p className="text-sm text-dark-200 whitespace-pre-wrap">
                     {priceModal.convoyeur_comments}
                   </p>
                 </div>
