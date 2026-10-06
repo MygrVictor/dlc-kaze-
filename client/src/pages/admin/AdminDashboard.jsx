@@ -470,7 +470,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── Tabs ────────────────────────────────────────── */}
-      <div className="flex gap-1 mb-6 bg-dark-800/50 p-1 rounded-xl overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 mb-6 overflow-x-auto scrollbar-none">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           if (tab.id === "convoyeurs") {
@@ -491,7 +491,7 @@ export default function AdminDashboard() {
               onClick={() => setActiveTab(tab.id)}
               className={`shrink-0 flex items-center gap-2 px-3 min-h-[40px] rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "bg-primary-600 text-white shadow-lg"
+                  ? "bg-primary-600 text-white"
                   : "text-dark-400 hover:text-white hover:bg-dark-700/50"
               }`}
             >
@@ -502,7 +502,7 @@ export default function AdminDashboard() {
                   className={`text-xs px-1.5 py-0.5 rounded-full ${
                     activeTab === tab.id
                       ? "bg-white/20"
-                      : "bg-dark-600 text-dark-300"
+                      : "bg-primary-500/10 text-primary-400"
                   }`}
                 >
                   {tab.count}
