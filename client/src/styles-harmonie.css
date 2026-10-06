@@ -126,16 +126,17 @@
    plusieurs gris légèrement différents côte à côte. On aligne tout sur
    une même gamme, et les boutons discrets sur la palette mate. */
 .theme-light {
-  --l-bg: #f4f5f7;
+  /* Trois paliers bien distincts : page < panneau < carte. */
+  --l-bg: #e8ecf1;
   --l-surface: #ffffff;
-  --l-subtle: #f0f2f5;
-  --l-line: #dfe3e8;
-  --l-line-strong: #c5ccd5;
-  --l-text: #1f2733;
-  --l-text-2: #4a5462;
+  --l-subtle: #f1f4f8;
+  --l-line: #d3d9e1;
+  --l-line-strong: #b4bec9;
+  --l-text: #111827;
+  --l-text-2: #374151;
 }
 body:has(.theme-light) {
-  background: #f4f5f7;
+  background: #e8ecf1;
 }
 .dash.theme-light {
   background-color: var(--l-bg);
@@ -379,4 +380,104 @@ body:has(.theme-light) {
 .theme-light .user-card .user-card__actions > button:not([class*="btn-"]) {
   border: 1px solid var(--l-line);
   background: #fff;
+}
+
+/* ══════════════════════════════════════════════════
+   CONTRASTE ET SÉPARATION DES PALIERS — toutes les pages
+   ══════════════════════════════════════════════════
+   Les pages (missions, tableaux de bord, factures… côté admin, client
+   et convoyeur) empilent trois niveaux : le fond de page, les cartes,
+   et les encadrés à l'intérieur des cartes. Ces niveaux étaient trop
+   proches et se confondaient. On les écarte nettement, et l'on fonce
+   les textes secondaires, qui portent l'essentiel des libellés. */
+
+/* ── Mode clair ── */
+.theme-light .card,
+.dash.theme-light .card {
+  background-color: #ffffff;
+  border: 1px solid var(--l-line);
+  box-shadow:
+    0 1px 2px rgb(17 24 39 / 0.06),
+    0 2px 8px rgb(17 24 39 / 0.04);
+}
+/* Encadrés dans une carte : gris franc et bordé, pour se détacher du blanc */
+.theme-light .card [class*="bg-dark-800"],
+.theme-light .card [class*="bg-dark-700"],
+.theme-light .card [class*="bg-dark-900"],
+.theme-light .card [class*="bg-slate-800"] {
+  background-color: var(--l-subtle);
+}
+.theme-light .card [class*="bg-dark-600"] {
+  background-color: #e3e8ee;
+}
+/* En-têtes de tableaux */
+.theme-light thead,
+.theme-light thead tr {
+  background-color: #f1f4f8;
+}
+.theme-light th {
+  color: #374151 !important;
+  font-weight: 600;
+}
+.theme-light tbody tr:hover {
+  background-color: #f5f7fa;
+}
+/* Textes : hiérarchie conservée, contraste renforcé (≥ 7:1 pour les
+   secondaires, ≥ 5:1 pour les mentions). */
+.theme-light [class*="text-dark-100"],
+.theme-light [class*="text-slate-100"],
+.theme-light [class*="text-slate-900"],
+.theme-light [class*="text-dark-200"] {
+  color: #111827;
+}
+.theme-light [class*="text-dark-300"],
+.theme-light [class*="text-gray-300"],
+.theme-light [class*="text-slate-300"] {
+  color: #1f2937;
+}
+.theme-light [class*="text-dark-400"],
+.theme-light [class*="text-slate-400"],
+.theme-light [class*="text-gray-400"] {
+  color: #374151;
+}
+.theme-light [class*="text-dark-500"],
+.theme-light [class*="text-slate-500"],
+.theme-light [class*="text-gray-500"],
+.theme-light [class*="text-slate-600"] {
+  color: #4b5563;
+}
+.theme-light [class*="text-dark-600"],
+.theme-light [class*="text-dark-700"] {
+  color: #5b6472;
+}
+.theme-light .card h1,
+.theme-light .card h2,
+.theme-light .card h3,
+.theme-light .card h4,
+.theme-light h1,
+.theme-light h2 {
+  color: #0b1220;
+}
+/* Pastilles de statut : bordure plus marquée pour être repérées */
+.theme-light .badge {
+  font-weight: 600;
+}
+
+/* ── Mode sombre ── */
+.dash:not(.theme-light) {
+  background-color: #0a0f1a;
+}
+body:has(.dash:not(.theme-light)) {
+  background: #0a0f1a;
+}
+.dash:not(.theme-light) .card {
+  background: #172133;
+  border-color: rgb(255 255 255 / 0.1);
+}
+.dash:not(.theme-light) .card [class*="bg-dark-800"],
+.dash:not(.theme-light) .card [class*="bg-dark-900"] {
+  background-color: #0f1726;
+}
+.dash:not(.theme-light) .card [class*="bg-dark-700"] {
+  background-color: #1f2b40;
 }
