@@ -447,20 +447,78 @@ export default function MissionDetail() {
           </div>
         )}
 
-        {/* Prix */}
-        {mission.price && (
+        {/* Tarif puis Suivi, empilés dans la même colonne */}
+        <div className="flex flex-col gap-6">
+          {mission.price && (
+            <div className="card">
+              <div className="flex items-center gap-2 mb-4">
+                <Euro size={18} className="text-primary-400" />
+                <h3 className="font-semibold">Tarif</h3>
+              </div>
+              <p className="text-2xl font-bold">{formatPrice(mission.price)}</p>
+            </div>
+          )}
+
+          {/* Timeline */}
           <div className="card">
             <div className="flex items-center gap-2 mb-4">
-              <Euro size={18} className="text-primary-400" />
-              <h3 className="font-semibold">Tarif</h3>
+              <Clock size={18} className="text-primary-400" />
+              <h3 className="font-semibold">Suivi</h3>
             </div>
-            <p className="text-2xl font-bold">{formatPrice(mission.price)}</p>
+            <div className="space-y-3">
+              {[
+                {
+                  status: "EN_ATTENTE_DE_COTATION",
+                  label: "Demande créée",
+                  date: mission.created_at,
+                },
+                mission.status !== "EN_ATTENTE_DE_COTATION" && {
+                  status: "DEVIS_PROPOSE",
+                  label: "Devis proposé",
+                  date: mission.updated_at,
+                },
+                ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"].includes(
+                  mission.status,
+                ) && {
+                  status: "ACCEPTEE",
+                  label: "Mission acceptée",
+                  date: mission.updated_at,
+                },
+                ["ASSIGNEE", "EN_COURS", "LIVREE"].includes(mission.status) && {
+                  status: "ASSIGNEE",
+                  label: "Convoyeur assigné",
+                  date: mission.updated_at,
+                },
+                ["EN_COURS", "LIVREE"].includes(mission.status) && {
+                  status: "EN_COURS",
+                  label: "En cours de convoyage",
+                  date: mission.updated_at,
+                },
+                mission.status === "LIVREE" && {
+                  status: "LIVREE",
+                  label: "Véhicule livré",
+                  date: mission.updated_at,
+                },
+              ]
+                .filter(Boolean)
+                .map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-2 h-2 mt-1.5 rounded-full bg-primary-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">{step.label}</p>
+                      <p className="text-xs text-dark-500">
+                        {formatDate(step.date)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
-        )}
+        </div>
 
         {/* Urgence */}
         {mission.emergency_phone && (
-          <div className="card">
+          <div className="card self-start">
             <div className="flex items-center gap-2 mb-4">
               <ShieldAlert size={18} className="text-red-400" />
               <h3 className="font-semibold">Contact d'urgence</h3>
@@ -476,62 +534,6 @@ export default function MissionDetail() {
       {/* Documents joints à la mission */}
       <div className="card mt-6">
         <MissionDocuments missionId={mission.id} mode="client" />
-      </div>
-
-      {/* Timeline */}
-      <div className="card mt-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock size={18} className="text-primary-400" />
-          <h3 className="font-semibold">Suivi</h3>
-        </div>
-        <div className="space-y-3">
-          {[
-            {
-              status: "EN_ATTENTE_DE_COTATION",
-              label: "Demande créée",
-              date: mission.created_at,
-            },
-            mission.status !== "EN_ATTENTE_DE_COTATION" && {
-              status: "DEVIS_PROPOSE",
-              label: "Devis proposé",
-              date: mission.updated_at,
-            },
-            ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"].includes(
-              mission.status,
-            ) && {
-              status: "ACCEPTEE",
-              label: "Mission acceptée",
-              date: mission.updated_at,
-            },
-            ["ASSIGNEE", "EN_COURS", "LIVREE"].includes(mission.status) && {
-              status: "ASSIGNEE",
-              label: "Convoyeur assigné",
-              date: mission.updated_at,
-            },
-            ["EN_COURS", "LIVREE"].includes(mission.status) && {
-              status: "EN_COURS",
-              label: "En cours de convoyage",
-              date: mission.updated_at,
-            },
-            mission.status === "LIVREE" && {
-              status: "LIVREE",
-              label: "Véhicule livré",
-              date: mission.updated_at,
-            },
-          ]
-            .filter(Boolean)
-            .map((step, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-2 h-2 mt-1.5 rounded-full bg-primary-500 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">{step.label}</p>
-                  <p className="text-xs text-dark-500">
-                    {formatDate(step.date)}
-                  </p>
-                </div>
-              </div>
-            ))}
-        </div>
       </div>
 
       {/* Modal de refus du devis */}
