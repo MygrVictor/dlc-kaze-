@@ -139,16 +139,18 @@ router.post(
   "/mission/:missionId",
   authorize("admin", "client"),
   (req, res, next) =>
-    upload.single("document")(req, res, (err) =>
-      err
-        ? res.status(err.status || 400).json({
-            error:
-              err.code === "LIMIT_FILE_SIZE"
-                ? "Fichier trop volumineux (10 Mo maximum)."
-                : err.message,
-          })
-        : next(),
-    ),
+    upload.single("document")(req, res, (err) => {
+      if (!err) return next();
+      console.warn(
+        `[mission-documents] dépôt refusé mission=${req.params.missionId} user=${req.user?.id} code=${err.code || "-"} : ${err.message}`,
+      );
+      res.status(err.status || 400).json({
+        error:
+          err.code === "LIMIT_FILE_SIZE"
+            ? "Fichier trop volumineux (10 Mo maximum)."
+            : err.message,
+      });
+    }),
   async (req, res, next) => {
     try {
       if (!req.file)
