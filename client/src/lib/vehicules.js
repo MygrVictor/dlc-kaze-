@@ -19,6 +19,32 @@ export const CLASSE_PEAGE = {
 export const SEUIL_UTILITAIRE_M3 = 12;
 
 export const TYPES_VEHICULE = [
+  // ── Gabarits proposés à la création de mission ─────────────
+  {
+    code: "VL",
+    label: "VL — Véhicule léger",
+    categorie: "Gabarit",
+    classePeage: CLASSE_PEAGE.LEGER,
+    volumeM3: null,
+    tarification: "berline",
+  },
+  {
+    code: "VUL",
+    label: "VUL — Véhicule utilitaire léger",
+    categorie: "Gabarit",
+    classePeage: CLASSE_PEAGE.INTERMEDIAIRE,
+    volumeM3: null,
+    tarification: "utilitaire",
+  },
+  {
+    code: "VUL_C3",
+    label: "VUL — péage classe 3",
+    categorie: "Gabarit",
+    classePeage: CLASSE_PEAGE.POIDS_LOURD,
+    volumeM3: null,
+    tarification: "utilitaire",
+  },
+
   // ── Véhicules légers ────────────────────────────────────────
   {
     code: "citadine",

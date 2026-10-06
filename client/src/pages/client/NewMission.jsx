@@ -751,23 +751,10 @@ export default function NewMission() {
                     className="input-field"
                   >
                     <option value="">Sélectionnez</option>
-                    {parCategorie().map((groupe) => (
-                      <optgroup key={groupe.categorie} label={groupe.categorie}>
-                        {groupe.types.map((t) => (
-                          <option key={t.code} value={t.code}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
+                    <option value="VL">VL</option>
+                    <option value="VUL">VUL</option>
+                    <option value="VUL_C3">VUL (péage classe 3)</option>
                   </select>
-                  {v.vehicleType && (
-                    <p className="mt-1.5 text-xs text-dark-400">
-                      Péage classe {classeDePeage(v.vehicleType)}
-                      {estUtilitaire12m3(v.vehicleType) === "OUI" &&
-                        " — utilitaire ≥ 12 m³"}
-                    </p>
-                  )}
                 </div>
 
                 <div className="md:col-span-2">
