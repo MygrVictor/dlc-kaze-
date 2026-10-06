@@ -183,8 +183,8 @@ app.use(
 );
 
 // ── Body parsing + Limite de taille ─────────────────────────
-app.use(express.json({ limit: "100kb" }));
-app.use(express.urlencoded({ extended: false, limit: "100kb" }));
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: false, limit: "5mb" }));
 
 // ── Logging ──────────────────────────────────────────────────
 app.use(morgan(isProduction ? "combined" : "dev"));
