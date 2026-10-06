@@ -347,7 +347,7 @@ export default function ConvoyeurDashboard() {
                         {mission.vehicle_model || mission.vehicle?.model || ""}
                       </span>
                       {(mission.vehicle_plate || mission.vehicle?.plate) && (
-                        <span className="text-xs text-dark-500 font-mono ml-auto">
+                        <span className="text-xs text-dark-400 font-mono px-1.5 py-0.5 bg-dark-800/60 rounded">
                           {mission.vehicle_plate || mission.vehicle?.plate}
                         </span>
                       )}
