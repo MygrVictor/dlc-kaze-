@@ -498,69 +498,22 @@ body:has(.dash:not(.theme-light)) {
   [class*="text-white"]:not([class*=":text-white"]) {
   color: #111827;
 }
-/* Prix : pastille verte pleine, chiffres tabulaires, même rendu partout. */
-.dash .price-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 8px;
-  background: rgb(74 222 128 / 0.12);
-  border: 1px solid rgb(74 222 128 / 0.3);
-  color: #86efac !important;
+/* Prix : simple texte en gras, noir en mode clair, blanc en sombre. */
+.dash .price-tag,
+.dash .price-cell {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
   white-space: nowrap;
+  color: #ffffff !important;
 }
 .theme-light .price-tag,
-.theme-light .price-tag[class*="bg-"] {
-  /* Fond plein et texte blanc : le prix ne peut plus se perdre sur le
-     fond clair, quelle que soit la carte qui le porte. */
-  background: #2f6b55 !important;
-  border-color: #2f6b55 !important;
-  color: #ffffff !important;
-}
-.theme-light .price-tag * {
-  color: #ffffff !important;
-}
-
-/* Prix en cellule de tableau : texte foncé et gras (pas de pastille, pour
-   ne pas casser l'alignement des colonnes). */
-.dash .price-cell {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: #86efac !important;
-}
-.theme-light .price-cell {
-  color: #1d5a43 !important;
-}
+.theme-light .price-cell,
+.theme-light .price-tag *,
 .theme-light .price-cell * {
-  color: inherit;
-}
-
-/* ── Listes de missions : un seul rendu ──────────
-   Lignes de tableau et éléments de liste partagent la même hauteur, le
-   même séparateur et le même survol. */
-.dash main table td {
-  vertical-align: middle;
-}
-.dash main tbody tr {
-  border-bottom: 1px solid rgb(255 255 255 / 0.06);
-}
-.theme-light main tbody tr {
-  border-bottom-color: var(--l-line);
-}
-.theme-light main tbody tr:nth-child(even) {
-  background-color: #f7f9fc;
-}
-.theme-light main tbody tr:hover {
-  background-color: #eaf0f8;
-}
-.theme-light main a.card:hover,
-.theme-light main .card.group:hover {
-  border-color: #9fb3d1;
-  box-shadow: 0 4px 14px rgb(20 33 58 / 0.08);
+  color: #111827 !important;
 }
 
 /* ══════════════════════════════════════════════════
