@@ -267,187 +267,160 @@ function generateDevisPDF(mission, client) {
     .stroke();
   y += 15;
 
-  // ── VÉHICULE ──────────────────────────────────────────────────
-  doc
-    .fontSize(10)
-    .font("Helvetica-Bold")
-    .fillColor(COLORS.primary)
-    .text("VÉHICULE", 50, y);
-  y += 16;
+  // ── DEUX COLONNES : véhicule + services | enlèvement + livraison ──
+  // Chaque colonne avance son propre curseur vertical ; la suite du devis
+  // reprend sous la plus longue des deux.
+  const colGap = 24;
+  const colW = (pageWidth - colGap) / 2;
+  const xL = 50;
+  const xR = 50 + colW + colGap;
+  const yStart = y;
 
-  const vehicleLines = [];
-  if (mission.vehicle_brand || mission.vehicle_model) {
-    vehicleLines.push({
-      label: "Marque / Modèle",
-      value:
-        `${mission.vehicle_brand || ""} ${mission.vehicle_model || ""}`.trim(),
-    });
-  }
-  if (mission.vehicle_plate) {
-    vehicleLines.push({ label: "Plaque", value: mission.vehicle_plate });
-  }
-  if (mission.vehicle_vin) {
-    vehicleLines.push({ label: "VIN", value: mission.vehicle_vin });
-  }
-  if (mission.vehicle_finish) {
-    vehicleLines.push({ label: "Finition", value: mission.vehicle_finish });
-  }
-  if (mission.vehicle_energy) {
-    vehicleLines.push({
-      label: "Énergie",
-      value: energyLabels[mission.vehicle_energy] || mission.vehicle_energy,
-    });
-  }
-  if (mission.vehicle_state) {
-    vehicleLines.push({
-      label: "État",
-      value: stateLabels[mission.vehicle_state] || mission.vehicle_state,
-    });
-  }
-  if (mission.vehicle_keys != null) {
-    vehicleLines.push({
-      label: "Clés",
-      value: `${mission.vehicle_keys} jeu(x)`,
-    });
-  }
+  const titreSection = (texte, x, yy) => {
+    doc
+      .fontSize(10)
+      .font("Helvetica-Bold")
+      .fillColor(COLORS.primary)
+      .text(texte, x, yy, { width: colW });
+    return yy + 16;
+  };
 
-  vehicleLines.forEach((line) => {
+  // Ligne « libellé : valeur » sur la largeur d'une colonne.
+  const ligne = (label, value, x, yy) => {
+    const labelW = 78;
     doc
       .fontSize(8)
       .font("Helvetica")
       .fillColor(COLORS.muted)
-      .text(line.label, 50, y, { width: 140 });
+      .text(label, x, yy, { width: labelW });
+    doc.fontSize(9).font("Helvetica-Bold").fillColor(COLORS.text);
+    const h = doc.heightOfString(String(value), { width: colW - labelW });
+    doc.text(String(value), x + labelW, yy, { width: colW - labelW });
+    return yy + Math.max(14, h + 3);
+  };
+
+  // Texte libre (adresse, contact…) sur la largeur d'une colonne.
+  const texte = (
+    contenu,
+    x,
+    yy,
+    { gras = false, taille = 9, muted = false } = {},
+  ) => {
     doc
-      .fontSize(9)
-      .font("Helvetica-Bold")
-      .fillColor(COLORS.text)
-      .text(line.value, 190, y, { width: pageWidth - 140 });
-    y += 14;
-  });
+      .fontSize(taille)
+      .font(gras ? "Helvetica-Bold" : "Helvetica")
+      .fillColor(muted ? COLORS.muted : COLORS.text);
+    const h = doc.heightOfString(contenu, { width: colW });
+    doc.text(contenu, x, yy, { width: colW });
+    return yy + h + 3;
+  };
 
-  // ── SÉPARATION ────────────────────────────────────────────────
-  y += 10;
-  doc
-    .moveTo(50, y)
-    .lineTo(50 + pageWidth, y)
-    .strokeColor(COLORS.line)
-    .lineWidth(0.5)
-    .stroke();
-  y += 15;
+  // ── Colonne gauche : VÉHICULE ──
+  let yL = titreSection("VÉHICULE", xL, yStart);
 
-  // ── TRAJET ────────────────────────────────────────────────────
-  // Départ
-  doc
-    .fontSize(10)
-    .font("Helvetica-Bold")
-    .fillColor(COLORS.text)
-    .text("ENLÈVEMENT (DÉPART)", 50, y);
-  y += 16;
-
-  doc
-    .fontSize(9)
-    .font("Helvetica")
-    .fillColor(COLORS.text)
-    .text(mission.departure_address, 65, y, { width: pageWidth / 2 - 30 });
-  y += doc.heightOfString(mission.departure_address, {
-    width: pageWidth / 2 - 30,
-  });
-  y += 4;
-
-  if (mission.departure_date) {
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(`Date : ${formatDate(mission.departure_date)}`, 65, y);
-    y += 12;
+  if (mission.vehicle_brand || mission.vehicle_model) {
+    yL = ligne(
+      "Marque / Modèle",
+      `${mission.vehicle_brand || ""} ${mission.vehicle_model || ""}`.trim(),
+      xL,
+      yL,
+    );
   }
-  if (mission.departure_contact_name) {
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(
-        `Contact : ${mission.departure_contact_name}${mission.departure_contact_phone ? ` — ${mission.departure_contact_phone}` : ""}`,
-        65,
-        y,
-      );
-    y += 12;
+  if (mission.vehicle_plate)
+    yL = ligne("Plaque", mission.vehicle_plate, xL, yL);
+  if (mission.vehicle_vin) yL = ligne("VIN", mission.vehicle_vin, xL, yL);
+  if (mission.vehicle_finish) {
+    yL = ligne("Finition", mission.vehicle_finish, xL, yL);
   }
-  if (mission.departure_instructions) {
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(`Instructions : ${mission.departure_instructions}`, 65, y, {
-        width: pageWidth - 30,
-      });
-    y +=
-      doc.heightOfString(`Instructions : ${mission.departure_instructions}`, {
-        width: pageWidth - 30,
-      }) + 4;
+  if (mission.vehicle_energy) {
+    yL = ligne(
+      "Énergie",
+      energyLabels[mission.vehicle_energy] || mission.vehicle_energy,
+      xL,
+      yL,
+    );
+  }
+  if (mission.vehicle_state) {
+    yL = ligne(
+      "État",
+      stateLabels[mission.vehicle_state] || mission.vehicle_state,
+      xL,
+      yL,
+    );
+  }
+  if (mission.vehicle_keys != null) {
+    yL = ligne("Clés", `${mission.vehicle_keys} jeu(x)`, xL, yL);
   }
 
-  y += 10;
-
-  // Arrivée
-  doc
-    .fontSize(10)
-    .font("Helvetica-Bold")
-    .fillColor(COLORS.text)
-    .text("LIVRAISON (ARRIVÉE)", 50, y);
-  y += 16;
-
-  doc
-    .fontSize(9)
-    .font("Helvetica")
-    .fillColor(COLORS.text)
-    .text(mission.arrival_address, 65, y, { width: pageWidth / 2 - 30 });
-  y += doc.heightOfString(mission.arrival_address, {
-    width: pageWidth / 2 - 30,
-  });
-  y += 4;
-
-  if (mission.arrival_date) {
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(`Date : ${formatDate(mission.arrival_date)}`, 65, y);
-    y += 12;
-  }
-  if (mission.arrival_contact_name) {
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(
-        `Contact : ${mission.arrival_contact_name}${mission.arrival_contact_phone ? ` — ${mission.arrival_contact_phone}` : ""}`,
-        65,
-        y,
-      );
-    y += 12;
-  }
-
-  // ── SERVICES ──────────────────────────────────────────────────
+  // ── Colonne gauche : SERVICES ──
   const services = [];
   if (mission.service_wash_exterior) services.push("Lavage extérieur");
   if (mission.service_clean_interior) services.push("Nettoyage intérieur");
   if (mission.service_refuel) services.push("Plein de carburant");
   if (mission.service_handover) services.push("Mise en main du véhicule");
 
+  yL += 10;
   if (services.length > 0) {
-    y += 15;
-    doc
-      .fontSize(10)
-      .font("Helvetica-Bold")
-      .fillColor(COLORS.primary)
-      .text("SERVICES ADDITIONNELS", 50, y);
-    y += 16;
+    yL = titreSection("SERVICES ADDITIONNELS", xL, yL);
     services.forEach((s) => {
-      doc
-        .fontSize(9)
-        .font("Helvetica")
-        .fillColor(COLORS.text)
-        .text(`✓  ${s}`, 65, y);
-      y += 14;
+      yL = texte(`✓  ${s}`, xL, yL);
+    });
+  } else {
+    yL = titreSection("SERVICES", xL, yL);
+    yL = texte("Convoyage simple", xL, yL, { muted: true });
+  }
+
+  // ── Colonne droite : ENLÈVEMENT ──
+  let yR = titreSection("ENLÈVEMENT (DÉPART)", xR, yStart);
+  yR = texte(mission.departure_address || "—", xR, yR, { gras: true });
+  if (mission.departure_date) {
+    yR = texte(`Date : ${formatDate(mission.departure_date)}`, xR, yR, {
+      taille: 8,
+      muted: true,
     });
   }
+  if (mission.departure_contact_name) {
+    yR = texte(
+      `Contact : ${mission.departure_contact_name}${mission.departure_contact_phone ? ` — ${mission.departure_contact_phone}` : ""}`,
+      xR,
+      yR,
+      { taille: 8, muted: true },
+    );
+  }
+  if (mission.departure_instructions) {
+    yR = texte(`Instructions : ${mission.departure_instructions}`, xR, yR, {
+      taille: 8,
+      muted: true,
+    });
+  }
+
+  // ── Colonne droite : LIVRAISON ──
+  yR += 10;
+  yR = titreSection("LIVRAISON (ARRIVÉE)", xR, yR);
+  yR = texte(mission.arrival_address || "—", xR, yR, { gras: true });
+  if (mission.arrival_date) {
+    yR = texte(`Date : ${formatDate(mission.arrival_date)}`, xR, yR, {
+      taille: 8,
+      muted: true,
+    });
+  }
+  if (mission.arrival_contact_name) {
+    yR = texte(
+      `Contact : ${mission.arrival_contact_name}${mission.arrival_contact_phone ? ` — ${mission.arrival_contact_phone}` : ""}`,
+      xR,
+      yR,
+      { taille: 8, muted: true },
+    );
+  }
+
+  // Filet vertical entre les deux colonnes.
+  y = Math.max(yL, yR);
+  doc
+    .moveTo(50 + colW + colGap / 2, yStart)
+    .lineTo(50 + colW + colGap / 2, y)
+    .strokeColor(COLORS.line)
+    .lineWidth(0.5)
+    .stroke();
 
   // ── URGENCE ───────────────────────────────────────────────────
   if (mission.emergency_phone) {
