@@ -26,6 +26,7 @@ import {
   XCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import MissionDocuments from "../../components/MissionDocuments";
 
 const extraireNomFichier = (contentDisposition) => {
   if (!contentDisposition) return null;
@@ -288,64 +289,6 @@ export default function MissionDetail() {
 
       {/* Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Véhicule */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <Car size={18} className="text-primary-400" />
-            <h3 className="font-semibold">Véhicule</h3>
-          </div>
-          <div className="space-y-2 text-sm">
-            {(mission.vehicle_brand || mission.vehicle_model) && (
-              <div className="flex justify-between">
-                <span className="text-dark-400">Véhicule</span>
-                <span>
-                  {[mission.vehicle_brand, mission.vehicle_model]
-                    .filter(Boolean)
-                    .join(" ")}
-                </span>
-              </div>
-            )}
-            {mission.vehicle_plate && (
-              <div className="flex justify-between">
-                <span className="text-dark-400">Plaque</span>
-                <span className="font-mono">{mission.vehicle_plate}</span>
-              </div>
-            )}
-            {mission.vehicle_vin && (
-              <div className="flex justify-between">
-                <span className="text-dark-400">VIN</span>
-                <span className="font-mono">{mission.vehicle_vin}</span>
-              </div>
-            )}
-            {mission.vehicle_energy && (
-              <div className="flex justify-between">
-                <span className="text-dark-400">Énergie</span>
-                <span>
-                  {energyLabels[mission.vehicle_energy] ||
-                    mission.vehicle_energy}
-                </span>
-              </div>
-            )}
-            {mission.vehicle_state && (
-              <div className="flex justify-between">
-                <span className="text-dark-400">État</span>
-                <span>
-                  {stateLabels[mission.vehicle_state] || mission.vehicle_state}
-                </span>
-              </div>
-            )}
-            {mission.vehicle_keys != null && (
-              <div className="flex justify-between">
-                <span className="text-dark-400">Clés</span>
-                <span className="flex items-center gap-1">
-                  <Key size={13} />
-                  {mission.vehicle_keys}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Départ */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
@@ -416,6 +359,64 @@ export default function MissionDetail() {
           </div>
         </div>
 
+        {/* Véhicule */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-4">
+            <Car size={18} className="text-primary-400" />
+            <h3 className="font-semibold">Véhicule</h3>
+          </div>
+          <div className="space-y-2 text-sm">
+            {(mission.vehicle_brand || mission.vehicle_model) && (
+              <div className="flex justify-between">
+                <span className="text-dark-400">Véhicule</span>
+                <span>
+                  {[mission.vehicle_brand, mission.vehicle_model]
+                    .filter(Boolean)
+                    .join(" ")}
+                </span>
+              </div>
+            )}
+            {mission.vehicle_plate && (
+              <div className="flex justify-between">
+                <span className="text-dark-400">Plaque</span>
+                <span className="font-mono">{mission.vehicle_plate}</span>
+              </div>
+            )}
+            {mission.vehicle_vin && (
+              <div className="flex justify-between">
+                <span className="text-dark-400">VIN</span>
+                <span className="font-mono">{mission.vehicle_vin}</span>
+              </div>
+            )}
+            {mission.vehicle_energy && (
+              <div className="flex justify-between">
+                <span className="text-dark-400">Énergie</span>
+                <span>
+                  {energyLabels[mission.vehicle_energy] ||
+                    mission.vehicle_energy}
+                </span>
+              </div>
+            )}
+            {mission.vehicle_state && (
+              <div className="flex justify-between">
+                <span className="text-dark-400">État</span>
+                <span>
+                  {stateLabels[mission.vehicle_state] || mission.vehicle_state}
+                </span>
+              </div>
+            )}
+            {mission.vehicle_keys != null && (
+              <div className="flex justify-between">
+                <span className="text-dark-400">Clés</span>
+                <span className="flex items-center gap-1">
+                  <Key size={13} />
+                  {mission.vehicle_keys}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Services */}
         {hasServices && (
           <div className="card">
@@ -470,6 +471,11 @@ export default function MissionDetail() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Documents joints à la mission */}
+      <div className="card mt-6">
+        <MissionDocuments missionId={mission.id} mode="client" />
       </div>
 
       {/* Timeline */}
