@@ -96,7 +96,7 @@ export default function ConvoyeurHistorique() {
             </div>
             <div className="min-w-0">
               <p className="text-xs text-dark-400">Total perçu</p>
-              <p className="text-xl font-bold truncate">
+              <p className="price-tag text-xl font-bold truncate">
                 {formatPrice(revenus)}
               </p>
             </div>
@@ -144,7 +144,7 @@ export default function ConvoyeurHistorique() {
                       Livrée le {formatDate(mission.updated_at)}
                     </span>
                     {mission.price > 0 && (
-                      <span className="px-2 py-0.5 rounded-lg text-xs font-bold bg-accent-500/10 text-accent-400 border border-accent-500/20 shrink-0">
+                      <span className="price-tag px-2 py-0.5 rounded-lg text-xs font-bold bg-accent-500/10 text-accent-400 border border-accent-500/20 shrink-0">
                         {formatPrice(mission.price)}
                       </span>
                     )}

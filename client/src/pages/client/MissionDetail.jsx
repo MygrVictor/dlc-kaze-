@@ -205,7 +205,7 @@ export default function MissionDetail() {
               <Euro size={24} className="text-primary-400 shrink-0" />
               <div>
                 <p className="text-sm text-dark-300">Devis proposé</p>
-                <p className="text-2xl font-bold">
+                <p className="price-tag text-2xl font-bold">
                   {formatPrice(mission.price)}
                 </p>
               </div>
@@ -270,7 +270,7 @@ export default function MissionDetail() {
                 <CheckCircle2 size={22} className="text-emerald-400 shrink-0" />
                 <div>
                   <p className="text-sm text-dark-300">Devis accepté</p>
-                  <p className="text-xl font-bold">
+                  <p className="price-tag text-xl font-bold">
                     {formatPrice(mission.price)}
                   </p>
                 </div>

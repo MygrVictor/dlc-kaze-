@@ -1497,7 +1497,7 @@ export default function AdminDashboard() {
                 {detailModal.price && (
                   <div className="flex items-center gap-3">
                     <div className="text-center">
-                      <span className="text-lg font-bold text-primary-400">
+                      <span className="price-tag text-lg font-bold text-primary-400">
                         {formatPrice(detailModal.price)}
                       </span>
                       <p className="text-[10px] text-dark-500">Prix client</p>
@@ -1506,7 +1506,7 @@ export default function AdminDashboard() {
                       <>
                         <span className="text-dark-600">/</span>
                         <div className="text-center">
-                          <span className="text-lg font-bold text-accent-400">
+                          <span className="price-tag text-lg font-bold text-accent-400">
                             {formatPrice(detailModal.price_convoyeur)}
                           </span>
                           <p className="text-[10px] text-dark-500">
@@ -1514,7 +1514,7 @@ export default function AdminDashboard() {
                           </p>
                         </div>
                         <div className="px-2 py-1 bg-accent-500/5 border border-accent-500/10 rounded text-center">
-                          <span className="text-sm font-bold text-accent-400">
+                          <span className="price-tag text-sm font-bold text-accent-400">
                             {formatPrice(
                               Number(detailModal.price) -
                                 Number(detailModal.price_convoyeur),
@@ -1978,7 +1978,7 @@ export default function AdminDashboard() {
               Number(priceConvoyeurValue) > 0 && (
                 <div className="mb-4 p-3 bg-accent-500/5 border border-accent-500/10 rounded-lg">
                   <p className="text-xs text-dark-400">Marge</p>
-                  <p className="text-lg font-bold text-accent-400">
+                  <p className="price-tag text-lg font-bold text-accent-400">
                     {formatPrice(
                       Number(priceValue) - Number(priceConvoyeurValue),
                     )}

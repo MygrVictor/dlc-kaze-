@@ -498,11 +498,68 @@ body:has(.dash:not(.theme-light)) {
   [class*="text-white"]:not([class*=":text-white"]) {
   color: #111827;
 }
+/* Prix : pastille verte pleine, chiffres tabulaires, même rendu partout. */
 .dash .price-tag {
-  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: rgb(74 222 128 / 0.12);
+  border: 1px solid rgb(74 222 128 / 0.3);
+  color: #86efac !important;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 .theme-light .price-tag {
-  color: var(--mat-blue);
+  background: #e7f3ed;
+  border-color: #9cc9b2;
+  color: #1d5a43 !important;
+}
+
+/* ══════════════════════════════════════════════════
+   UN SEUL PATTERN DE PAGE
+   ══════════════════════════════════════════════════
+   Toutes les pages (admin, client, convoyeur) reprennent la structure du
+   tableau de bord : titre de page, sous-titre, puis cartes. Les titres
+   variaient (avec ou sans icône, icône verte, orange, blanche…) : on
+   les aligne. */
+.dash main h1 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dash main h1 > svg {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.08);
+  color: #93b4e6 !important;
+  flex-shrink: 0;
+}
+.theme-light main h1 > svg {
+  background: #dbe5f3;
+  color: var(--mat-blue) !important;
+}
+.dash main h1 + p {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+/* Cartes : même rayon et même marge intérieure sur toutes les pages. */
+.dash main .card {
+  border-radius: 14px;
+}
+/* Tableaux : même en-tête partout. */
+.dash main th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* ══════════════════════════════════════════════════

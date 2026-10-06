@@ -1414,7 +1414,7 @@ export default function AdminMissions() {
                       <div className="mb-4 p-3 bg-accent-500/5 border border-accent-500/10 rounded-lg flex items-center justify-between">
                         <div>
                           <p className="text-xs text-dark-400">Marge</p>
-                          <p className="text-lg font-bold text-accent-400">
+                          <p className="price-tag text-lg font-bold text-accent-400">
                             {formatPrice(
                               Number(priceValue) - Number(priceConvoyeurValue),
                             )}

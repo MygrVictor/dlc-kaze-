@@ -293,7 +293,7 @@ export default function ConvoyeurDashboard() {
                       </span>
                       <div className="flex items-center gap-2 flex-wrap ml-auto">
                         {mission.price > 0 && (
-                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold bg-accent-500/10 text-accent-400 border border-accent-500/20">
+                          <span className="price-tag flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold bg-accent-500/10 text-accent-400 border border-accent-500/20">
                             {formatPrice(mission.price)}
                           </span>
                         )}
