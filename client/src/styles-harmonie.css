@@ -481,3 +481,82 @@ body:has(.dash:not(.theme-light)) {
 .dash:not(.theme-light) .card [class*="bg-dark-700"] {
   background-color: #1f2b40;
 }
+
+/* ══════════════════════════════════════════════════
+   PRIX TOUJOURS LISIBLES
+   ══════════════════════════════════════════════════
+   Le mode clair rend le blanc aux textes posés sur un fond coloré. Or la
+   détection par sous-chaîne attrapait aussi les fonds translucides et
+   les survols (`hover:bg-primary-500/5`) : le texte restait blanc sur
+   une carte blanche — d'où des prix invisibles. On rétablit le texte
+   sombre dans ces cas-là. */
+.theme-light
+  [class*="bg-"][class*="/"]:not([class*="bg-white/"])
+  [class*="text-white"]:not([class*=":text-white"]),
+.theme-light
+  [class*="hover:bg-"]
+  [class*="text-white"]:not([class*=":text-white"]) {
+  color: #111827;
+}
+.dash .price-tag {
+  color: #ffffff;
+}
+.theme-light .price-tag {
+  color: var(--mat-blue);
+}
+
+/* ══════════════════════════════════════════════════
+   DE LA COULEUR EN MODE CLAIR
+   ══════════════════════════════════════════════════
+   Mode clair ne veut pas dire tout blanc : le bleu marine du menu
+   revient sur le fond de page (très légèrement teinté), sur les
+   fenêtres qui s'ouvrent et sur les titres. */
+.theme-light {
+  --l-bg: #e4eaf3;
+}
+body:has(.theme-light) {
+  background: #e4eaf3;
+}
+.dash.theme-light {
+  background-color: #e4eaf3;
+}
+
+/* Fenêtres (modales) : bandeau marine en tête, comme la barre latérale. */
+.theme-light .fixed.inset-0 > .card,
+.theme-light .fixed.inset-0 .card.relative {
+  border-top: 0;
+  padding-top: 0;
+  overflow: hidden;
+}
+.theme-light .fixed.inset-0 > .card > :first-child,
+.theme-light .fixed.inset-0 .card.relative > :first-child {
+  margin: 0 -24px 16px;
+  padding: 16px 24px;
+  background: #14213a;
+  color: #ffffff;
+}
+.theme-light .fixed.inset-0 > .card > :first-child *,
+.theme-light .fixed.inset-0 .card.relative > :first-child * {
+  color: #e6ecf5 !important;
+}
+.theme-light .fixed.inset-0 > .card > :first-child h2,
+.theme-light .fixed.inset-0 > .card > :first-child h3,
+.theme-light .fixed.inset-0 .card.relative > :first-child h2,
+.theme-light .fixed.inset-0 .card.relative > :first-child h3 {
+  color: #ffffff !important;
+}
+.theme-light .fixed.inset-0 > .card > :first-child button:hover,
+.theme-light .fixed.inset-0 .card.relative > :first-child button:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+
+/* Titres de page et de carte : marine plutôt que noir. */
+.theme-light h1,
+.theme-light .card h2,
+.theme-light .card h3 {
+  color: #14213a;
+}
+/* Cartes : liseré marine discret à gauche pour les rythmer. */
+.theme-light main .card {
+  border-left: 3px solid #2f4f7f33;
+}

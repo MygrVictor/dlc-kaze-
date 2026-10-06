@@ -234,7 +234,7 @@ export default function ClientDashboard() {
               </div>
               <div className="flex items-center gap-4">
                 {mission.price && (
-                  <span className="text-lg font-bold text-white">
+                  <span className="price-tag text-lg font-bold">
                     {formatPrice(mission.price)}
                   </span>
                 )}

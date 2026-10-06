@@ -197,7 +197,7 @@ export default function ClientDevis() {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-center">
-                <span className="text-lg font-bold text-white mr-1">
+                <span className="price-tag text-lg font-bold mr-1">
                   {formatPrice(mission.price)}
                 </span>
                 <button
