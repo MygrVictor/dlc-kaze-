@@ -1,0 +1,260 @@
+/* ══════════════════════════════════════════════════
+   HARMONISATION — boutons mats et palette unique
+   ══════════════════════════════════════════════════
+
+   Les boutons de l'espace connecté mélangeaient des teintes Tailwind vives
+   (bleu 600, orange 600, vert 500…) et des teintes déjà adoucies. Une
+   seule palette de tons classiques, peu saturés et sans reflet, est
+   imposée ici à tous les boutons pleins, quel que soit le thème. */
+.dash {
+  --mat-blue: #2f4f7f;
+  --mat-blue-h: #284470;
+  --mat-green: #2f6b55;
+  --mat-green-h: #285c49;
+  --mat-red: #a33a3a;
+  --mat-red-h: #8e3131;
+  --mat-orange: #a5622e;
+  --mat-orange-h: #8f5427;
+}
+
+.dash .btn-primary,
+.dash .btn-success,
+.dash .btn-accent,
+.dash .btn-warning,
+.dash .btn-danger,
+.dash .btn-outline,
+.dash .btn-secondary,
+.dash .btn-ghost,
+.dash .btn-soft-success,
+.dash .btn-soft-warning,
+.dash .btn-soft-danger {
+  box-shadow: none;
+  background-image: none;
+  text-shadow: none;
+}
+
+.dash .btn-primary {
+  background: var(--mat-blue);
+  border-color: var(--mat-blue);
+  color: #fff;
+}
+.dash .btn-primary:hover:not(:disabled) {
+  background: var(--mat-blue-h);
+  border-color: var(--mat-blue-h);
+}
+.dash .btn-success,
+.dash .btn-accent {
+  background: var(--mat-green);
+  border-color: var(--mat-green);
+  color: #fff;
+}
+.dash .btn-success:hover:not(:disabled),
+.dash .btn-accent:hover:not(:disabled) {
+  background: var(--mat-green-h);
+  border-color: var(--mat-green-h);
+}
+.dash .btn-warning {
+  background: var(--mat-orange);
+  border-color: var(--mat-orange);
+  color: #fff;
+}
+.dash .btn-warning:hover:not(:disabled) {
+  background: var(--mat-orange-h);
+  border-color: var(--mat-orange-h);
+}
+.dash .btn-danger {
+  background: var(--mat-red);
+  border-color: var(--mat-red);
+  color: #fff;
+}
+.dash .btn-danger:hover:not(:disabled) {
+  background: var(--mat-red-h);
+  border-color: var(--mat-red-h);
+}
+
+/* Boutons écrits directement en utilitaires (`bg-primary-600 …`) : on les
+   ramène sur la même palette. Les fonds translucides (`/10`, `/20`…) des
+   pastilles et encadrés ne sont pas concernés. */
+.dash button[class*="bg-primary-5"]:not([class*="bg-primary-500/"]),
+.dash button[class*="bg-primary-6"]:not([class*="bg-primary-600/"]),
+.dash button[class*="bg-primary-7"]:not([class*="bg-primary-700/"]),
+.dash a[class*="bg-primary-6"]:not([class*="bg-primary-600/"]),
+.dash button[class*="bg-blue-6"]:not([class*="bg-blue-600/"]),
+.dash button[class*="bg-indigo-6"]:not([class*="bg-indigo-600/"]) {
+  background-color: var(--mat-blue);
+  background-image: none;
+  box-shadow: none;
+}
+.dash button[class*="bg-accent-5"]:not([class*="bg-accent-500/"]),
+.dash button[class*="bg-accent-6"]:not([class*="bg-accent-600/"]),
+.dash button[class*="bg-accent-7"]:not([class*="bg-accent-700/"]),
+.dash button[class*="bg-green-6"]:not([class*="bg-green-600/"]),
+.dash button[class*="bg-emerald-6"]:not([class*="bg-emerald-600/"]) {
+  background-color: var(--mat-green);
+  background-image: none;
+  box-shadow: none;
+}
+.dash button[class*="bg-orange-5"]:not([class*="bg-orange-500/"]),
+.dash button[class*="bg-orange-6"]:not([class*="bg-orange-600/"]) {
+  background-color: var(--mat-orange);
+  background-image: none;
+  box-shadow: none;
+}
+.dash button[class*="bg-red-5"]:not([class*="bg-red-500/"]),
+.dash button[class*="bg-red-6"]:not([class*="bg-red-600/"]) {
+  background-color: var(--mat-red);
+  background-image: none;
+  box-shadow: none;
+}
+.dash button[class*="bg-primary-6"]:not([class*="/"]):hover:not(:disabled),
+.dash button[class*="bg-blue-6"]:not([class*="/"]):hover:not(:disabled),
+.dash button[class*="bg-indigo-6"]:not([class*="/"]):hover:not(:disabled) {
+  background-color: var(--mat-blue-h);
+}
+.dash button[class*="bg-accent-"]:not([class*="/"]):hover:not(:disabled) {
+  background-color: var(--mat-green-h);
+}
+.dash button[class*="bg-orange-6"]:not([class*="/"]):hover:not(:disabled) {
+  background-color: var(--mat-orange-h);
+}
+.dash button[class*="bg-red-6"]:not([class*="/"]):hover:not(:disabled) {
+  background-color: var(--mat-red-h);
+}
+
+/* ── Mode clair : une seule famille de gris ──────
+   Le mode clair mélangeait slate, gray et voiles noirs translucides :
+   plusieurs gris légèrement différents côte à côte. On aligne tout sur
+   une même gamme, et les boutons discrets sur la palette mate. */
+.theme-light {
+  --l-bg: #f4f5f7;
+  --l-surface: #ffffff;
+  --l-subtle: #f0f2f5;
+  --l-line: #dfe3e8;
+  --l-line-strong: #c5ccd5;
+  --l-text: #1f2733;
+  --l-text-2: #4a5462;
+}
+body:has(.theme-light) {
+  background: #f4f5f7;
+}
+.dash.theme-light {
+  background-color: var(--l-bg);
+  color: var(--l-text);
+}
+.theme-light [class*="bg-dark-950"],
+.theme-light [class*="bg-slate-950"],
+.theme-light [class*="bg-dark-700"],
+.theme-light [class*="bg-gray-700"] {
+  background-color: var(--l-subtle);
+}
+.theme-light [class*="bg-dark-900"],
+.theme-light [class*="bg-slate-900"],
+.theme-light [class*="bg-dark-800"],
+.theme-light [class*="bg-slate-800"],
+.theme-light [class*="bg-gray-800"],
+.theme-light aside,
+.dash.theme-light .card,
+.theme-light .card {
+  background-color: var(--l-surface);
+}
+.theme-light [class*="border-dark-7"],
+.theme-light [class*="border-dark-8"],
+.theme-light [class*="border-slate-7"],
+.theme-light [class*="border-slate-8"],
+.theme-light [class*="border-gray-7"],
+.theme-light [class*="divide-dark-"] > * + *,
+.theme-light .card {
+  border-color: var(--l-line);
+}
+.theme-light [class*="border-dark-5"],
+.theme-light [class*="border-dark-6"] {
+  border-color: var(--l-line-strong);
+}
+.theme-light .card {
+  box-shadow: 0 1px 2px rgb(31 39 51 / 0.05);
+}
+.theme-light .badge {
+  background: var(--l-subtle);
+  border-color: var(--l-line);
+  color: var(--l-text-2);
+}
+
+/* Boutons neutres et discrets en mode clair : mêmes tons mats. */
+.theme-light .btn-secondary,
+.theme-light .btn-outline {
+  background: var(--l-surface);
+  border-color: var(--l-line-strong);
+  color: var(--l-text);
+}
+.theme-light .btn-secondary:hover:not(:disabled),
+.theme-light .btn-outline:hover:not(:disabled) {
+  background: var(--l-subtle);
+  border-color: #aeb7c2;
+}
+.theme-light .btn-soft-success {
+  background: #eef4f1;
+  border-color: #b9d1c6;
+  color: #2f6b55;
+}
+.theme-light .btn-soft-success:hover:not(:disabled) {
+  background: #e2ece7;
+  border-color: #9cbfaf;
+}
+.theme-light .btn-soft-warning {
+  background: #f6efe8;
+  border-color: #dcc3aa;
+  color: #8a5226;
+}
+.theme-light .btn-soft-warning:hover:not(:disabled) {
+  background: #efe3d7;
+  border-color: #cfac8b;
+}
+.theme-light .btn-soft-danger {
+  background: #f6ecec;
+  border-color: #ddbcbc;
+  color: #8e3131;
+}
+.theme-light .btn-soft-danger:hover:not(:disabled) {
+  background: #efdfdf;
+  border-color: #cfa2a2;
+}
+
+/* Champs : même bordure que le reste, focus dans le bleu mat. */
+.dash.theme-light .input-field,
+.theme-light input:not([type="checkbox"]):not([type="radio"]),
+.theme-light textarea,
+.theme-light select {
+  border-color: var(--l-line-strong);
+  color: var(--l-text);
+}
+.dash.theme-light .input-field:focus,
+.theme-light input:focus,
+.theme-light textarea:focus,
+.theme-light select:focus {
+  border-color: var(--mat-blue);
+}
+
+/* Couleurs d'information : même teinte que les boutons, pour que texte,
+   pastille et bouton d'une même famille se répondent. */
+.theme-light [class*="text-primary-4"],
+.theme-light [class*="text-primary-3"],
+.theme-light [class*="text-blue-4"],
+.theme-light [class*="text-blue-3"],
+.theme-light [class*="text-indigo-4"],
+.theme-light [class*="text-cyan-4"] {
+  color: var(--mat-blue);
+}
+.theme-light [class*="text-accent-4"],
+.theme-light [class*="text-accent-3"],
+.theme-light [class*="text-green-4"],
+.theme-light [class*="text-emerald-4"] {
+  color: var(--mat-green);
+}
+.theme-light [class*="text-orange-4"],
+.theme-light [class*="text-orange-3"] {
+  color: var(--mat-orange-h);
+}
+.theme-light [class*="text-red-4"],
+.theme-light [class*="text-red-3"] {
+  color: var(--mat-red);
+}
