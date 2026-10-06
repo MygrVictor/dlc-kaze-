@@ -812,12 +812,12 @@ export default function AdminMissions() {
                     <td className="py-3 px-4 text-dark-400" data-label="Date">
                       {formatDate(m.departure_date || m.created_at)}
                     </td>
-                    <td className="py-3 px-4 font-semibold" data-label="Prix">
+                    <td className="price-cell py-3 px-4 font-semibold" data-label="Prix">
                       {m.price ? (
                         <div>
                           {formatPrice(m.price)}
                           {m.price_convoyeur && (
-                            <p className="text-[10px] font-normal text-accent-400">
+                            <p className="price-tag text-[10px] font-normal text-accent-400">
                               Conv. {formatPrice(m.price_convoyeur)}
                             </p>
                           )}
@@ -1326,10 +1326,10 @@ export default function AdminMissions() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs text-dark-400">Prix client</p>
-                    <p className="text-lg font-bold">
+                    <p className="price-tag text-lg font-bold">
                       {priceModal.price ? formatPrice(priceModal.price) : "—"}
                       {priceModal.price_convoyeur && (
-                        <span className="ml-3 text-sm font-normal text-accent-400">
+                        <span className="price-tag ml-3 text-sm font-normal text-accent-400">
                           Convoyeur {formatPrice(priceModal.price_convoyeur)}
                         </span>
                       )}

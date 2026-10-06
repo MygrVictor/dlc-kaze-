@@ -840,10 +840,10 @@ export default function AdminDashboard() {
                                 <span className="text-dark-500">—</span>
                               )}
                             </td>
-                            <td className="py-2.5 pr-3 font-semibold">
+                            <td className="price-cell py-2.5 pr-3 font-semibold">
                               {m.price ? formatPrice(m.price) : "—"}
                             </td>
-                            <td className="py-2.5 pr-3 text-amber-400 font-bold text-base">
+                            <td className="price-cell py-2.5 pr-3 text-amber-400 font-bold text-base">
                               {m.price_convoyeur
                                 ? formatPrice(m.price_convoyeur)
                                 : "—"}
@@ -1909,7 +1909,7 @@ export default function AdminDashboard() {
             </div>
             {priceModal.refus_motif && (
               <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg mb-4">
-                <p className="text-sm font-semibold text-orange-300 mb-1">
+                <p className="price-tag text-sm font-semibold text-orange-300 mb-1">
                   Devis précédent refusé
                   {priceModal.price
                     ? ` (${formatPrice(priceModal.price)})`
@@ -2515,7 +2515,7 @@ function MissionsTab({
                       {formatDate(m.departure_date || m.created_at)}
                     </td>
                     {/* Prix */}
-                    <td className="py-3 px-3 font-semibold">
+                    <td className="price-cell py-3 px-3 font-semibold">
                       {m.price ? (
                         formatPrice(m.price)
                       ) : (
@@ -3127,7 +3127,7 @@ function UpcomingMissionsTab({
                     {/* Prix */}
                     <td className="py-2.5 px-3 text-xs">
                       {m.price ? (
-                        <span className="text-emerald-400 font-medium">
+                        <span className="price-tag text-emerald-400 font-medium">
                           {formatPrice(m.price)}
                         </span>
                       ) : (
