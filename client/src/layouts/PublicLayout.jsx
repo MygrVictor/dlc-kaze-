@@ -1,4 +1,4 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 
@@ -56,10 +56,62 @@ function useSectionActive() {
   return actif;
 }
 
+/**
+ * Gestion du défilement entre les pages du site.
+ *
+ * - Changement de page sans ancre : retour en haut (sinon on arrivait sur
+ *   « Devenir convoyeur » à la hauteur où l'on avait cliqué sur l'accueil).
+ * - Ancre (`/#convoy`) : défilement vers la section, en réessayant le temps
+ *   que la page d'accueil (chargée à la demande) soit affichée.
+ */
+function useDefilementRoutes() {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    const id = hash.slice(1);
+    let essais = 0;
+    let minuteur;
+    const viser = () => {
+      const cible = document.getElementById(id);
+      if (cible) {
+        cible.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (essais++ < 20) {
+        minuteur = setTimeout(viser, 50);
+      }
+    };
+    viser();
+    return () => clearTimeout(minuteur);
+  }, [pathname, hash]);
+}
+
 export default function PublicLayout() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const sectionActive = useSectionActive();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const surAccueil = pathname === "/";
+  useDefilementRoutes();
+
+  /**
+   * Les liens de la navbar visent des sections de l'accueil. Depuis une
+   * autre page (formulaire de rappel, devenir convoyeur), une simple ancre
+   * `#convoy` ne mène nulle part : on repasse donc par l'accueil.
+   */
+  const allerA = (e, href) => {
+    e.preventDefault();
+    setMenuOpen(false);
+    if (href === "/") {
+      if (surAccueil) window.scrollTo({ top: 0, behavior: "smooth" });
+      else navigate("/");
+      return;
+    }
+    navigate(`/${href}`);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -107,12 +159,13 @@ export default function PublicLayout() {
                 const cible = item.href.startsWith("#")
                   ? item.href.slice(1)
                   : "accueil";
-                const estActif = sectionActive === cible;
+                const estActif = surAccueil && sectionActive === cible;
 
                 return (
                   <li key={item.label}>
                     <a
-                      href={item.href}
+                      href={item.href === "/" ? "/" : `/${item.href}`}
+                      onClick={(e) => allerA(e, item.href)}
                       className={`nav-lien${estActif ? " nav-lien--actif" : ""}`}
                       aria-current={estActif ? "true" : undefined}
                     >
@@ -191,8 +244,8 @@ export default function PublicLayout() {
             {LIENS.map((item) => (
               <a
                 key={item.label}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
+                href={item.href === "/" ? "/" : `/${item.href}`}
+                onClick={(e) => allerA(e, item.href)}
                 style={{
                   color: "rgba(255,255,255,0.75)",
                   fontSize: 15,

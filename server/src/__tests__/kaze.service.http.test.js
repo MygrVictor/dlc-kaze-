@@ -466,7 +466,11 @@ describe("fetchRecentJobs", () => {
   });
 
   it("sert le cache pendant cinq minutes", async () => {
-    client.get.mockResolvedValue(page([jobRecent("j1")]));
+    // Le cache n'est servi que si chaque job porte ses étapes : un job
+    // sans étapes force un rafraîchissement (cf. fetchRecentJobs).
+    client.get.mockResolvedValue(
+      page([{ ...jobRecent("j1"), steps: [{ id: "s1" }] }]),
+    );
 
     await kaze.fetchRecentJobs();
     const appelsInitiaux = client.get.mock.calls.length;
@@ -1031,17 +1035,32 @@ describe("createMission", () => {
       client.get.mockResolvedValue({ data: gabaritObs() });
     });
 
-    it("transmet les commentaires du client tels quels", async () => {
-      await kaze.createMission({ ...MISSION, comments: "Portail code 1234" });
+    // Seules les consignes validées par l'admin (`convoyeur_comments`)
+    // partent vers Kaze : le commentaire brut du client peut contenir des
+    // informations commerciales qui n'ont pas à être lues par le convoyeur.
+    it("transmet les consignes destinées au convoyeur telles quelles", async () => {
+      await kaze.createMission({
+        ...MISSION,
+        convoyeur_comments: "Portail code 1234",
+      });
 
       expect(observations()).toBe("Portail code 1234");
+    });
+
+    it("ne transmet pas le commentaire brut du client", async () => {
+      await kaze.createMission({
+        ...MISSION,
+        comments: "Remise négociée 20 %",
+      });
+
+      expect(observations()).toBe("");
     });
 
     it("annonce la mise en main en tête des observations", async () => {
       await kaze.createMission({
         ...MISSION,
         service_handover: true,
-        comments: "Portail code 1234",
+        convoyeur_comments: "Portail code 1234",
       });
 
       expect(observations()).toBe(

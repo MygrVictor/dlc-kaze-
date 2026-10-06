@@ -13,6 +13,8 @@ const missionRoutes = require("./routes/mission.routes");
 const adminRoutes = require("./routes/admin.routes");
 const convoyeurRoutes = require("./routes/convoyeur.routes");
 const factureRoutes = require("./routes/facture.routes");
+const missionDocumentRoutes = require("./routes/mission-documents.routes");
+const { peutConsulter } = require("./db/perimetre");
 const webhookRoutes = require("./routes/webhook.routes");
 const partnerRoutes = require("./routes/partner.routes");
 const { extractAuthToken } = require("./lib/auth-cookie");
@@ -222,6 +224,7 @@ app.use("/api/missions", missionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/convoyeur", convoyeurRoutes);
 app.use("/api/factures", factureRoutes);
+app.use("/api/mission-documents", missionDocumentRoutes);
 app.use("/api/v1", partnerRoutes);
 
 // ── Fichiers uploadés (documents convoyeurs) ─────────────────
@@ -309,7 +312,33 @@ app.get(/^\/uploads\/(.+)$/, async (req, res) => {
       if (candidatures[0]) reserveAdmin = true;
     }
 
-    if (reserveAdmin) {
+    // Quatrième famille : les pièces jointes d'une mission. Le client (ou
+    // son siège) et l'admin y ont accès ; le convoyeur affecté seulement
+    // si l'admin a coché la pièce comme visible.
+    let docMission = null;
+    if (!proprietaireId && !reserveAdmin) {
+      const piecesMission = await db.query(
+        `SELECT m.client_id, m.convoyeur_id, md.visible_convoyeur
+           FROM mission_documents md
+           JOIN missions m ON m.id = md.mission_id
+          WHERE md.file_path = $1`,
+        [cheminRelatif],
+      );
+      docMission = piecesMission?.rows?.[0] || null;
+    }
+
+    if (docMission) {
+      const autorise =
+        demandeur.role === "admin" ||
+        (demandeur.role === "convoyeur" &&
+          docMission.convoyeur_id === demandeur.id &&
+          docMission.visible_convoyeur) ||
+        (demandeur.role === "client" &&
+          (await peutConsulter(demandeur, docMission.client_id)));
+      if (!autorise) {
+        return res.status(404).json({ error: "Fichier introuvable." });
+      }
+    } else if (reserveAdmin) {
       if (demandeur.role !== "admin") {
         return res.status(404).json({ error: "Fichier introuvable." });
       }

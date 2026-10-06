@@ -32,6 +32,10 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import BandeauDossier from "../../components/BandeauDossier";
+import MissionDocuments from "../../components/MissionDocuments";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import useSondage from "../../lib/useSondage";
 
 export default function ConvoyeurDashboard() {
@@ -609,6 +613,16 @@ export default function ConvoyeurDashboard() {
                         </div>
                       )}
                     </div>
+
+                    {/* Documents transmis par Drive Line Connect (carte
+                        grise, bon d'enlèvement…) — seulement les pièces
+                        cochées par l'admin. Masqué s'il n'y en a aucune. */}
+                    {UUID_REGEX.test(String(mission.id || "")) && (
+                      <MissionDocuments
+                        missionId={mission.id}
+                        mode="convoyeur"
+                      />
+                    )}
                   </div>
                 )}
               </div>

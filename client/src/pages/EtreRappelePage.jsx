@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
 import RappelForm from "../components/RappelForm";
 
 /**
@@ -15,13 +14,6 @@ import RappelForm from "../components/RappelForm";
  * ce qu'une ancre en bas de page ne permettait pas.
  */
 export default function EtreRappelePage() {
-  // Un visiteur qui suit un lien depuis le bas de la page d'accueil
-  // arriverait sinon à mi-hauteur, la position de défilement étant
-  // conservée d'une route à l'autre.
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
   return (
     <main className="page-rappel">
       <div className="page-rappel__inner">

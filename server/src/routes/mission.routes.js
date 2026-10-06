@@ -719,25 +719,32 @@ router.get(
 
       const groupe = lot.length > 1;
 
-      // Numérotation incrémentale par compte client : chaque client a sa
-      // propre suite DEV-000001, DEV-000002, … sur ses devis cotés.
-      //
-      // On ancre le numéro sur la première mission du lot pour qu'un devis
-      // multi-véhicules conserve la même référence quel que soit le véhicule
-      // depuis lequel le client télécharge le PDF.
+      // Numérotation auto-incrémentée : chaque devis reçoit le numéro
+      // suivant de la séquence `devis_number_seq` à sa première édition,
+      // puis le conserve. Un devis multi-véhicules partage un seul numéro.
       const missionAncre = groupe ? lot[0] : mission;
-      const { rows: numeroRows } = await db.query(
-        `SELECT COUNT(*)::int AS devis_index
-           FROM missions
-          WHERE client_id = $1
-            AND price IS NOT NULL
-            AND (
-              created_at < $2
-              OR (created_at = $2 AND id <= $3)
-            )`,
-        [missionAncre.client_id, missionAncre.created_at, missionAncre.id],
-      );
-      const devisIndex = Math.max(1, Number(numeroRows[0]?.devis_index || 1));
+      let devisIndex = Number(missionAncre.devis_number) || null;
+      if (!devisIndex) {
+        const idsLot = lot.map((m) => m.id);
+        const attribution = await db.query(
+          `WITH n AS (SELECT nextval('devis_number_seq') AS v)
+           UPDATE missions
+              SET devis_number = n.v
+             FROM n
+            WHERE missions.id = ANY($1) AND missions.devis_number IS NULL
+        RETURNING missions.devis_number`,
+          [idsLot],
+        );
+        devisIndex = Number(attribution?.rows?.[0]?.devis_number) || null;
+        if (!devisIndex) {
+          // Une édition concurrente a pu attribuer le numéro entre-temps.
+          const relu = await db.query(
+            "SELECT devis_number FROM missions WHERE id = $1",
+            [missionAncre.id],
+          );
+          devisIndex = Number(relu?.rows?.[0]?.devis_number) || 1;
+        }
+      }
       const devisNum = `DEV-${String(devisIndex).padStart(6, "0")}`;
 
       // Le renderer de PDF lit `quote_number`/`devis_number` : on injecte la

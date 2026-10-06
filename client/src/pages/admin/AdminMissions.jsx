@@ -36,6 +36,7 @@ import {
   UserX,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import MissionDocuments from "../../components/MissionDocuments";
 
 // ── Kaze status helpers ──
 const KAZE_STATUS_MAP = {
@@ -1282,6 +1283,11 @@ export default function AdminMissions() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Pièces jointes : l'admin coche celles que le convoyeur verra */}
+              {priceModal.source === "dlc" && priceModal.id && (
+                <MissionDocuments missionId={priceModal.id} mode="admin" />
               )}
 
               {/* Motif de refus du précédent devis */}

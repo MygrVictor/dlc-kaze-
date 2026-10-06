@@ -142,7 +142,14 @@ describe("AdminMissions", () => {
   it("ouvre la modale de cotation en cliquant sur Coter", async () => {
     renderAdminMissions();
     await waitFor(() => screen.getByRole("button", { name: /coter/i }));
+    // Le bouton de la ligne ouvre d'abord le détail en lecture seule…
     fireEvent.click(screen.getByRole("button", { name: /coter/i }));
+    await waitFor(() =>
+      expect(screen.getByText("Détail de la mission")).toBeInTheDocument(),
+    );
+    // …puis « Coter » dans le détail bascule en mode cotation.
+    const boutons = screen.getAllByRole("button", { name: /^coter$/i });
+    fireEvent.click(boutons[boutons.length - 1]);
     await waitFor(() =>
       expect(screen.getByText("Coter la mission")).toBeInTheDocument(),
     );

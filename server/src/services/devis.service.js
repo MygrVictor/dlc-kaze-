@@ -96,6 +96,20 @@ const formatDevisNumber = (value) => {
   return `DEV-${String(safe).padStart(6, "0")}`;
 };
 
+/**
+ * Échéance du devis : un mois après l'émission. En fin de mois, on
+ * plafonne au dernier jour du mois suivant (31/01 → 28/02, pas 03/03).
+ */
+const echeanceDevis = (emission) => {
+  const d = new Date(emission);
+  const jour = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + 1);
+  const dernierJour = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(jour, dernierJour));
+  return d;
+};
+
 const resolveDevisLogoPath = () => {
   const candidates = [
     process.env.DEVIS_LOGO_PATH,
@@ -154,7 +168,7 @@ function generateDevisPDF(mission, client) {
     mission.devis_number || mission.devis_numero || mission.quote_number,
   );
   const today = new Date();
-  const echeance = mission.arrival_date || mission.departure_date || today;
+  const echeance = echeanceDevis(today);
 
   doc
     .fontSize(10)
@@ -623,20 +637,27 @@ function generateDevisGroupePDF(missions, client) {
     .font("Helvetica-Bold")
     .fillColor(COLORS.primary)
     .text(devisNum, 350, 45, { width: pageWidth - 300, align: "right" });
+  const emission = new Date();
   doc
     .fontSize(9)
     .font("Helvetica")
     .fillColor(COLORS.muted)
     .text(
-      `${missions.length} véhicules — émis le ${formatDateShort(new Date())}`,
+      `${missions.length} véhicules — émis le ${formatDateNumeric(emission)}`,
       350,
       68,
+      { width: pageWidth - 300, align: "right" },
+    )
+    .text(
+      `Date d'échéance : ${formatDateNumeric(echeanceDevis(emission))}`,
+      350,
+      80,
       { width: pageWidth - 300, align: "right" },
     );
 
   doc
-    .moveTo(50, 90)
-    .lineTo(50 + pageWidth, 90)
+    .moveTo(50, 96)
+    .lineTo(50 + pageWidth, 96)
     .strokeColor(COLORS.line)
     .lineWidth(1)
     .stroke();

@@ -282,6 +282,48 @@ const migrate = async () => {
       ADD COLUMN IF NOT EXISTS desired_pickup_date TIMESTAMPTZ;
   `);
 
+  // Pièces jointes d'une mission (carte grise, bon d'enlèvement…).
+  // `visible_convoyeur` est coché par l'admin : rien ne part sur le
+  // terrain sans validation.
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS mission_documents (
+      id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      mission_id        UUID NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+      label             VARCHAR(120) NOT NULL,
+      original_name     VARCHAR(255) NOT NULL,
+      file_path         VARCHAR(500) NOT NULL,
+      mime_type         VARCHAR(100),
+      visible_convoyeur BOOLEAN NOT NULL DEFAULT false,
+      uploaded_by       UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_mission_documents_mission
+      ON mission_documents(mission_id);
+    CREATE INDEX IF NOT EXISTS idx_mission_documents_chemin
+      ON mission_documents(file_path);
+  `);
+
+  // Numérotation des devis : une suite unique, attribuée une fois pour
+  // toutes à la première édition et conservée sur la mission. Le
+  // compteur démarre après le nombre de missions déjà cotées pour ne
+  // pas réémettre un numéro déjà communiqué à un client.
+  await db.query(`
+    ALTER TABLE missions
+      ADD COLUMN IF NOT EXISTS devis_number INTEGER;
+    CREATE SEQUENCE IF NOT EXISTS devis_number_seq;
+  `);
+  await db.query(`
+    SELECT setval(
+      'devis_number_seq',
+      GREATEST(
+        (SELECT COUNT(*) FROM missions WHERE price IS NOT NULL),
+        (SELECT COALESCE(MAX(devis_number), 0) FROM missions)
+      ) + 1,
+      false
+    )
+    WHERE NOT (SELECT is_called FROM devis_number_seq);
+  `);
+
   await db.query(`
     CREATE TABLE IF NOT EXISTS user_documents (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

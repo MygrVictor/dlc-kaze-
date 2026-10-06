@@ -327,8 +327,9 @@ describe("POST /api/missions — création", () => {
     // de lot + destinataire du récapitulatif + statut initial + les deux
     // prix et l'auteur, réservés à la saisie administrative, + la
     // structure de livraison et sa raison sociale + les métadonnées
-    // supplémentaires introduites par l'évolution de création.
-    expect(params).toHaveLength(45);
+    // supplémentaires introduites par l'évolution de création + la date
+    // d'enlèvement souhaitée.
+    expect(params).toHaveLength(46);
     expect(params).toEqual(
       expect.arrayContaining([
         CLIENT.id,
@@ -643,7 +644,7 @@ describe("POST /api/missions — dates et urgence", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(capture.params).toHaveLength(45);
+      expect(capture.params).toHaveLength(46);
       expect(capture.sql).toMatch(/service_handover/);
     });
   });

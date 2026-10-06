@@ -26,6 +26,8 @@ import {
   Sparkles,
   Check,
   Fuel,
+  Paperclip,
+  Upload,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ChampAdresse from "../../components/ChampAdresse";
@@ -225,6 +227,30 @@ export default function NewMission() {
 
   const [observations, setObservations] = useState("");
 
+  // Pièces jointes (carte grise, bon d'enlèvement…), libellé libre.
+  // Envoyées après la création, une fois les missions connues.
+  const [pieces, setPieces] = useState([]);
+  const FORMATS_PIECES = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ];
+  const ajouterPieces = (fichiers) => {
+    const valides = [];
+    for (const f of Array.from(fichiers || [])) {
+      if (!FORMATS_PIECES.includes(f.type)) {
+        toast.error(`${f.name} : formats acceptés PDF, JPG, PNG, WEBP.`);
+      } else if (f.size > 10 * 1024 * 1024) {
+        toast.error(`${f.name} : 10 Mo maximum.`);
+      } else {
+        valides.push({ file: f, label: f.name.replace(/\.[^.]+$/, "") });
+      }
+    }
+    if (valides.length) setPieces((p) => [...p, ...valides]);
+  };
+  const piecesValides = pieces.every((p) => p.label.trim());
+
   // ── Helpers véhicules ──
   const addVehicle = () => setVehicles([...vehicles, emptyVehicle()]);
   const removeVehicle = (idx) => {
@@ -285,6 +311,8 @@ export default function NewMission() {
           !erreurTelephone(emergency.phone) &&
           !erreurEmail(emergency.contactEmail)
         );
+      case 5:
+        return piecesValides;
       default:
         return true;
     }
@@ -344,6 +372,29 @@ export default function NewMission() {
       const { data } = await api.post("/missions", payload);
       const count = data.count || 1;
 
+      // Pièces jointes : rattachées à chaque mission créée (un véhicule =
+      // une mission). Un échec n'annule pas la mission déjà enregistrée.
+      if (pieces.length && data.missions?.length) {
+        let echecs = 0;
+        for (const m of data.missions) {
+          for (const p of pieces) {
+            const fd = new FormData();
+            fd.append("label", p.label.trim());
+            fd.append("document", p.file);
+            try {
+              await api.post(`/mission-documents/mission/${m.id}`, fd);
+            } catch {
+              echecs += 1;
+            }
+          }
+        }
+        if (echecs) {
+          toast.error(
+            "Certains documents n'ont pas pu être envoyés. Transmettez-les à notre équipe.",
+          );
+        }
+      }
+
       if (estAdmin) {
         toast.success(
           count > 1
@@ -372,11 +423,11 @@ export default function NewMission() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Nouvelle mission</h1>
-        <p className="text-dark-400 text-sm mt-1">
-          {estAdmin
-            ? "Mission déjà négociée : elle sera publiée immédiatement auprès des convoyeurs."
-            : "Remplissez les informations pour recevoir un devis personnalisé."}
-        </p>
+        {!estAdmin && (
+          <p className="text-dark-400 text-sm mt-1">
+            Remplissez les informations pour recevoir un devis personnalisé.
+          </p>
+        )}
       </div>
 
       {/* Stepper */}
@@ -498,9 +549,6 @@ export default function NewMission() {
                     onChange={(e) => setPriceConvoyeur(e.target.value)}
                     placeholder="180.00"
                   />
-                  <p className="text-xs text-dark-500 mt-2">
-                    Seul montant visible par les convoyeurs.
-                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-1.5">
@@ -515,9 +563,6 @@ export default function NewMission() {
                     onChange={(e) => setPriceClient(e.target.value)}
                     placeholder="Facultatif"
                   />
-                  <p className="text-xs text-dark-500 mt-2">
-                    Pour votre suivi, jamais affiché au convoyeur.
-                  </p>
                 </div>
               </div>
 
@@ -532,15 +577,7 @@ export default function NewMission() {
                   onChange={(e) => setPurchaseOrderNumber(e.target.value)}
                   placeholder="Ex. BC-2026-1042"
                 />
-                <p className="text-xs text-dark-500 mt-2">
-                  Référence interne, visible uniquement côté administration.
-                </p>
               </div>
-
-              <p className="text-xs text-primary-300 bg-primary-600/10 border border-primary-600/20 rounded-lg px-4 py-3 leading-relaxed">
-                Cette mission ne passe pas par la cotation : elle sera publiée
-                immédiatement auprès des convoyeurs.
-              </p>
             </div>
           )}
 
@@ -598,7 +635,7 @@ export default function NewMission() {
                   placeholder="Ex. BC-2026-1042"
                 />
                 <p className="text-xs text-dark-500 mt-2">
-                  Référence interne, non transmise au convoyeur.
+                  Votre référence pour cette commande (facultatif).
                 </p>
               </div>
             )}
@@ -1260,16 +1297,99 @@ export default function NewMission() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Observations internes (équipe admin uniquement)
+                Informations complémentaires
               </label>
               <textarea
                 value={observations}
                 onChange={(e) => setObservations(e.target.value)}
                 rows={5}
                 className="input-field resize-none"
-                placeholder="Ces informations ne sont pas envoyées automatiquement au convoyeur. L'équipe admin filtre puis transmet uniquement le nécessaire."
+                placeholder="Précisions utiles pour la mission : accès au site, horaires, état du véhicule…"
               />
             </div>
+          </div>
+
+          {/* Documents */}
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Paperclip size={18} className="text-primary-400" />
+              <h3 className="text-sm font-semibold">Documents</h3>
+              <span className="text-xs text-dark-500">(facultatif)</span>
+            </div>
+            <p className="text-xs text-dark-400 mb-3">
+              Carte grise, bon d'enlèvement, PV… Joignez les pièces utiles à la
+              mission.
+            </p>
+
+            <div
+              className="border-2 border-dashed border-dark-600 rounded-xl p-4 text-sm text-dark-400 flex items-center justify-between gap-3"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                ajouterPieces(e.dataTransfer.files);
+              }}
+            >
+              <span>
+                Glissez vos fichiers ici (PDF, JPG, PNG, WEBP — 10 Mo max).
+              </span>
+              <label className="btn-secondary cursor-pointer inline-flex items-center gap-2 shrink-0">
+                <Upload size={14} />
+                Ajouter
+                <input
+                  type="file"
+                  multiple
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    ajouterPieces(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+
+            {pieces.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {pieces.map((p, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <input
+                      value={p.label}
+                      onChange={(e) =>
+                        setPieces((liste) =>
+                          liste.map((x, j) =>
+                            j === i ? { ...x, label: e.target.value } : x,
+                          ),
+                        )
+                      }
+                      maxLength={120}
+                      className={`input-field flex-1 ${
+                        p.label.trim() ? "" : "border-red-500/60"
+                      }`}
+                      placeholder="Libellé (ex : Carte grise)"
+                      aria-label={`Libellé du document ${p.file.name}`}
+                    />
+                    <span className="text-xs text-dark-500 truncate max-w-[140px]">
+                      {p.file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPieces((liste) => liste.filter((_, j) => j !== i))
+                      }
+                      className="p-2 rounded-lg text-dark-400 hover:text-red-400 hover:bg-red-500/10"
+                      title="Retirer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!piecesValides && (
+              <p className="text-xs text-red-400 mt-2">
+                Chaque document doit avoir un libellé.
+              </p>
+            )}
           </div>
 
           {/* Récap */}
