@@ -57,7 +57,7 @@ const NAV_ITEMS = {
     { label: "Carte", path: "/admin/carte", icon: MapPin },
     { label: "Utilisateurs", path: "/admin/utilisateurs", icon: Users },
     { label: "Demandes", path: "/admin/demandes", icon: Inbox },
-    { label: "Gestion Kaze", path: "/admin/kaze", icon: Zap },
+    { label: "Santé API Kaze", path: "/admin/kaze", icon: Zap },
   ],
   convoyeur: [
     { label: "Mon planning", path: "/convoyeur", icon: LayoutDashboard },
