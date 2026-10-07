@@ -135,15 +135,37 @@ export default function AdminMissions() {
       .finally(() => setLoading(false));
   }, [statusFilter, searchQuery]);
 
-  // Debounce la recherche (400ms)
+  // Debounce la recherche (250ms)
   useEffect(() => {
     if (!searchQuery && !statusFilter) {
       fetchMissions();
       return;
     }
-    const timer = setTimeout(fetchMissions, searchQuery ? 400 : 0);
+    const timer = setTimeout(fetchMissions, searchQuery ? 250 : 0);
     return () => clearTimeout(timer);
   }, [fetchMissions]);
+
+  // Suggestions en direct sous le champ de recherche (dès 2 caractères).
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsOuvertes, setSuggestionsOuvertes] = useState(false);
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    let annule = false;
+    const t = setTimeout(() => {
+      api
+        .get(`/admin/missions?search=${encodeURIComponent(q)}&limit=8`)
+        .then((res) => !annule && setSuggestions(res.data.missions || []))
+        .catch(() => !annule && setSuggestions([]));
+    }, 150);
+    return () => {
+      annule = true;
+      clearTimeout(t);
+    };
+  }, [searchQuery]);
 
   // Fetch Kaze jobs once
   useEffect(() => {
@@ -590,9 +612,47 @@ export default function AdminMissions() {
             type="text"
             placeholder="Rechercher par client, entreprise, plaque, adresse, réf. Kaze…"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSuggestionsOuvertes(true);
+            }}
+            onFocus={() => setSuggestionsOuvertes(true)}
+            onBlur={() => setTimeout(() => setSuggestionsOuvertes(false), 150)}
+            onKeyDown={(e) =>
+              e.key === "Escape" && setSuggestionsOuvertes(false)
+            }
             className="input-field pl-9 py-2 text-sm"
+            autoComplete="off"
           />
+          {suggestionsOuvertes && suggestions.length > 0 && (
+            <ul className="absolute left-0 right-0 top-full mt-1 z-30 max-h-80 overflow-y-auto rounded-lg border border-dark-600 bg-dark-800 shadow-xl">
+              {suggestions.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setSuggestionsOuvertes(false);
+                      ouvrirMissionLecture(s);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-dark-700 flex items-center gap-3 text-sm"
+                  >
+                    <span className="font-mono font-semibold text-dark-100 whitespace-nowrap">
+                      {s.vehicle_plate || "—"}
+                    </span>
+                    <span className="truncate text-dark-200">
+                      {[s.vehicle_brand, s.vehicle_model]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </span>
+                    <span className="ml-auto truncate text-xs text-dark-400">
+                      {s.client_company || s.client_name}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <Link
           to="/admin/nouvelle-mission"
