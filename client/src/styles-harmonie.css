@@ -615,3 +615,38 @@ body:has(.theme-light) {
 .theme-light main .card {
   border-left: 3px solid #2f4f7f33;
 }
+
+/* Analyse : tableaux clients / convoyeurs lisibles en mode clair. */
+.theme-light .analyse-table {
+  color: #111827;
+}
+.theme-light .analyse-table thead {
+  background: #eef2f7;
+  color: #374151;
+}
+.theme-light .analyse-table td,
+.theme-light .analyse-table td p,
+.theme-light .analyse-table td span {
+  color: #111827;
+}
+.theme-light .analyse-table td .text-dark-500,
+.theme-light .analyse-table td.text-dark-500,
+.theme-light .analyse-table td.text-dark-400 {
+  color: #4b5563;
+}
+.theme-light .analyse-table td.text-emerald-400 {
+  color: #047857;
+  font-weight: 600;
+}
+.theme-light .analyse-table td.text-amber-400 {
+  color: #b45309;
+}
+.theme-light .analyse-table .text-red-400\/70 {
+  color: #b91c1c;
+}
+.theme-light .analyse-table tbody tr:hover {
+  background: #f3f6fa;
+}
+.theme-light .analyse-table tbody {
+  border-color: #e5e7eb;
+}

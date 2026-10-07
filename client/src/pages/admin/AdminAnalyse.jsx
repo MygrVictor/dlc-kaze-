@@ -703,7 +703,7 @@ export default function AdminAnalyse() {
       {onglet === "clients" && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="analyse-table w-full text-sm">
               <thead className="bg-dark-800/50 text-dark-400 text-xs">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Client</th>
@@ -817,7 +817,7 @@ export default function AdminAnalyse() {
       {onglet === "convoyeurs" && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="analyse-table w-full text-sm">
               <thead className="bg-dark-800/50 text-dark-400 text-xs">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Convoyeur</th>
