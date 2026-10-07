@@ -257,14 +257,32 @@ router.get("/missions", async (req, res, next) => {
       paramIdx += 1;
     }
 
-    if (search) {
+    // Recherche « intelligente » : chaque mot doit correspondre à au moins
+    // un champ (ET entre les mots). Pour la plaque, tirets et espaces sont
+    // ignorés : « ab », « AB-1 », « ab12 » trouvent « AB-123-CD ».
+    const motsRecherche = String(search || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 6);
+    let premierPlaque = null;
+    for (const mot of motsRecherche) {
+      const plaque = mot.toUpperCase().replace(/[^A-Z0-9]/g, "");
       conditions.push(`(
         u.full_name ILIKE $${paramIdx} OR u.email ILIKE $${paramIdx} OR u.company ILIKE $${paramIdx}
-        OR m.vehicle_brand ILIKE $${paramIdx} OR m.vehicle_plate ILIKE $${paramIdx}
+        OR m.vehicle_brand ILIKE $${paramIdx} OR m.vehicle_model ILIKE $${paramIdx}
         OR m.departure_address ILIKE $${paramIdx} OR m.arrival_address ILIKE $${paramIdx}
+        OR m.purchase_order_number ILIKE $${paramIdx}
+        OR m.kaze_mission_id::text ILIKE $${paramIdx}
+        ${plaque ? `OR REGEXP_REPLACE(UPPER(COALESCE(m.vehicle_plate, '')), '[^A-Z0-9]', '', 'g') LIKE $${paramIdx + 1}` : ""}
       )`);
-      params.push(`%${search}%`);
+      params.push(`%${mot}%`);
       paramIdx += 1;
+      if (plaque) {
+        params.push(`%${plaque}%`);
+        if (premierPlaque === null) premierPlaque = { idx: paramIdx, plaque };
+        paramIdx += 1;
+      }
     }
 
     if (MASQUER_MISSIONS_DEMO) {
@@ -277,7 +295,11 @@ router.get("/missions", async (req, res, next) => {
       countQuery += where;
     }
 
-    query += ` ORDER BY m.created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+    // Plaques qui COMMENCENT par la saisie en tête de liste.
+    const tri = premierPlaque
+      ? `(REGEXP_REPLACE(UPPER(COALESCE(m.vehicle_plate, '')), '[^A-Z0-9]', '', 'g') LIKE '${premierPlaque.plaque}%') DESC, `
+      : "";
+    query += ` ORDER BY ${tri}m.created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
 
     const [{ rows }, { rows: countRows }] = await Promise.all([
       db.query(query, [...params, safeLimit, offset]),

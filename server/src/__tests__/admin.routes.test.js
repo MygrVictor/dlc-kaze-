@@ -224,8 +224,32 @@ describe("GET /api/admin/missions", () => {
 
     const liste = appels.find((a) => !/COUNT/i.test(a.sql));
     expect(liste.sql).toMatch(/u\.full_name ILIKE/);
-    expect(liste.sql).toMatch(/m\.vehicle_plate ILIKE/);
+    expect(liste.sql).toMatch(/m\.vehicle_plate/);
     expect(liste.params).toContain("%Peugeot%");
+  });
+
+  it("recherche plaque tolérante : « ab-1 » cherche AB1 sans tirets", async () => {
+    const appels = mockListe();
+
+    await lister("?search=ab-1");
+
+    const liste = appels.find((a) => !/COUNT/i.test(a.sql));
+    expect(liste.sql).toMatch(
+      /REGEXP_REPLACE\(UPPER\(COALESCE\(m\.vehicle_plate/,
+    );
+    expect(liste.params).toContain("%AB1%");
+    expect(liste.sql).toMatch(/LIKE 'AB1%'\) DESC/);
+  });
+
+  it("plusieurs mots : chacun doit correspondre (ET)", async () => {
+    const appels = mockListe();
+
+    await lister("?search=Peugeot%20Lyon");
+
+    const liste = appels.find((a) => !/COUNT/i.test(a.sql));
+    expect(liste.params).toEqual(
+      expect.arrayContaining(["%Peugeot%", "%Lyon%"]),
+    );
   });
 
   it("combine statut et recherche avec un AND", async () => {
