@@ -441,7 +441,7 @@ export default function LandingPage() {
                 flotte automobile. »
               </blockquote>
               <figcaption>
-                <strong>GRF</strong>
+                <strong>GRDF</strong>
                 <span>Avis Trustpilot</span>
               </figcaption>
             </figure>
