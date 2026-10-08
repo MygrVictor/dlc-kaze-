@@ -429,33 +429,38 @@ export default function LandingPage() {
 
           <div className="temoignages reveal">
             <figure className="temoignage">
+              <div className="temoignage-etoiles" aria-label="5 étoiles sur 5">
+                ★★★★★
+              </div>
               <blockquote>
-                « Un interlocuteur unique qui connaît nos sites et nos
-                contraintes. On appelle, c'est réglé dans l'heure. »
+                « DriveLineConnect est notre partenaire depuis près de six mois
+                et nous sommes très satisfaits de cette collaboration. Son
+                professionnalisme, son sens de l'écoute et sa réactivité font
+                toute la différence au quotidien. Rien à redire : un partenaire
+                fiable et efficace que je recommande vivement pour la gestion de
+                flotte automobile. »
               </blockquote>
               <figcaption>
-                <strong>Responsable de flotte</strong>
-                <span>Énergie · 120 véhicules / an</span>
+                <strong>GRF</strong>
+                <span>Avis Trustpilot</span>
               </figcaption>
             </figure>
             <figure className="temoignage">
+              <div className="temoignage-etoiles" aria-label="5 étoiles sur 5">
+                ★★★★★
+              </div>
               <blockquote>
-                « Les états des lieux photo à l'enlèvement et à la livraison ont
-                mis fin aux litiges sur les rayures. »
+                « Driveline Connect est un très bon partenaire avec qui nous
+                travaillons depuis décembre 2025. Les convoyages se font
+                toujours dans les délais demandés par le client, nous n'avons
+                jamais eu de mauvais retour de la part de nos collaborateurs
+                quant à la qualité de leurs services. Je recommande à 100 %
+                cette société de convoyage ! Nous sommes très satisfaits des
+                services proposés et de leur réactivité par mail. »
               </blockquote>
               <figcaption>
-                <strong>Directeur après-vente</strong>
-                <span>Distribution automobile · 8 concessions</span>
-              </figcaption>
-            </figure>
-            <figure className="temoignage">
-              <blockquote>
-                « Réactivité et proximité : le devis part en trente minutes, le
-                convoyeur est affecté le jour même. »
-              </blockquote>
-              <figcaption>
-                <strong>Responsable logistique</strong>
-                <span>Loueur longue durée</span>
+                <strong>EQUANS</strong>
+                <span>Avis Trustpilot</span>
               </figcaption>
             </figure>
           </div>
