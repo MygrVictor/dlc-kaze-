@@ -329,6 +329,25 @@ export default function AdminMissions() {
     }
   };
 
+  // Devis PDF tel que le client le reçoit, ouvert dans un nouvel onglet.
+  const voirDevis = async (missionId) => {
+    const onglet = window.open("", "_blank");
+    try {
+      const res = await api.get(`/missions/${missionId}/devis`, {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(
+        new Blob([res.data], { type: "application/pdf" }),
+      );
+      if (onglet) onglet.location.href = url;
+      else window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      onglet?.close();
+      toast.error("Devis indisponible pour cette mission.");
+    }
+  };
+
   const ouvrirMissionLecture = (mission) => {
     setPriceModal(mission);
     setLectureSeule(true);
@@ -1411,6 +1430,15 @@ export default function AdminMissions() {
                           Coter
                         </button>
                       )}
+                    {priceModal.price && priceModal.source !== "kaze" && (
+                      <button
+                        onClick={() => voirDevis(priceModal.id)}
+                        className="btn-secondary flex items-center gap-2"
+                      >
+                        <FileText size={16} />
+                        Voir le devis
+                      </button>
+                    )}
                     <button
                       onClick={() => setPriceModal(null)}
                       className="btn-secondary"
