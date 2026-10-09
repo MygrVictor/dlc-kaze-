@@ -245,7 +245,11 @@ export default function NewMission() {
       } else if (f.size > 25 * 1024 * 1024) {
         toast.error(`${f.name} : 25 Mo maximum.`);
       } else {
-        valides.push({ file: f, label: f.name.replace(/\.[^.]+$/, "") });
+        valides.push({
+          file: f,
+          label: f.name.replace(/\.[^.]+$/, ""),
+          visibleConvoyeur: false,
+        });
       }
     }
     if (valides.length) setPieces((p) => [...p, ...valides]);
@@ -384,6 +388,11 @@ export default function NewMission() {
           for (const [i, p] of pieces.entries()) {
             const fd = new FormData();
             fd.append("label", p.label.trim());
+            if (estAdmin)
+              fd.append(
+                "visible_convoyeur",
+                p.visibleConvoyeur ? "true" : "false",
+              );
             fd.append("document", fichiers[i]);
             try {
               // Envoi d'un fichier : le délai global de 30 s est trop court
@@ -1314,6 +1323,8 @@ export default function NewMission() {
             <p className="text-xs text-dark-400 mb-3">
               Carte grise, bon d'enlèvement, PV… Joignez les pièces utiles à la
               mission.
+              {estAdmin &&
+                " Cochez « Convoyeur » pour les documents que le convoyeur doit voir."}
             </p>
 
             <div
@@ -1347,6 +1358,29 @@ export default function NewMission() {
               <ul className="mt-3 space-y-2">
                 {pieces.map((p, i) => (
                   <li key={i} className="flex items-center gap-2">
+                    {estAdmin && (
+                      <label
+                        className="flex items-center gap-1.5 cursor-pointer shrink-0 text-xs text-dark-400"
+                        title="Rendre visible au convoyeur"
+                      >
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4"
+                          checked={p.visibleConvoyeur}
+                          onChange={(e) =>
+                            setPieces((liste) =>
+                              liste.map((x, j) =>
+                                j === i
+                                  ? { ...x, visibleConvoyeur: e.target.checked }
+                                  : x,
+                              ),
+                            )
+                          }
+                          aria-label={`Visible convoyeur : ${p.file.name}`}
+                        />
+                        Convoyeur
+                      </label>
+                    )}
                     <input
                       value={p.label}
                       onChange={(e) =>

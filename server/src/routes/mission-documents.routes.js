@@ -178,10 +178,17 @@ router.post(
         return res.status(404).json({ error: "Mission introuvable." });
       }
 
+      // Seul l'admin décide de ce que voit le convoyeur ; la valeur envoyée
+      // par un client est ignorée (multipart : booléen transmis en texte).
+      const visibleConvoyeur =
+        req.user.role === "admin" &&
+        String(req.body?.visible_convoyeur) === "true";
+
       const { rows } = await db.query(
         `INSERT INTO mission_documents
-           (mission_id, label, original_name, file_path, mime_type, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6)
+           (mission_id, label, original_name, file_path, mime_type, uploaded_by,
+            visible_convoyeur)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING ${COLONNES}`,
         [
           mission.id,
@@ -190,6 +197,7 @@ router.post(
           `/uploads/missions/${req.file.filename}`,
           req.file.mimetype,
           req.user.id,
+          visibleConvoyeur,
         ],
       );
       res.status(201).json({ document: rows[0] });

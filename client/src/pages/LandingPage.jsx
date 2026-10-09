@@ -463,6 +463,22 @@ export default function LandingPage() {
                 <span>Avis Trustpilot</span>
               </figcaption>
             </figure>
+            <figure className="temoignage">
+              <div className="temoignage-etoiles" aria-label="5 étoiles sur 5">
+                ★★★★★
+              </div>
+              <blockquote>
+                « En partenariat avec DriveLineConnect depuis bientôt 3 ans. Je
+                suis très satisfait de leur qualité de service et de leur
+                réactivité, que ce soit pour la demande de prix, la gestion des
+                imprévus ou tout simplement pour leurs délais de transport. Je
+                recommande à 100 %. »
+              </blockquote>
+              <figcaption>
+                <strong>Groupe 2L Logistics</strong>
+                <span>Avis Trustpilot</span>
+              </figcaption>
+            </figure>
           </div>
         </div>
       </section>
