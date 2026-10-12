@@ -385,6 +385,12 @@ app.get("/api/health", (_req, res) => {
 // ── Servir le client React en production ─────────────────────
 if (isProduction) {
   const clientBuild = path.resolve(__dirname, "../../client/dist");
+  // Le service worker doit être relu à chaque visite, sinon une mise à
+  // jour reste bloquée derrière le cache HTTP du navigateur.
+  app.get("/sw.js", (_req, res) => {
+    res.set("Cache-Control", "no-cache");
+    res.sendFile(path.join(clientBuild, "sw.js"));
+  });
   app.use(express.static(clientBuild));
 
   // Adresses que l'application React ne connaît pas : elles n'ont aucune
