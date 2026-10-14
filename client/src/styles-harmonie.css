@@ -317,6 +317,23 @@ body:has(.theme-light) {
   color: #ffffff;
 }
 
+/* Barre du haut sur mobile : même bleu marine que le menu latéral,
+   dans les deux thèmes. */
+.dash .dash-topbar,
+.dash.theme-light .dash-topbar {
+  background-color: #14213a;
+  border-color: #1f2e4a;
+  color: #ffffff;
+}
+.dash .dash-topbar button,
+.dash.theme-light .dash-topbar button {
+  color: #b9c5d6;
+}
+.dash .dash-topbar button:hover,
+.dash.theme-light .dash-topbar button:hover {
+  color: #ffffff;
+}
+
 /* ── Cartes utilisateurs ─────────────────────────
    Un liseré de couleur par rôle, un avatar teinté, des icônes sur les
    informations et une barre d'actions séparée donnent du relief à la

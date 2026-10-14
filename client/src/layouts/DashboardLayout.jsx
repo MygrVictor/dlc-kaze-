@@ -321,7 +321,7 @@ export default function DashboardLayout() {
       <div className="flex-1 min-w-0 lg:ml-64 flex flex-col min-h-screen">
         {/* Top bar mobile */}
         <header
-          className={`lg:hidden flex items-center justify-between px-4 h-14 border-b ${
+          className={`dash-topbar lg:hidden flex items-center justify-between px-4 h-14 border-b ${
             theme === "light"
               ? "bg-white border-slate-200 text-slate-900"
               : "bg-slate-900 border-slate-800 text-slate-100"
