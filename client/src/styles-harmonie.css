@@ -334,6 +334,23 @@ body:has(.theme-light) {
   color: #ffffff;
 }
 
+/* En-tête tableau Admin Missions : bleu marine + texte blanc, y compris
+   en mode clair où d'autres règles globales peuvent le recolorer. */
+.dash .missions-table-head,
+.dash.theme-light .missions-table-head,
+.missions-table-head {
+  background: #0e1a3a !important;
+  color: #ffffff !important;
+  border-color: #1f2e4a !important;
+}
+.dash .missions-table-head th,
+.dash.theme-light .missions-table-head th,
+.missions-table-head th {
+  background: #0e1a3a !important;
+  color: #ffffff !important;
+  border-color: #1f2e4a !important;
+}
+
 /* ── Cartes utilisateurs ─────────────────────────
    Un liseré de couleur par rôle, un avatar teinté, des icônes sur les
    informations et une barre d'actions séparée donnent du relief à la

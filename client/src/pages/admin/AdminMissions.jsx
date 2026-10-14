@@ -777,32 +777,59 @@ export default function AdminMissions() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-stack">
               <thead>
-                <tr className="border-b border-dark-700 bg-dark-800/50">
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                <tr className="missions-table-head">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Source
                   </th>
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Trajet
                   </th>
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Client
                   </th>
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Véhicule
                   </th>
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Date
                   </th>
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Prix
                   </th>
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Statut
                   </th>
-                  <th className="text-left py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Convoyeur
                   </th>
-                  <th className="text-right py-3 px-4 text-dark-400 font-medium">
+                  <th
+                    className="text-right py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
+                  >
                     Actions
                   </th>
                 </tr>
