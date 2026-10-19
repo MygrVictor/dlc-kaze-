@@ -101,6 +101,38 @@ router.post(
   async (req, res, next) => {
     try {
       const estAdmin = req.user.role === "admin";
+      const estParent =
+        !estAdmin &&
+        req.user.role === "client" &&
+        (
+          await db.query(
+            "SELECT 1 FROM users WHERE parent_id = $1 AND role = 'client' LIMIT 1",
+            [req.user.id],
+          )
+        ).rows.length > 0;
+      const clientIdFromBody =
+        req.body?.clientId || req.body?.client_id || null;
+
+      const clientId = estAdmin
+        ? clientIdFromBody || null
+        : estParent && clientIdFromBody
+          ? clientIdFromBody
+          : req.user.id;
+
+      if (!estAdmin && estParent && clientIdFromBody) {
+        const { rows } = await db.query(
+          `SELECT 1
+             FROM users
+            WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
+          [clientIdFromBody, req.user.id],
+        );
+        if (rows.length === 0) {
+          return res.status(403).json({
+            error: "Ce compte ne fait pas partie de votre groupe.",
+          });
+        }
+      }
+
       const {
         // Étape 1 : Véhicules (tableau)
         vehicles,
@@ -142,7 +174,6 @@ router.post(
 
       // Champs réservés à l'administration. Ignorés si un client les
       // envoie : il ne choisit ni son commanditaire ni sa rémunération.
-      const clientId = estAdmin ? req.body.clientId || null : req.user.id;
       const priceConvoyeur = estAdmin ? req.body.priceConvoyeur || null : null;
       const priceClient = estAdmin ? req.body.priceClient || null : null;
       const convoyeurPreassigneId = estAdmin
@@ -523,14 +554,28 @@ router.post(
 // ═════════════════════════════════════════════════════════════
 router.get("/mes-missions", authorize("client"), async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status } = req.query;
+    const { page = 1, limit = 20, status, clientId: clientIdParam } = req.query;
     const offset = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
     const safeLimit = Math.min(100, Math.max(1, parseInt(limit)));
 
-    // Le périmètre est déduit du compte authentifié, jamais d'un
-    // paramètre de requête : c'est ce qui empêche un client de se
-    // déclarer parent d'un autre en forgeant son appel.
-    const perimetre = await perimetreClient(req.user);
+    let perimetre = await perimetreClient(req.user);
+    if (clientIdParam) {
+      const cible = String(clientIdParam);
+      if (cible === req.user.id) {
+        perimetre = [req.user.id];
+      } else {
+        const { rows } = await db.query(
+          `SELECT id
+             FROM users
+            WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
+          [cible, req.user.id],
+        );
+        if (rows.length === 0) {
+          return res.status(403).json({ error: "Accès interdit." });
+        }
+        perimetre = [cible];
+      }
+    }
 
     // Le nom de l'entité n'est joint que pour un siège : un compte seul
     // n'a que faire d'une colonne qui répéterait son propre nom à chaque

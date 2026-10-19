@@ -959,12 +959,33 @@ router.post("/reset-password", authLimiter, async (req, res, next) => {
 router.get("/me", authenticate, async (req, res, next) => {
   try {
     let rattachements = 0;
+    let childAccounts = [];
     if (req.user.role === "client") {
-      const { rows } = await db.query(
+      const { rows: countRows } = await db.query(
         "SELECT COUNT(*) FROM users WHERE parent_id = $1 AND role = 'client'",
         [req.user.id],
       );
-      rattachements = parseInt(rows[0].count, 10);
+      rattachements = parseInt(countRows[0].count, 10);
+
+      if (rattachements > 0) {
+        try {
+          const { rows } = await db.query(
+            `SELECT id, email, full_name, company
+               FROM users
+              WHERE parent_id = $1 AND role = 'client'
+              ORDER BY company NULLS LAST, full_name ASC`,
+            [req.user.id],
+          );
+          childAccounts = rows.map(({ id, email, full_name, company }) => ({
+            id,
+            email,
+            full_name,
+            company,
+          }));
+        } catch {
+          childAccounts = [];
+        }
+      }
     }
 
     res.json({
@@ -978,6 +999,7 @@ router.get("/me", authenticate, async (req, res, next) => {
         is_validated: req.user.is_validated,
         kaze_driver_id: req.user.kaze_driver_id,
         rattachements,
+        child_accounts: childAccounts,
       },
     });
   } catch (err) {

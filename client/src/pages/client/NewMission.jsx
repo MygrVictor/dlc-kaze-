@@ -126,6 +126,9 @@ export default function NewMission() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const estAdmin = user?.role === "admin";
+  const estParent =
+    user?.role === "client" && (user?.child_accounts || []).length > 0;
+  const [selectedClientId, setSelectedClientId] = useState(user?.id || "");
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -327,6 +330,10 @@ export default function NewMission() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const effectiveClientId = estParent
+        ? selectedClientId || user?.id || null
+        : user?.id || null;
+
       const payload = {
         recapEmail: recapEmail.trim() || null,
         vehicles: vehicles.map((v) => ({
@@ -366,6 +373,9 @@ export default function NewMission() {
         desiredDeliveryDate: arrival.date || null,
         isUrgent: arrival.isUrgent || false,
         // Ignorés par l'API si l'auteur n'est pas administrateur.
+        ...(estAdmin || estParent
+          ? { clientId: effectiveClientId || null }
+          : {}),
         ...(estAdmin && {
           clientId: clientId || null,
           convoyeurId: convoyeurId || null,
@@ -434,6 +444,26 @@ export default function NewMission() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!user) return;
+    if (estParent && user.child_accounts?.length) {
+      setSelectedClientId((current) => current || user.id);
+    } else {
+      setSelectedClientId(user.id);
+    }
+  }, [user?.id, estParent]);
+
+  useEffect(() => {
+    if (!estAdmin && !estParent) return;
+    const targetId = selectedClientId || user?.id || "";
+    if (!targetId) return;
+    if (targetId === user?.id) {
+      setClientId(user.id);
+      return;
+    }
+    setClientId(targetId);
+  }, [selectedClientId, user?.id, estAdmin, estParent]);
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -657,6 +687,39 @@ export default function NewMission() {
               </div>
             )}
           </div>
+
+          {/* Parent client account selector */}
+          {estParent && (
+            <div className="card space-y-5">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Building2 size={20} className="text-primary-400" />
+                Compte associé
+              </h3>
+
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                  Sélectionner le compte concerné
+                </label>
+                <select
+                  className="input-field"
+                  value={selectedClientId || user?.id || ""}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                >
+                  <option value={user?.id || ""}>
+                    {user?.company || user?.full_name || "Mon compte"}
+                  </option>
+                  {(user?.child_accounts || []).map((child) => (
+                    <option key={child.id} value={child.id}>
+                      {child.company ||
+                        child.full_name ||
+                        child.email ||
+                        "Compte associé"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

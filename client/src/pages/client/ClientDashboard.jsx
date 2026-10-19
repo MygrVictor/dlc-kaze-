@@ -52,19 +52,38 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filtre, setFiltre] = useState("TOUTES");
+  const [selectedClientId, setSelectedClientId] = useState("");
+
+  const accountOptions = [
+    {
+      id: user?.id || "",
+      label: user?.company || user?.full_name || "Mon compte",
+    },
+    ...(user?.child_accounts || []).map((child) => ({
+      id: child.id,
+      label:
+        child.company || child.full_name || child.email || "Compte associé",
+    })),
+  ];
 
   useEffect(() => {
-    // Le siège d'un groupe agrège les missions de ses entités : la
-    // valeur par défaut de vingt tronquerait sa liste sans rien dire.
+    if (!user) return;
+    const effectiveId = selectedClientId || user.id;
+    setSelectedClientId((current) => current || user.id);
+
     api
-      .get("/missions/mes-missions?limit=100")
+      .get(
+        `/missions/mes-missions?limit=100${
+          effectiveId !== user.id ? `&clientId=${effectiveId}` : ""
+        }`,
+      )
       .then((res) => setMissions(res.data.missions))
       .catch((err) => {
         console.error(err);
         setError("Impossible de charger vos missions.");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user?.id, selectedClientId]);
 
   // Le filtrage se fait en mémoire : le client a rarement plus de quelques
   // dizaines de missions, un aller-retour serveur par onglet serait un coût
@@ -108,13 +127,31 @@ export default function ClientDashboard() {
             Gérez vos demandes de convoyage automobile.
           </p>
         </div>
-        <Link
-          to="/client/nouvelle-mission"
-          className="btn-primary flex items-center gap-2 mt-4 sm:mt-0"
-        >
-          <PlusCircle size={18} />
-          Nouvelle mission
-        </Link>
+        <div className="flex items-center gap-3 mt-4 sm:mt-0">
+          {accountOptions.length > 1 && (
+            <select
+              value={selectedClientId || user?.id || ""}
+              onChange={(e) => {
+                setSelectedClientId(e.target.value);
+                setLoading(true);
+              }}
+              className="input-field min-w-[220px]"
+            >
+              {accountOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <Link
+            to="/client/nouvelle-mission"
+            className="btn-primary flex items-center gap-2"
+          >
+            <PlusCircle size={18} />
+            Nouvelle mission
+          </Link>
+        </div>
       </div>
 
       {/* Loading */}
