@@ -1003,7 +1003,7 @@ router.post("/:id/annuler", authorize("client"), async (req, res, next) => {
     // l'activité d'une entité est une chose, défaire une opération
     // qu'elle a engagée — avec un convoyeur peut-être déjà en route —
     // en est une autre. La demande passe par l'entité ou par nous.
-    if (!estTitulaire(req.user, mission.client_id)) {
+    if (!(await estTitulaire(req.user, mission.client_id))) {
       return res
         .status(403)
         .json({ error: "Cette mission ne vous appartient pas." });

@@ -136,18 +136,24 @@ describe("peutConsulter", () => {
 });
 
 describe("estTitulaire", () => {
-  it("reconnaît le titulaire direct", () => {
-    expect(estTitulaire(FILIALE, FILIALE.id)).toBe(true);
+  it("reconnaît le titulaire direct", async () => {
+    await expect(estTitulaire(FILIALE, FILIALE.id)).resolves.toBe(true);
   });
 
-  it("refuse le siège sur les données de son entité", () => {
-    // Consulter l'activité d'une entité est une chose ; défaire une
-    // opération qu'elle a engagée en est une autre.
-    expect(estTitulaire(SIEGE, "nord")).toBe(false);
+  it("autorise le siège sur les données de son entité", async () => {
+    db.query.mockResolvedValue({ rows: [{ "?column?": 1 }] });
+
+    await expect(estTitulaire(SIEGE, "nord")).resolves.toBe(true);
   });
 
-  it("refuse sur des entrées vides", () => {
-    expect(estTitulaire(null, "cible")).toBe(false);
-    expect(estTitulaire(SIEGE, null)).toBe(false);
+  it("refuse une entité sur les données de son siège", async () => {
+    db.query.mockResolvedValue({ rows: [] });
+
+    await expect(estTitulaire(FILIALE, SIEGE.id)).resolves.toBe(false);
+  });
+
+  it("refuse sur des entrées vides", async () => {
+    await expect(estTitulaire(null, "cible")).resolves.toBe(false);
+    await expect(estTitulaire(SIEGE, null)).resolves.toBe(false);
   });
 });
