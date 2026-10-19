@@ -720,20 +720,26 @@ router.get(
       const groupe = lot.length > 1;
 
       // Numérotation auto-incrémentée : chaque devis reçoit le numéro
-      // suivant de la séquence `devis_number_seq` à sa première édition,
-      // puis le conserve. Un devis multi-véhicules partage un seul numéro.
+      // suivant pour son client, pas pour l'ensemble de la plateforme.
+      // Un devis multi-véhicules partage un seul numéro.
       const missionAncre = groupe ? lot[0] : mission;
       let devisIndex = Number(missionAncre.devis_number) || null;
       if (!devisIndex) {
         const idsLot = lot.map((m) => m.id);
         const attribution = await db.query(
-          `WITH n AS (SELECT nextval('devis_number_seq') AS v)
+          `WITH next_num AS (
+             SELECT COALESCE(MAX(devis_number), 0) + 1 AS v
+             FROM missions
+             WHERE client_id = $1 AND devis_number IS NOT NULL
+           )
            UPDATE missions
-              SET devis_number = n.v
-             FROM n
-            WHERE missions.id = ANY($1) AND missions.devis_number IS NULL
-        RETURNING missions.devis_number`,
-          [idsLot],
+              SET devis_number = next_num.v
+             FROM next_num
+            WHERE missions.id = ANY($2)
+              AND missions.client_id = $1
+              AND missions.devis_number IS NULL
+          RETURNING missions.devis_number`,
+          [missionAncre.client_id, idsLot],
         );
         devisIndex = Number(attribution?.rows?.[0]?.devis_number) || null;
         if (!devisIndex) {

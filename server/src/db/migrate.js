@@ -303,25 +303,16 @@ const migrate = async () => {
       ON mission_documents(file_path);
   `);
 
-  // Numérotation des devis : une suite unique, attribuée une fois pour
-  // toutes à la première édition et conservée sur la mission. Le
-  // compteur démarre après le nombre de missions déjà cotées pour ne
-  // pas réémettre un numéro déjà communiqué à un client.
+  // Numérotation des devis : le compteur est par client pour éviter
+  // d'avoir 3, 4, 5 sur des comptes différents. Le numéro est fixé
+  // une fois à la première génération du devis et conservé sur la mission.
   await db.query(`
     ALTER TABLE missions
       ADD COLUMN IF NOT EXISTS devis_number INTEGER;
-    CREATE SEQUENCE IF NOT EXISTS devis_number_seq;
   `);
+
   await db.query(`
-    SELECT setval(
-      'devis_number_seq',
-      GREATEST(
-        (SELECT COUNT(*) FROM missions WHERE price IS NOT NULL),
-        (SELECT COALESCE(MAX(devis_number), 0) FROM missions)
-      ) + 1,
-      false
-    )
-    WHERE NOT (SELECT is_called FROM devis_number_seq);
+    DROP SEQUENCE IF EXISTS devis_number_seq;
   `);
 
   await db.query(`
