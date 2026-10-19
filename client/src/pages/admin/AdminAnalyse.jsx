@@ -323,10 +323,62 @@ function ClassementClients({ clients }) {
   );
 }
 
+const dateLocaleISO = (d) => {
+  const an = d.getFullYear();
+  const mois = String(d.getMonth() + 1).padStart(2, "0");
+  const jour = String(d.getDate()).padStart(2, "0");
+  return `${an}-${mois}-${jour}`;
+};
+
+const moisISO = (d) => {
+  const an = d.getFullYear();
+  const mois = String(d.getMonth() + 1).padStart(2, "0");
+  return `${an}-${mois}`;
+};
+
+const anneeISO = (d) => String(d.getFullYear());
+
+const borneMois = (valeur) => {
+  if (!valeur) {
+    const n = new Date();
+    return {
+      debut: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-01`,
+      fin: jour(new Date(n.getFullYear(), n.getMonth() + 1, 0)),
+    };
+  }
+  const [an, mois] = String(valeur).split("-");
+  if (!an || !mois) {
+    const n = new Date();
+    return {
+      debut: `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-01`,
+      fin: jour(new Date(n.getFullYear(), n.getMonth() + 1, 0)),
+    };
+  }
+  const date = new Date(Number(an), Number(mois) - 1, 1);
+  return {
+    debut: `${an}-${String(Number(mois)).padStart(2, "0")}-01`,
+    fin: jour(new Date(date.getFullYear(), date.getMonth() + 1, 0)),
+  };
+};
+
+const borneAnnee = (valeur) => {
+  const an = Number(valeur || new Date().getFullYear());
+  return {
+    debut: `${an}-01-01`,
+    fin: `${an}-12-31`,
+  };
+};
+
 export default function AdminAnalyse() {
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [periode, setPeriode] = useState("annee");
+  const [customDebut, setCustomDebut] = useState(() =>
+    dateLocaleISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
+  );
+  const [customFin, setCustomFin] = useState(() => dateLocaleISO(new Date()));
+  const [customMois, setCustomMois] = useState(() => moisISO(new Date()));
+  const [customAnnee, setCustomAnnee] = useState(() => anneeISO(new Date()));
   const [tri, setTri] = useState("ca_realise");
   const [onglet, setOnglet] = useState("clients");
   const [granulariteLivraisons, setGranulariteLivraisons] = useState("semaine");
@@ -334,12 +386,18 @@ export default function AdminAnalyse() {
     useState("__tous__");
   const [exportEnCours, setExportEnCours] = useState(false);
 
-  const bornes = PERIODES[periode].bornes();
+  const bornes = (() => {
+    if (periode === "personnalisee")
+      return { debut: customDebut, fin: customFin };
+    if (periode === "mois_personnalise") return borneMois(customMois);
+    if (periode === "annee_personnalise") return borneAnnee(customAnnee);
+    return PERIODES[periode].bornes();
+  })();
 
   const charger = useCallback(async () => {
     setChargement(true);
     try {
-      const { debut, fin } = PERIODES[periode].bornes();
+      const { debut, fin } = bornes;
       const res = await api.get(`/admin/analyse?debut=${debut}&fin=${fin}`);
       setDonnees(res.data);
     } catch {
@@ -347,7 +405,7 @@ export default function AdminAnalyse() {
     } finally {
       setChargement(false);
     }
-  }, [periode]);
+  }, [bornes]);
 
   useEffect(() => {
     charger();
@@ -356,7 +414,7 @@ export default function AdminAnalyse() {
   const exporter = async () => {
     setExportEnCours(true);
     try {
-      const { debut, fin } = PERIODES[periode].bornes();
+      const { debut, fin } = bornes;
       const res = await api.get(
         `/admin/analyse/export-csv?debut=${debut}&fin=${fin}`,
         { responseType: "blob" },
@@ -477,7 +535,65 @@ export default function AdminAnalyse() {
                 {libelle}
               </option>
             ))}
+            <option value="personnalisee">Période personnalisée</option>
+            <option value="mois_personnalise">Choisir un mois</option>
+            <option value="annee_personnalise">Choisir une année</option>
           </select>
+          {periode === "personnalisee" && (
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1 text-xs text-dark-400">
+                <span>Du</span>
+                <input
+                  type="date"
+                  value={customDebut}
+                  onChange={(e) => setCustomDebut(e.target.value)}
+                  className="input py-1.5 text-xs"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-dark-400">
+                <span>au</span>
+                <input
+                  type="date"
+                  value={customFin}
+                  onChange={(e) => setCustomFin(e.target.value)}
+                  className="input py-1.5 text-xs"
+                />
+              </label>
+            </div>
+          )}
+          {periode === "mois_personnalise" && (
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-xs text-dark-400">
+                <span>Mois</span>
+                <input
+                  type="month"
+                  value={customMois}
+                  onChange={(e) => setCustomMois(e.target.value)}
+                  className="input py-1.5 text-xs"
+                />
+              </label>
+            </div>
+          )}
+          {periode === "annee_personnalise" && (
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-xs text-dark-400">
+                <span>Année</span>
+                <input
+                  type="number"
+                  min="2024"
+                  max="2100"
+                  step="1"
+                  value={customAnnee}
+                  onChange={(e) =>
+                    setCustomAnnee(
+                      e.target.value || String(new Date().getFullYear()),
+                    )
+                  }
+                  className="input py-1.5 text-xs w-24"
+                />
+              </label>
+            </div>
+          )}
           <button
             onClick={exporter}
             disabled={exportEnCours}
