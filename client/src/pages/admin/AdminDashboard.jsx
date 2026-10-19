@@ -1299,11 +1299,14 @@ export default function AdminDashboard() {
                                 >
                                   {formatDate(m.departure_date || m.created_at)}
                                 </td>
-                                <td
-                                  className="py-2.5 pr-3 font-semibold"
-                                  data-label="Prix"
-                                >
-                                  {m.price ? formatPrice(m.price) : "—"}
+                                <td className="py-2.5 pr-3 text-xs">
+                                  {m.price ? (
+                                    <span className="price-tag text-emerald-400 font-medium">
+                                      {formatPrice(m.price)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-dark-500">—</span>
+                                  )}
                                 </td>
                                 <td className="py-2.5 pr-3" data-label="Statut">
                                   {m.source === "kaze" ? (
@@ -1915,7 +1918,7 @@ export default function AdminDashboard() {
                     ? ` (${formatPrice(priceModal.price)})`
                     : ""}
                 </p>
-                <p className="text-sm text-dark-200 whitespace-pre-wrap">
+                <p className="text-sm text-dark-200 whitespace-pre_wrap">
                   {priceModal.refus_motif}
                 </p>
                 {priceModal.client_phone && (
@@ -1927,7 +1930,7 @@ export default function AdminDashboard() {
             )}
             <div className="mb-4">
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Prix client (€ TTC)
+                Prix client (€)
               </label>
               <div className="relative">
                 <Euro
@@ -1951,7 +1954,7 @@ export default function AdminDashboard() {
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Prix convoyeur (€ TTC)
+                Prix convoyeur (€)
               </label>
               <div className="relative">
                 <Truck
@@ -2519,7 +2522,7 @@ function MissionsTab({
                       {m.price ? (
                         formatPrice(m.price)
                       ) : (
-                        <span className="text-dark-600 text-xs">—</span>
+                        <span className="text-dark-600">—</span>
                       )}
                     </td>
                     {/* Statut */}
@@ -2544,90 +2547,55 @@ function MissionsTab({
                     </td>
                     {/* Convoyeur */}
                     <td className="py-3 px-3">
-                      {m.convoyeur_name ? (
-                        <span className="flex items-center gap-1.5 text-accent-400 text-xs font-medium">
-                          <Truck size={12} /> {m.convoyeur_name}
-                        </span>
-                      ) : (
-                        <span className="text-dark-500">—</span>
-                      )}
-                    </td>
-                    {/* Actions */}
-                    <td className="py-3 px-3 text-right">
-                      {m.source === "dlc" ? (
-                        <div className="flex items-center gap-1.5 justify-end">
-                          {["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
-                            m.status,
-                          ) && (
-                            <button
-                              onClick={() => onCoter(m)}
-                              className="btn-primary btn-xs"
-                            >
-                              <Euro size={11} />{" "}
-                              {m.status === "DEVIS_REFUSE"
-                                ? "Recoter"
-                                : "Coter"}
-                            </button>
-                          )}
-                          {[
-                            "EN_ATTENTE_DE_COTATION",
-                            "DEVIS_PROPOSE",
-                            "DEVIS_REFUSE",
-                            "ANNULEE",
-                          ].includes(m.status) && (
-                            <button
-                              onClick={() => onSupprimer(m)}
-                              title="Supprimer définitivement"
-                              className="btn-soft-danger btn-xs"
-                            >
-                              <Trash2 size={11} /> Supprimer
-                            </button>
-                          )}
-                          {["ACCEPTEE", "ASSIGNEE", "EN_COURS"].includes(
-                            m.status,
-                          ) && (
+                      <div className="flex items-center gap-1.5">
+                        {m.source === "dlc" && !m.price && (
+                          <button
+                            onClick={() => onCoter(m)}
+                            className="text-[10px] px-2 py-1 bg-accent-500/10 text-accent-400 border border-accent-500/20 rounded hover:bg-accent-500/20 transition-colors"
+                          >
+                            Coter
+                          </button>
+                        )}
+                        {m.source === "dlc" &&
+                          m.status === "ACCEPTEE" &&
+                          !m.convoyeur_id && (
                             <button
                               onClick={() => onAssign(m)}
-                              className="btn-success btn-xs"
+                              className="text-[10px] px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded hover:bg-violet-500/20 transition-colors"
                             >
-                              <UserPlus size={11} />
-                              {m.convoyeur_name ? "Réassigner" : "Assigner"}
+                              Assigner
                             </button>
                           )}
-                          {!m.kaze_mission_id &&
-                            ["ACCEPTEE", "ASSIGNEE", "EN_COURS"].includes(
-                              m.status,
-                            ) && (
-                              <button
-                                onClick={() => onSyncKaze(m.id)}
-                                disabled={syncing === m.id}
-                                title="Créer la mission dans Kaze"
-                                className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-2 py-1 rounded flex items-center gap-1 disabled:opacity-50"
-                              >
-                                <RotateCcw
-                                  size={11}
-                                  className={
-                                    syncing === m.id ? "animate-spin" : ""
-                                  }
-                                />
-                                Sync
-                              </button>
-                            )}
-                          {!["LIVREE", "ANNULEE"].includes(m.status) && (
+                        {m.source === "dlc" &&
+                          !m.kaze_mission_id &&
+                          ["ACCEPTEE", "ASSIGNEE", "EN_COURS"].includes(
+                            m.status,
+                          ) && (
                             <button
-                              onClick={() => onAnnuler(m.id)}
-                              title="Annuler la mission"
-                              className="btn-soft-warning btn-xs"
+                              onClick={() => onSyncKaze(m.id)}
+                              disabled={syncing === m.id}
+                              title="Créer la mission dans Kaze"
+                              className="text-xs bg-orange-600 hover:bg-orange-500 text-white px-2 py-1 rounded flex items-center gap-1 disabled:opacity-50"
                             >
-                              <X size={11} /> Annuler
+                              <RotateCcw
+                                size={11}
+                                className={
+                                  syncing === m.id ? "animate-spin" : ""
+                                }
+                              />
+                              Sync
                             </button>
                           )}
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-dark-500 font-mono">
-                          {m.kaze_reference ? `#${m.kaze_reference}` : "Kaze"}
-                        </span>
-                      )}
+                        {!["LIVREE", "ANNULEE"].includes(m.status) && (
+                          <button
+                            onClick={() => onAnnuler(m.id)}
+                            title="Annuler la mission"
+                            className="btn-soft-warning btn-xs"
+                          >
+                            <X size={11} /> Annuler
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

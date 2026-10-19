@@ -55,6 +55,16 @@ const euros = (centimes) => {
   }).format(Number(centimes) / 100);
 };
 
+const eurosMission = (montant) => {
+  if (montant === null || montant === undefined || montant === "") {
+    return "—";
+  }
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(montant) || 0);
+};
+
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1610,13 +1620,17 @@ export default function AdminUsers() {
                                   CA livré
                                 </p>
                                 <p className="font-semibold text-lg">
-                                  {euros(profileMissionSummary.ca_realise)}
+                                  {eurosMission(
+                                    profileMissionSummary.ca_realise,
+                                  )}
                                 </p>
                               </div>
                               <div className="bg-dark-900 border border-dark-700 rounded-lg p-3">
                                 <p className="text-xs text-dark-500">Marge</p>
                                 <p className="font-semibold text-lg text-accent-400">
-                                  {euros(profileMissionSummary.marge_realisee)}
+                                  {eurosMission(
+                                    profileMissionSummary.marge_realisee,
+                                  )}
                                   <span className="text-xs text-dark-500 font-normal ml-1">
                                     (
                                     {(

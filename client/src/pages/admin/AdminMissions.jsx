@@ -1478,7 +1478,7 @@ export default function AdminMissions() {
                 <>
                   <div className="mb-3">
                     <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                      Prix client (€ TTC)
+                      Prix client (€)
                     </label>
                     <div className="relative">
                       <Euro
@@ -1503,7 +1503,7 @@ export default function AdminMissions() {
 
                   <div className="mb-3">
                     <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                      Prix convoyeur (€ TTC)
+                      Prix convoyeur (€)
                     </label>
                     <div className="relative">
                       <Truck
