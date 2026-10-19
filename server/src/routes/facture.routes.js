@@ -118,13 +118,32 @@ router.get(
   authorize("client", "convoyeur"),
   async (req, res, next) => {
     try {
+      const { clientId: clientIdParam } = req.query;
+      let perimetre = await perimetreClient(req.user);
+
+      if (req.user.role === "client" && clientIdParam) {
+        const cible = String(clientIdParam);
+        if (cible === req.user.id) {
+          perimetre = [req.user.id];
+        } else {
+          const { rows } = await db.query(
+            `SELECT id
+               FROM users
+              WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
+            [cible, req.user.id],
+          );
+          if (rows.length === 0) {
+            return res.status(403).json({ error: "Accès interdit." });
+          }
+          perimetre = [cible];
+        }
+      }
+
       // `perimetreClient` ne renvoie les comptes rattachés que pour le
       // rôle client : un convoyeur n'obtient jamais que son propre
       // identifiant. Cette route servant les deux rôles, la garde est
       // essentielle — l'élargir sans distinction ouvrirait les relevés
       // des convoyeurs les uns aux autres.
-      const perimetre = await perimetreClient(req.user);
-
       const { rows } = await db.query(
         `SELECT id, numero, libelle, montant_ttc, periode,
                 date_emission, date_echeance, statut,

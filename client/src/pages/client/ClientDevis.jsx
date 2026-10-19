@@ -17,6 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
 
 const STATUTS_DEVIS = [
   "DEVIS_PROPOSE",
@@ -69,15 +70,42 @@ const extraireNomFichier = (contentDisposition) => {
 };
 
 export default function ClientDevis() {
+  const { user } = useAuth();
   const [missions, setMissions] = useState([]);
   const [factures, setFactures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [onglet, setOnglet] = useState("devis");
+  const [selectedClientId, setSelectedClientId] = useState(user?.id || "");
+
+  const accountOptions = [
+    {
+      id: user?.id || "",
+      label: user?.company || user?.full_name || "Mon compte",
+    },
+    ...(user?.child_accounts || []).map((child) => ({
+      id: child.id,
+      label:
+        child.company || child.full_name || child.email || "Compte associé",
+    })),
+  ];
 
   useEffect(() => {
+    if (!user) return;
+
+    const effectiveId = selectedClientId || user.id;
+    setSelectedClientId((current) => current || user.id);
+
     Promise.all([
-      api.get("/missions/mes-missions?limit=100"),
-      api.get("/factures/mes-factures"),
+      api.get(
+        `/missions/mes-missions?limit=100${
+          effectiveId !== user.id ? `&clientId=${effectiveId}` : ""
+        }`,
+      ),
+      api.get(
+        `/factures/mes-factures${
+          effectiveId !== user.id ? `?clientId=${effectiveId}` : ""
+        }`,
+      ),
     ])
       .then(([missionsRes, facturesRes]) => {
         setMissions(missionsRes.data.missions || []);
@@ -85,7 +113,7 @@ export default function ClientDevis() {
       })
       .catch(() => toast.error("Impossible de charger vos devis/factures."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user?.id, selectedClientId]);
 
   const devis = useMemo(
     () =>
@@ -123,11 +151,30 @@ export default function ClientDevis() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Mes factures et devis</h1>
-        <p className="text-dark-400 text-sm mt-1">
-          Retrouvez vos devis et vos factures dans le même espace.
-        </p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Mes factures et devis</h1>
+          <p className="text-dark-400 text-sm mt-1">
+            Retrouvez vos devis et vos factures dans le même espace.
+          </p>
+        </div>
+
+        {accountOptions.length > 1 && (
+          <select
+            value={selectedClientId || user?.id || ""}
+            onChange={(e) => {
+              setSelectedClientId(e.target.value);
+              setLoading(true);
+            }}
+            className="input-field min-w-[220px]"
+          >
+            {accountOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
@@ -262,22 +309,22 @@ export default function ClientDevis() {
                   </p>
                 </div>
 
-                <div className="text-right">
-                  <div className="text-lg font-bold tabular-nums text-dark-100">
+                <div className="ml-auto flex items-center gap-3">
+                  <span className="text-lg font-bold">
                     {formaterMontantFacture(f.montant_ttc)}
-                  </div>
-                  <div className="text-xs text-slate-500">TTC</div>
+                  </span>
+                  <a
+                    href={`${API_BASE}/uploads/factures/${encodeURIComponent(
+                      f.file_path?.split("/").pop() || f.id,
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary btn-sm"
+                  >
+                    <Download size={16} />
+                    PDF
+                  </a>
                 </div>
-
-                <a
-                  href={`${API_BASE}${f.file_path}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dark-700 text-sm font-medium hover:bg-dark-700 transition"
-                >
-                  <Download size={15} />
-                  PDF
-                </a>
               </li>
             );
           })}
