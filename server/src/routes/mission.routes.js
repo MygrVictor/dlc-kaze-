@@ -631,6 +631,27 @@ router.get("/mes-missions", authorize("client"), async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 router.get("/mes-recaps", authorize("client"), async (req, res, next) => {
   try {
+    const { clientId: clientIdParam } = req.query;
+    let userId = req.user.id;
+
+    if (req.user.role === "client" && clientIdParam) {
+      const cible = String(clientIdParam);
+      if (cible === req.user.id) {
+        userId = req.user.id;
+      } else {
+        const { rows } = await db.query(
+          `SELECT id
+             FROM users
+            WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
+          [cible, req.user.id],
+        );
+        if (rows.length === 0) {
+          return res.status(403).json({ error: "Accès interdit." });
+        }
+        userId = cible;
+      }
+    }
+
     const { rows } = await db.query(
       `SELECT ud.id,
               ud.user_id,
@@ -647,7 +668,7 @@ router.get("/mes-recaps", authorize("client"), async (req, res, next) => {
         WHERE ud.user_id = $1
           AND ud.kind = 'kaze_recap'
         ORDER BY ud.created_at DESC`,
-      [req.user.id],
+      [userId],
     );
 
     res.json({ documents: rows });
@@ -665,13 +686,34 @@ router.get("/mes-recaps", authorize("client"), async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 router.get("/mes-documents", authorize("client"), async (req, res, next) => {
   try {
+    const { clientId: clientIdParam } = req.query;
+    let userId = req.user.id;
+
+    if (req.user.role === "client" && clientIdParam) {
+      const cible = String(clientIdParam);
+      if (cible === req.user.id) {
+        userId = req.user.id;
+      } else {
+        const { rows } = await db.query(
+          `SELECT id
+             FROM users
+            WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
+          [cible, req.user.id],
+        );
+        if (rows.length === 0) {
+          return res.status(403).json({ error: "Accès interdit." });
+        }
+        userId = cible;
+      }
+    }
+
     const { rows } = await db.query(
       `SELECT id, label, original_name, file_path, mime_type, created_at
          FROM user_documents
         WHERE user_id = $1
           AND kind = 'client_extra'
         ORDER BY created_at DESC`,
-      [req.user.id],
+      [userId],
     );
 
     res.json({ documents: rows });

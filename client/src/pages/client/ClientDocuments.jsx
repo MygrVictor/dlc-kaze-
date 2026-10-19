@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FolderOpen, FileText, Download, ExternalLink } from "lucide-react";
 import api from "../../lib/api";
 import { formatDate } from "../../lib/utils";
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_URL?.replace("/api", "") || "";
 
@@ -13,39 +14,75 @@ const lienFichier = (chemin) => `${API_BASE}${chemin}`;
  * l'administrateur dépose ou retire une pièce.
  */
 export default function ClientDocuments() {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState(null);
+  const [selectedClientId, setSelectedClientId] = useState(user?.id || "");
+
+  const accountOptions = [
+    {
+      id: user?.id || "",
+      label: user?.company || user?.full_name || "Mon compte",
+    },
+    ...(user?.child_accounts || []).map((child) => ({
+      id: child.id,
+      label:
+        child.company || child.full_name || child.email || "Compte associé",
+    })),
+  ];
 
   useEffect(() => {
-    let actif = true;
+    if (!user) return;
+
+    const effectiveId = selectedClientId || user.id;
+    setSelectedClientId((current) => current || user.id);
+
     api
-      .get("/missions/mes-documents")
+      .get(
+        `/missions/mes-documents${
+          effectiveId !== user.id ? `?clientId=${effectiveId}` : ""
+        }`,
+      )
       .then(({ data }) => {
-        if (actif) setDocuments(data.documents || []);
+        setDocuments(data.documents || []);
       })
       .catch((err) => {
-        if (actif)
-          setErreur(
-            err.response?.data?.error || "Impossible de charger vos documents.",
-          );
+        setErreur(
+          err.response?.data?.error || "Impossible de charger vos documents.",
+        );
       })
       .finally(() => {
-        if (actif) setLoading(false);
+        setLoading(false);
       });
-
-    return () => {
-      actif = false;
-    };
-  }, []);
+  }, [user?.id, selectedClientId]);
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">Mes documents</h1>
-        <p className="text-dark-400 text-sm mt-1">
-          Les documents administratifs transmis par Drive Line Connect.
-        </p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Mes documents</h1>
+          <p className="text-dark-400 text-sm mt-1">
+            Les documents administratifs transmis par Drive Line Connect.
+          </p>
+        </div>
+
+        {accountOptions.length > 1 && (
+          <select
+            value={selectedClientId || user?.id || ""}
+            onChange={(e) => {
+              setSelectedClientId(e.target.value);
+              setLoading(true);
+            }}
+            className="input-field min-w-[220px]"
+          >
+            {accountOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {erreur && (
