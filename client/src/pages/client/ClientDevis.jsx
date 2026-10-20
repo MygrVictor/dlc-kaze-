@@ -78,6 +78,9 @@ export default function ClientDevis() {
   const [selectedClientId, setSelectedClientId] = useState(user?.id || "");
 
   const accountOptions = [
+    ...(user?.child_accounts?.length
+      ? [{ id: "__all__", label: "Tous les comptes" }]
+      : []),
     {
       id: user?.id || "",
       label: user?.company || user?.full_name || "Mon compte",
@@ -92,18 +95,26 @@ export default function ClientDevis() {
   useEffect(() => {
     if (!user) return;
 
-    const effectiveId = selectedClientId || user.id;
-    setSelectedClientId((current) => current || user.id);
+    const effectiveId =
+      selectedClientId === "__all__" ? null : selectedClientId || user.id;
+    setSelectedClientId(
+      (current) =>
+        current || (user?.child_accounts?.length ? "__all__" : user.id),
+    );
 
     Promise.all([
       api.get(
         `/missions/mes-missions?limit=100${
-          effectiveId !== user.id ? `&clientId=${effectiveId}` : ""
+          effectiveId && effectiveId !== user.id
+            ? `&clientId=${effectiveId}`
+            : ""
         }`,
       ),
       api.get(
         `/factures/mes-factures${
-          effectiveId !== user.id ? `?clientId=${effectiveId}` : ""
+          effectiveId && effectiveId !== user.id
+            ? `?clientId=${effectiveId}`
+            : ""
         }`,
       ),
     ])
@@ -161,7 +172,10 @@ export default function ClientDevis() {
 
         {accountOptions.length > 1 && (
           <select
-            value={selectedClientId || user?.id || ""}
+            value={
+              selectedClientId ||
+              (user?.child_accounts?.length ? "__all__" : user?.id || "")
+            }
             onChange={(e) => {
               setSelectedClientId(e.target.value);
               setLoading(true);

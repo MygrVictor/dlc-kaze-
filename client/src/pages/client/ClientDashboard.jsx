@@ -52,9 +52,14 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filtre, setFiltre] = useState("TOUTES");
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState(
+    user?.child_accounts?.length ? "__all__" : user?.id || "",
+  );
 
   const accountOptions = [
+    ...(user?.child_accounts?.length
+      ? [{ id: "__all__", label: "Tous les comptes" }]
+      : []),
     {
       id: user?.id || "",
       label: user?.company || user?.full_name || "Mon compte",
@@ -68,13 +73,19 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const effectiveId = selectedClientId || user.id;
-    setSelectedClientId((current) => current || user.id);
+    const effectiveId =
+      selectedClientId === "__all__" ? null : selectedClientId || user.id;
+    setSelectedClientId(
+      (current) =>
+        current || (user?.child_accounts?.length ? "__all__" : user.id),
+    );
 
     api
       .get(
         `/missions/mes-missions?limit=100${
-          effectiveId !== user.id ? `&clientId=${effectiveId}` : ""
+          effectiveId && effectiveId !== user.id
+            ? `&clientId=${effectiveId}`
+            : ""
         }`,
       )
       .then((res) => setMissions(res.data.missions))
@@ -130,7 +141,10 @@ export default function ClientDashboard() {
         <div className="flex items-center gap-3 mt-4 sm:mt-0">
           {accountOptions.length > 1 && (
             <select
-              value={selectedClientId || user?.id || ""}
+              value={
+                selectedClientId ||
+                (user?.child_accounts?.length ? "__all__" : user?.id || "")
+              }
               onChange={(e) => {
                 setSelectedClientId(e.target.value);
                 setLoading(true);

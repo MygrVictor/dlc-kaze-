@@ -21,6 +21,9 @@ export default function ClientDocuments() {
   const [selectedClientId, setSelectedClientId] = useState(user?.id || "");
 
   const accountOptions = [
+    ...(user?.child_accounts?.length
+      ? [{ id: "__all__", label: "Tous les comptes" }]
+      : []),
     {
       id: user?.id || "",
       label: user?.company || user?.full_name || "Mon compte",
@@ -35,13 +38,19 @@ export default function ClientDocuments() {
   useEffect(() => {
     if (!user) return;
 
-    const effectiveId = selectedClientId || user.id;
-    setSelectedClientId((current) => current || user.id);
+    const effectiveId =
+      selectedClientId === "__all__" ? null : selectedClientId || user.id;
+    setSelectedClientId(
+      (current) =>
+        current || (user?.child_accounts?.length ? "__all__" : user.id),
+    );
 
     api
       .get(
         `/missions/mes-documents${
-          effectiveId !== user.id ? `?clientId=${effectiveId}` : ""
+          effectiveId && effectiveId !== user.id
+            ? `?clientId=${effectiveId}`
+            : ""
         }`,
       )
       .then(({ data }) => {
@@ -69,7 +78,10 @@ export default function ClientDocuments() {
 
         {accountOptions.length > 1 && (
           <select
-            value={selectedClientId || user?.id || ""}
+            value={
+              selectedClientId ||
+              (user?.child_accounts?.length ? "__all__" : user?.id || "")
+            }
             onChange={(e) => {
               setSelectedClientId(e.target.value);
               setLoading(true);
