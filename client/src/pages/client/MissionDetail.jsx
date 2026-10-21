@@ -631,11 +631,6 @@ export default function MissionDetail() {
             </div>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-slate-600">
-                Le document reste masqué pour le convoyeur tant qu’un admin ne
-                le valide.
-              </p>
-
               <button
                 type="submit"
                 disabled={
