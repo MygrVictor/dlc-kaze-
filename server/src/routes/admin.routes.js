@@ -270,6 +270,7 @@ router.get("/missions", async (req, res, next) => {
       const plaque = mot.toUpperCase().replace(/[^A-Z0-9]/g, "");
       conditions.push(`(
         u.full_name ILIKE $${paramIdx} OR u.email ILIKE $${paramIdx} OR u.company ILIKE $${paramIdx}
+        OR m.id::text ILIKE $${paramIdx}
         OR m.vehicle_brand ILIKE $${paramIdx} OR m.vehicle_model ILIKE $${paramIdx}
         OR m.departure_address ILIKE $${paramIdx} OR m.arrival_address ILIKE $${paramIdx}
         OR m.purchase_order_number ILIKE $${paramIdx}

@@ -626,6 +626,7 @@ export default function AdminMissions() {
     } catch {
       // on ne bloque pas l’ouverture en cas de lecture déjà faite.
     }
+
     const mission = missions.find((m) => m.id === document.mission_id);
     if (mission) {
       setPriceModal(mission);
@@ -634,16 +635,38 @@ export default function AdminMissions() {
       await refreshUnreadDocuments();
       return;
     }
-    const detail = await api.get(
-      `/admin/missions?search=${encodeURIComponent(document.mission_id)}`,
-    );
-    const missionFromApi = Array.isArray(detail.data?.missions)
-      ? detail.data.missions.find((m) => m.id === document.mission_id)
-      : null;
-    if (missionFromApi) {
-      setPriceModal(missionFromApi);
-      setLectureSeule(true);
-      setAdminCommentValue(missionFromApi.convoyeur_comments || "");
+
+    try {
+      const fallback = await api.get(`/admin/missions?limit=200`);
+      const missionFromList = Array.isArray(fallback.data?.missions)
+        ? fallback.data.missions.find((m) => m.id === document.mission_id)
+        : null;
+
+      if (missionFromList) {
+        setPriceModal(missionFromList);
+        setLectureSeule(true);
+        setAdminCommentValue(missionFromList.convoyeur_comments || "");
+        await refreshUnreadDocuments();
+        return;
+      }
+    } catch {
+      // ignore : on essaie ensuite la recherche par texte, si besoin.
+    }
+
+    try {
+      const detail = await api.get(
+        `/admin/missions?search=${encodeURIComponent(document.mission_id)}`,
+      );
+      const missionFromApi = Array.isArray(detail.data?.missions)
+        ? detail.data.missions.find((m) => m.id === document.mission_id)
+        : null;
+      if (missionFromApi) {
+        setPriceModal(missionFromApi);
+        setLectureSeule(true);
+        setAdminCommentValue(missionFromApi.convoyeur_comments || "");
+      }
+    } catch {
+      // aucun impact sur l’ouverture si la recherche est vide.
     }
     await refreshUnreadDocuments();
   };
@@ -689,29 +712,6 @@ export default function AdminMissions() {
           </button>
         </div>
       </div>
-
-      {unreadDocCount > 0 && unreadDocs.length > 0 && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-red-200">
-              {unreadDocCount} document{unreadDocCount > 1 ? "s" : ""} à
-              traiter.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {unreadDocs.slice(0, 3).map((doc) => (
-                <button
-                  key={doc.id}
-                  type="button"
-                  onClick={() => ouvrirMissionDepuisNotification(doc)}
-                  className="rounded-lg border border-red-500/30 bg-dark-800/70 px-2.5 py-1.5 text-xs text-red-100 hover:bg-dark-700"
-                >
-                  {doc.label || doc.original_name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Search + Export */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
