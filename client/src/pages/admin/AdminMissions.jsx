@@ -98,6 +98,9 @@ export default function AdminMissions() {
   const [retraitId, setRetraitId] = useState(null);
   const [recotationId, setRecotationId] = useState(null);
 
+  const [unreadDocCount, setUnreadDocCount] = useState(0);
+  const [unreadDocs, setUnreadDocs] = useState([]);
+
   const chargerConvoyeurs = async () => {
     try {
       const res = await api.get("/admin/users?role=convoyeur,admin");
@@ -594,6 +597,57 @@ export default function AdminMissions() {
     "ANNULEE",
   ];
 
+  const refreshUnreadDocuments = useCallback(async () => {
+    try {
+      const { data } = await api.get("/mission-documents/unread-count");
+      setUnreadDocCount(Number(data?.count || 0));
+      const unreadRes = await api.get("/mission-documents/unread");
+      setUnreadDocs(
+        Array.isArray(unreadRes.data?.documents)
+          ? unreadRes.data.documents
+          : [],
+      );
+    } catch {
+      setUnreadDocCount(0);
+      setUnreadDocs([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUnreadDocuments();
+    const id = setInterval(refreshUnreadDocuments, 30000);
+    return () => clearInterval(id);
+  }, [refreshUnreadDocuments]);
+
+  const ouvrirMissionDepuisNotification = async (document) => {
+    if (!document?.mission_id) return;
+    try {
+      await api.patch(`/mission-documents/${document.id}/mark-seen`);
+    } catch {
+      // on ne bloque pas l’ouverture en cas de lecture déjà faite.
+    }
+    const mission = missions.find((m) => m.id === document.mission_id);
+    if (mission) {
+      setPriceModal(mission);
+      setLectureSeule(true);
+      setAdminCommentValue(mission.convoyeur_comments || "");
+      await refreshUnreadDocuments();
+      return;
+    }
+    const detail = await api.get(
+      `/admin/missions?search=${encodeURIComponent(document.mission_id)}`,
+    );
+    const missionFromApi = Array.isArray(detail.data?.missions)
+      ? detail.data.missions.find((m) => m.id === document.mission_id)
+      : null;
+    if (missionFromApi) {
+      setPriceModal(missionFromApi);
+      setLectureSeule(true);
+      setAdminCommentValue(missionFromApi.convoyeur_comments || "");
+    }
+    await refreshUnreadDocuments();
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
@@ -604,21 +658,60 @@ export default function AdminMissions() {
             assignez les missions de convoyage.
           </p>
         </div>
-        <button
-          onClick={() => {
-            fetchMissions();
-            fetchKazeJobs();
-          }}
-          disabled={loading || kazeLoading}
-          className="btn-secondary flex items-center gap-2 text-sm mt-3 sm:mt-0"
-        >
-          <RefreshCw
-            size={14}
-            className={loading || kazeLoading ? "animate-spin" : ""}
-          />
-          Actualiser
-        </button>
+        <div className="flex items-center gap-2 mt-3 sm:mt-0">
+          {unreadDocCount > 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                unreadDocs[0] && ouvrirMissionDepuisNotification(unreadDocs[0])
+              }
+              className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/20"
+            >
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                {unreadDocCount > 9 ? "9+" : unreadDocCount}
+              </span>
+              Nouveau document{unreadDocCount > 1 ? "s" : ""}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              fetchMissions();
+              fetchKazeJobs();
+            }}
+            disabled={loading || kazeLoading}
+            className="btn-secondary flex items-center gap-2 text-sm"
+          >
+            <RefreshCw
+              size={14}
+              className={loading || kazeLoading ? "animate-spin" : ""}
+            />
+            Actualiser
+          </button>
+        </div>
       </div>
+
+      {unreadDocCount > 0 && unreadDocs.length > 0 && (
+        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-red-200">
+              {unreadDocCount} document{unreadDocCount > 1 ? "s" : ""} à
+              traiter.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {unreadDocs.slice(0, 3).map((doc) => (
+                <button
+                  key={doc.id}
+                  type="button"
+                  onClick={() => ouvrirMissionDepuisNotification(doc)}
+                  className="rounded-lg border border-red-500/30 bg-dark-800/70 px-2.5 py-1.5 text-xs text-red-100 hover:bg-dark-700"
+                >
+                  {doc.label || doc.original_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search + Export */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">

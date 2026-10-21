@@ -2,12 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import {
-  STATUS_LABELS,
-  STATUS_COLORS,
-  formatDate,
-  formatPrice,
-} from "../../lib/utils";
-import {
   ArrowLeft,
   MapPin,
   Car,
@@ -24,6 +18,8 @@ import {
   Download,
   KeyRound,
   XCircle,
+  Plus,
+  Paperclip,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import MissionDocuments from "../../components/MissionDocuments";
@@ -51,16 +47,25 @@ export default function MissionDetail() {
   const [refusModal, setRefusModal] = useState(false);
   const [refusMotif, setRefusMotif] = useState("");
   const [refusing, setRefusing] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [documentLabel, setDocumentLabel] = useState("");
+  const [documentFile, setDocumentFile] = useState(null);
+  const [refreshDocuments, setRefreshDocuments] = useState(0);
+
+  const refreshMission = async () => {
+    try {
+      const res = await api.get(`/missions/${id}`);
+      setMission(res.data.mission);
+    } catch {
+      toast.error("Mission introuvable.");
+      navigate("/client");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    api
-      .get(`/missions/${id}`)
-      .then((res) => setMission(res.data.mission))
-      .catch(() => {
-        toast.error("Mission introuvable.");
-        navigate("/client");
-      })
-      .finally(() => setLoading(false));
+    refreshMission();
   }, [id, navigate]);
 
   const downloadDevis = async (missionId) => {
@@ -129,6 +134,40 @@ export default function MissionDetail() {
       toast.error(err.response?.data?.error || "Erreur lors du refus.");
     } finally {
       setRefusing(false);
+    }
+  };
+
+  const handleDocumentSubmit = async (e) => {
+    e.preventDefault();
+    if (!documentFile) {
+      toast.error("Choisissez un document avant envoi.");
+      return;
+    }
+    if (!documentLabel.trim()) {
+      toast.error("Le libellé du document est obligatoire.");
+      return;
+    }
+
+    setUploadingDoc(true);
+    try {
+      const fd = new FormData();
+      fd.append("label", documentLabel.trim());
+      fd.append("document", documentFile);
+      await api.post(`/mission-documents/mission/${id}`, fd, {
+        timeout: 5 * 60 * 1000,
+      });
+      setDocumentLabel("");
+      setDocumentFile(null);
+      setRefreshDocuments((v) => v + 1);
+      toast.success(
+        "Document ajouté. Il est visible uniquement par l’admin pour l’instant.",
+      );
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Erreur lors de l’envoi du document.",
+      );
+    } finally {
+      setUploadingDoc(false);
     }
   };
 
@@ -527,12 +566,67 @@ export default function MissionDetail() {
             </div>
           </div>
         )}
-
       </div>
 
       {/* Documents joints à la mission */}
       <div className="card mt-6">
-        <MissionDocuments missionId={mission.id} mode="client" />
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Paperclip size={16} className="text-primary-400" />
+            <h3 className="font-semibold">Documents joints</h3>
+          </div>
+        </div>
+
+        {mission.status !== "LIVREE" && mission.status !== "ANNULEE" && (
+          <form
+            onSubmit={handleDocumentSubmit}
+            className="mb-5 rounded-xl border border-dark-700 bg-dark-800/60 p-3"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="flex-1">
+                <label className="block text-xs uppercase tracking-wide text-dark-400 mb-1">
+                  Libellé
+                </label>
+                <input
+                  type="text"
+                  value={documentLabel}
+                  onChange={(e) => setDocumentLabel(e.target.value)}
+                  placeholder="Ex. : Bon d'enlèvement, PV, carte grise…"
+                  className="input w-full"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs uppercase tracking-wide text-dark-400 mb-1">
+                  Fichier
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,image/png,image/jpeg,image/webp"
+                  onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                  className="block w-full rounded-xl border border-dark-700 bg-dark-900 px-3 py-2 text-sm text-dark-200 file:mr-3 file:rounded-md file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button
+                type="submit"
+                disabled={
+                  uploadingDoc || !documentFile || !documentLabel.trim()
+                }
+                className="btn-primary flex items-center gap-2"
+              >
+                <Plus size={16} />
+                {uploadingDoc ? "Envoi…" : "Ajouter le document"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <MissionDocuments
+          missionId={mission.id}
+          mode="client"
+          refreshKey={refreshDocuments}
+        />
       </div>
 
       {/* Modal de refus du devis */}

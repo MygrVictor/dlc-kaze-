@@ -294,6 +294,7 @@ const migrate = async () => {
       file_path         VARCHAR(500) NOT NULL,
       mime_type         VARCHAR(100),
       visible_convoyeur BOOLEAN NOT NULL DEFAULT false,
+      unread_by_admin   BOOLEAN NOT NULL DEFAULT false,
       uploaded_by       UUID REFERENCES users(id) ON DELETE SET NULL,
       created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -301,6 +302,13 @@ const migrate = async () => {
       ON mission_documents(mission_id);
     CREATE INDEX IF NOT EXISTS idx_mission_documents_chemin
       ON mission_documents(file_path);
+    CREATE INDEX IF NOT EXISTS idx_mission_documents_unread
+      ON mission_documents(unread_by_admin);
+  `);
+
+  await db.query(`
+    ALTER TABLE mission_documents
+      ADD COLUMN IF NOT EXISTS unread_by_admin BOOLEAN NOT NULL DEFAULT false;
   `);
 
   // Numérotation des devis : le compteur est par client pour éviter

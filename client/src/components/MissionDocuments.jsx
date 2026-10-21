@@ -26,7 +26,11 @@ const lienFichier = (chemin) => `${API_BASE}${chemin}`;
  * Le filtrage réel est fait par l'API : ce composant n'affiche que ce
  * que le serveur renvoie au rôle connecté.
  */
-export default function MissionDocuments({ missionId, mode = "client" }) {
+export default function MissionDocuments({
+  missionId,
+  mode = "client",
+  refreshKey = 0,
+}) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enCours, setEnCours] = useState({});
@@ -46,7 +50,7 @@ export default function MissionDocuments({ missionId, mode = "client" }) {
   useEffect(() => {
     setLoading(true);
     charger();
-  }, [charger]);
+  }, [charger, refreshKey]);
 
   const basculer = async (doc) => {
     setEnCours((p) => ({ ...p, [doc.id]: true }));

@@ -72,7 +72,7 @@ router.param("docId", (req, res, next, v) =>
 );
 
 const COLONNES = `id, mission_id, label, original_name, file_path, mime_type,
-                  visible_convoyeur, created_at`;
+                  visible_convoyeur, unread_by_admin, created_at`;
 
 function retirer(fichier) {
   if (fichier?.path && fs.existsSync(fichier.path)) {
@@ -178,17 +178,25 @@ router.post(
         return res.status(404).json({ error: "Mission introuvable." });
       }
 
+      if (["LIVREE", "ANNULEE"].includes(mission.status)) {
+        retirer(req.file);
+        return res.status(409).json({
+          error:
+            "La mission est clôturée : vous ne pouvez plus ajouter de document.",
+        });
+      }
+
       // Seul l'admin décide de ce que voit le convoyeur ; la valeur envoyée
       // par un client est ignorée (multipart : booléen transmis en texte).
-      const visibleConvoyeur =
-        req.user.role === "admin" &&
-        String(req.body?.visible_convoyeur) === "true";
+      const visibleConvoyeur = false;
+      const unreadByAdmin =
+        req.user.role === "client" && req.user.id === mission.client_id;
 
       const { rows } = await db.query(
         `INSERT INTO mission_documents
            (mission_id, label, original_name, file_path, mime_type, uploaded_by,
-            visible_convoyeur)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+            visible_convoyeur, unread_by_admin)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING ${COLONNES}`,
         [
           mission.id,
@@ -198,6 +206,7 @@ router.post(
           req.file.mimetype,
           req.user.id,
           visibleConvoyeur,
+          unreadByAdmin,
         ],
       );
       res.status(201).json({ document: rows[0] });
@@ -260,5 +269,55 @@ router.delete("/:docId", authorize("admin"), async (req, res, next) => {
     next(err);
   }
 });
+
+router.get("/unread-count", authorize("admin"), async (_req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT COUNT(*)::int AS count
+         FROM mission_documents
+        WHERE unread_by_admin = true`,
+    );
+    res.json({ count: Number(rows[0]?.count || 0) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/unread", authorize("admin"), async (_req, res, next) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, mission_id, label, original_name, created_at
+         FROM mission_documents
+        WHERE unread_by_admin = true
+        ORDER BY created_at DESC
+        LIMIT 20`,
+    );
+    res.json({ documents: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch(
+  "/:docId/mark-seen",
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const { rows } = await db.query(
+        `UPDATE mission_documents
+          SET unread_by_admin = false
+        WHERE id = $1
+        RETURNING ${COLONNES}`,
+        [req.params.docId],
+      );
+      if (!rows[0]) {
+        return res.status(404).json({ error: "Document introuvable." });
+      }
+      res.json({ document: rows[0] });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 module.exports = router;
