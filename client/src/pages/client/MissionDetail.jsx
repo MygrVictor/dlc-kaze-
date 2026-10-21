@@ -586,11 +586,16 @@ export default function MissionDetail() {
         {mission.status !== "LIVREE" && mission.status !== "ANNULEE" && (
           <form
             onSubmit={handleDocumentSubmit}
-            className="mb-5 rounded-xl border border-dark-700 bg-dark-800/60 p-3"
+            className="mb-5 rounded-2xl border border-dark-700 bg-dark-900/80 p-4 shadow-sm"
           >
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
-                <label className="block text-xs uppercase tracking-wide text-dark-400 mb-1">
+            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-primary-700">
+              <Paperclip size={15} className="text-primary-500" />
+              <span>Ajouter un document</span>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[1.2fr_1fr]">
+              <div>
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-slate-700">
                   Libellé
                 </label>
                 <input
@@ -598,28 +603,45 @@ export default function MissionDetail() {
                   value={documentLabel}
                   onChange={(e) => setDocumentLabel(e.target.value)}
                   placeholder="Ex. : Bon d'enlèvement, PV, carte grise…"
-                  className="input w-full"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15"
                 />
               </div>
-              <div className="flex-1">
-                <label className="block text-xs uppercase tracking-wide text-dark-400 mb-1">
+
+              <div>
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-slate-700">
                   Fichier
                 </label>
-                <input
-                  type="file"
-                  accept=".pdf,image/png,image/jpeg,image/webp"
-                  onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
-                  className="block w-full rounded-xl border border-dark-700 bg-dark-900 px-3 py-2 text-sm text-dark-200 file:mr-3 file:rounded-md file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
-                />
+                <label className="group flex h-[46px] w-full cursor-pointer items-center justify-between rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm transition hover:border-primary-400/70 hover:bg-slate-100">
+                  <span className="truncate text-slate-700">
+                    {documentFile ? documentFile.name : "Choisir un fichier"}
+                  </span>
+                  <span className="ml-2 inline-flex items-center rounded-full border border-primary-200 bg-primary-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary-700">
+                    PDF / JPG
+                  </span>
+                  <input
+                    type="file"
+                    accept=".pdf,image/png,image/jpeg,image/webp"
+                    onChange={(e) =>
+                      setDocumentFile(e.target.files?.[0] || null)
+                    }
+                    className="hidden"
+                  />
+                </label>
               </div>
             </div>
-            <div className="mt-3 flex justify-end">
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-slate-600">
+                Le document reste masqué pour le convoyeur tant qu’un admin ne
+                le valide.
+              </p>
+
               <button
                 type="submit"
                 disabled={
                   uploadingDoc || !documentFile || !documentLabel.trim()
                 }
-                className="btn-primary flex items-center gap-2"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
               >
                 <Plus size={16} />
                 {uploadingDoc ? "Envoi…" : "Ajouter le document"}
