@@ -172,7 +172,7 @@ async function authenticate() {
   } catch (err) {
     console.error(
       "❌ Kaze auth error:",
-      err.response?.status,
+      err.response?.status ?? err.code ?? "",
       err.response?.data || err.message,
     );
     throw new Error(
@@ -197,11 +197,17 @@ kazeClient.interceptors.request.use(async (config) => {
 kazeClient.interceptors.response.use(
   (res) => res,
   (error) => {
+    // Une erreur levée par l'intercepteur de requête (ex: auth échouée)
+    // n'a ni config ni réponse : éviter le « undefined undefined undefined ».
+    if (!error.config) {
+      console.error("❌ Kaze API (avant envoi):", error.message);
+      throw error;
+    }
     console.error(
       "❌ Kaze API:",
-      error.config?.method?.toUpperCase(),
-      error.config?.url,
-      error.response?.status,
+      error.config.method?.toUpperCase(),
+      error.config.url,
+      error.response?.status ?? error.code ?? "",
       error.response?.data || error.message,
     );
     throw error;

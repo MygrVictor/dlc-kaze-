@@ -1873,16 +1873,35 @@ router.get("/kaze/test", async (_req, res, next) => {
   }
 });
 
+// Cache mémoire des jobs Kaze récents : cette route est appelée à chaque
+// affichage des pages admin (≈1500 fois/semaine, ~600 Ko) et chaque appel
+// parcourt plusieurs pages Kaze → principale source de 429. Un cache court
+// suffit (les statuts sont de toute façon synchronisés par le cron) et sert
+// aussi de repli si Kaze refuse momentanément.
+const CACHE_KAZE_JOBS_MS =
+  parseInt(process.env.KAZE_JOBS_CACHE_MS, 10) || 3 * 60 * 1000;
+const cacheKazeJobs = new Map(); // days → { jobs, at }
+
 router.get("/kaze/jobs", async (req, res, next) => {
   try {
     const days = req.query.days ? parseInt(req.query.days, 10) : 60;
     let rawJobs = [];
     let warning = null;
-    try {
-      rawJobs = await kazeService.fetchRecentJobs(days);
-    } catch (kazeErr) {
-      warning = `Kaze indisponible: ${kazeErr.message}`;
-      console.error("⚠️ Kaze jobs fetch:", kazeErr.message);
+    const enCache = cacheKazeJobs.get(days);
+    if (enCache && Date.now() - enCache.at < CACHE_KAZE_JOBS_MS) {
+      rawJobs = enCache.jobs;
+    } else {
+      try {
+        rawJobs = await kazeService.fetchRecentJobs(days);
+        cacheKazeJobs.set(days, { jobs: rawJobs, at: Date.now() });
+      } catch (kazeErr) {
+        if (enCache) {
+          rawJobs = enCache.jobs; // repli sur la dernière liste connue
+        } else {
+          warning = `Kaze indisponible: ${kazeErr.message}`;
+        }
+        console.error("⚠️ Kaze jobs fetch:", kazeErr.message);
+      }
     }
 
     const rawJobsArray = Array.isArray(rawJobs) ? rawJobs : [];

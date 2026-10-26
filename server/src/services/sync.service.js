@@ -187,6 +187,33 @@ async function avecVerrouSync(travail) {
   });
 }
 
+// ── Compteur d'échecs consécutifs (persisté : en prod chaque sync
+//    est un process cron distinct, la mémoire ne survit pas) ─────────
+const SEUIL_ALERTE_SYNC =
+  parseInt(process.env.SYNC_ALERT_AFTER_FAILURES, 10) || 3;
+const FICHIER_ECHECS = require("path").join(
+  require("os").tmpdir(),
+  "dlc-sync-kaze-echecs",
+);
+
+function lireEchecsConsecutifs() {
+  try {
+    return (
+      parseInt(require("fs").readFileSync(FICHIER_ECHECS, "utf8"), 10) || 0
+    );
+  } catch {
+    return 0;
+  }
+}
+
+function ecrireEchecsConsecutifs(n) {
+  try {
+    require("fs").writeFileSync(FICHIER_ECHECS, String(n));
+  } catch {
+    /* non bloquant */
+  }
+}
+
 /**
  * Synchronise les statuts Kaze → DLC pour toutes les missions liées.
  */
@@ -196,14 +223,26 @@ async function syncKazeStatuses() {
 
   try {
     await avecVerrouSync(syncKazeStatusesInterne);
+    ecrireEchecsConsecutifs(0);
   } catch (err) {
     console.error("❌ Erreur sync Kaze:", err.message);
-    // La sync tourne sans témoin humain : sans alerte, une panne de
-    // l'API Kaze passerait inaperçue jusqu'à ce qu'un client s'étonne
-    // que son statut ne bouge plus.
-    await require("./alerte.service")
-      .alerter({ contexte: "sync Kaze", erreur: err })
-      .catch(() => {});
+    // Un échec isolé (Kaze lent, base saturée une seconde) se rattrape
+    // tout seul à la sync suivante : on n'alerte que si la panne dure.
+    const echecs = lireEchecsConsecutifs() + 1;
+    ecrireEchecsConsecutifs(echecs);
+    if (echecs === SEUIL_ALERTE_SYNC) {
+      await require("./alerte.service")
+        .alerter({
+          contexte: "sync Kaze",
+          erreur: err,
+          detail: `${echecs} échecs consécutifs`,
+        })
+        .catch(() => {});
+    } else {
+      console.warn(
+        `⚠️  Sync Kaze: échec ${echecs} (alerte à partir de ${SEUIL_ALERTE_SYNC})`,
+      );
+    }
   } finally {
     isSyncing = false;
   }
@@ -327,8 +366,17 @@ async function syncKazeStatusesInterne() {
       `🔎 Sync Kaze: ${linkedMissions.length} mission(s) liée(s) à vérifier (mode unitaire).`,
     );
 
-    // 2. Pour chaque mission liée, vérifier le statut côté Kaze
+    // 2. Pour chaque mission liée, vérifier le statut côté Kaze.
+    //    Appels espacés : enchaîner 200 GET d'un coup déclenche le
+    //    rate-limit Kaze (429) et fait échouer une partie de la passe.
+    const delaiEnv = parseInt(process.env.SYNC_UNIT_DELAY_MS, 10);
+    const pauseUnitaireMs = delaiEnv >= 0 ? delaiEnv : 300;
+    let premier = true;
     for (const mission of linkedMissions) {
+      if (!premier && pauseUnitaireMs > 0) {
+        await new Promise((r) => setTimeout(r, pauseUnitaireMs));
+      }
+      premier = false;
       try {
         const kazeJob = await kazeService.fetchJob(mission.kaze_mission_id);
         const kazeStatus = kazeJob.status;
