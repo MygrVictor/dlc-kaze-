@@ -298,17 +298,20 @@ const migrate = async () => {
       uploaded_by       UUID REFERENCES users(id) ON DELETE SET NULL,
       created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await db.query(`
+    ALTER TABLE mission_documents
+      ADD COLUMN IF NOT EXISTS unread_by_admin BOOLEAN NOT NULL DEFAULT false;
+  `);
+
+  await db.query(`
     CREATE INDEX IF NOT EXISTS idx_mission_documents_mission
       ON mission_documents(mission_id);
     CREATE INDEX IF NOT EXISTS idx_mission_documents_chemin
       ON mission_documents(file_path);
     CREATE INDEX IF NOT EXISTS idx_mission_documents_unread
       ON mission_documents(unread_by_admin);
-  `);
-
-  await db.query(`
-    ALTER TABLE mission_documents
-      ADD COLUMN IF NOT EXISTS unread_by_admin BOOLEAN NOT NULL DEFAULT false;
   `);
 
   // Numérotation des devis : le compteur est par client pour éviter

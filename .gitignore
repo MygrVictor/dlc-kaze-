@@ -43,3 +43,4 @@ tmp/
 
 # Archives de déploiement (générées localement)
 *.zip
+widget-livrauto/commandes-test.json

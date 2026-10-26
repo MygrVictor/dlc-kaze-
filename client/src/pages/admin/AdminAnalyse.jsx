@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import toast from "react-hot-toast";
 import api from "../../lib/api";
 import {
@@ -385,14 +385,17 @@ export default function AdminAnalyse() {
   const [clientLivraisonsFiltre, setClientLivraisonsFiltre] =
     useState("__tous__");
   const [exportEnCours, setExportEnCours] = useState(false);
+  const dernierQueryKeyRef = useRef("");
 
-  const bornes = (() => {
+  const bornes = useMemo(() => {
     if (periode === "personnalisee")
       return { debut: customDebut, fin: customFin };
     if (periode === "mois_personnalise") return borneMois(customMois);
     if (periode === "annee_personnalise") return borneAnnee(customAnnee);
     return PERIODES[periode].bornes();
-  })();
+  }, [periode, customDebut, customFin, customMois, customAnnee]);
+
+  const queryKey = `${bornes.debut}|${bornes.fin}`;
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -408,8 +411,10 @@ export default function AdminAnalyse() {
   }, [bornes]);
 
   useEffect(() => {
+    if (dernierQueryKeyRef.current === queryKey) return;
+    dernierQueryKeyRef.current = queryKey;
     charger();
-  }, [charger]);
+  }, [charger, queryKey]);
 
   const exporter = async () => {
     setExportEnCours(true);
