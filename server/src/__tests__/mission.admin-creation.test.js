@@ -101,6 +101,9 @@ function preparerBase(
   const capture = {};
   db.query.mockImplementation(async (sql, params) => {
     if (estLectureUtilisateur(sql)) return { rows: [utilisateur] };
+    // Détection d'un siège (comptes enfants) : aucun dans ces scénarios.
+    if (/WHERE parent_id = \$1 AND role = 'client'/i.test(sql))
+      return { rows: [] };
     if (/AND role = 'client'/i.test(sql))
       return { rows: clientExiste ? [{ id: CLIENT_CIBLE }] : [] };
     if (/AND role = ANY\(\$2\)/i.test(sql)) {

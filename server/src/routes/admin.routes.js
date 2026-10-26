@@ -1878,8 +1878,11 @@ router.get("/kaze/test", async (_req, res, next) => {
 // parcourt plusieurs pages Kaze → principale source de 429. Un cache court
 // suffit (les statuts sont de toute façon synchronisés par le cron) et sert
 // aussi de repli si Kaze refuse momentanément.
+// Désactivé en test : chaque test doit voir la réponse Kaze qu'il simule.
 const CACHE_KAZE_JOBS_MS =
-  parseInt(process.env.KAZE_JOBS_CACHE_MS, 10) || 3 * 60 * 1000;
+  process.env.NODE_ENV === "test"
+    ? 0
+    : parseInt(process.env.KAZE_JOBS_CACHE_MS, 10) || 3 * 60 * 1000;
 const cacheKazeJobs = new Map(); // days → { jobs, at }
 
 router.get("/kaze/jobs", async (req, res, next) => {

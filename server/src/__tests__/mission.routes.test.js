@@ -849,16 +849,23 @@ describe("GET /api/missions/mes-missions", () => {
     let params;
     mockDb(CLIENT, (sql, p) => {
       if (/parent_id = \$1/i.test(sql)) return { rows: [] };
+      // Contrôle d'appartenance de ?clientId : « victime » n'est pas une
+      // entité rattachée au client connecté.
+      if (/parent_id = \$2/i.test(sql)) return { rows: [] };
       if (/COUNT/i.test(sql)) return { rows: [{ count: "0" }] };
       params = p;
       return { rows: [] };
     });
 
     // Le périmètre se déduit du jeton : aucun paramètre de requête ne
-    // doit pouvoir y ajouter le compte d'un tiers.
-    await lister("?client_id=victime&clientId=victime&parent_id=victime");
+    // doit pouvoir y ajouter le compte d'un tiers. Viser un compte non
+    // rattaché est refusé, sans qu'aucune mission ne soit lue.
+    const res = await lister(
+      "?client_id=victime&clientId=victime&parent_id=victime",
+    );
 
-    expect(params[0]).toEqual([CLIENT.id]);
+    expect(res.status).toBe(403);
+    expect(params).toBeUndefined();
   });
 });
 
