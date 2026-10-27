@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# Les archives contiennent des données personnelles : lisibles par le
+# seul propriétaire du compte.
+umask 077
+
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DESTINATION="${BACKUP_DIR:-$HOME/backups/dlc-kaze}"
 RETENTION_JOURS="${BACKUP_RETENTION_DAYS:-14}"

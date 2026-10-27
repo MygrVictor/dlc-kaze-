@@ -153,8 +153,20 @@ app.use(
         // jointes envoyées par l'équipe s'ouvrent depuis son stockage.
         frameSrc: ["'self'", "https://client.crisp.chat"],
         mediaSrc: ["'self'", "https://client.crisp.chat"],
+        // Aucune page de l'application ne doit être intégrée ailleurs
+        // (anti-clickjacking, complète X-Frame-Options: DENY). Le futur
+        // widget Interencheres sera servi à part, avec sa propre règle.
+        frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
       },
     },
+    // HSTS : le navigateur n'utilise plus que HTTPS pendant 1 an.
+    // Pas d'includeSubDomains ni de preload : un sous-domaine sans
+    // certificat deviendrait inaccessible, et le preload est irréversible.
+    strictTransportSecurity: isProduction
+      ? { maxAge: 31536000, includeSubDomains: false, preload: false }
+      : false,
     crossOriginEmbedderPolicy: false,
   }),
 );
