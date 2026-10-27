@@ -1778,11 +1778,17 @@ export default function AdminMissions() {
                   compte.
                 </p>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="relative space-y-2 max-h-60 overflow-y-auto">
                   {convoyeurs.map((c) => (
                     <label
                       key={c.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border ${
+                      // `relative` est indispensable : le bouton radio caché
+                      // (sr-only) est en position absolue. Sans parent
+                      // positionné, il sort de la liste déroulante ; au clic,
+                      // le navigateur lui donne le focus et fait défiler toute
+                      // la page pour l'atteindre — d'où l'écran « blanc » sur
+                      // les convoyeurs du bas de la liste.
+                      className={`relative flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border ${
                         selectedConvoyeur === c.id
                           ? "bg-accent-600/10 border-accent-500/30"
                           : "bg-dark-700/50 border-dark-600 hover:border-dark-500"
