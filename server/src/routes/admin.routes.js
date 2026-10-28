@@ -463,22 +463,22 @@ const STATUTS_ENGAGES = ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"];
 /**
  * Coût retenu pour la marge analytique.
  *
- * Les missions réalisées par un administrateur suivent un modèle interne à
- * 50 % du prix mission. Cette règle s'applique même si un `price_convoyeur`
- * est présent en base sur certaines lignes historiques.
+ * Les missions réalisées par un administrateur suivent un modèle interne :
+ * la marge DLC vaut un tiers du prix mission, le coût les deux tiers
+ * restants. Cette règle s'applique même si un `price_convoyeur` est présent
+ * en base sur certaines lignes historiques.
  *
  * Pour les anciennes missions sans coût exploitable (aucun prix convoyeur et
- * aucun lien fiable vers un convoyeur), on applique aussi ce forfait de 50 %
+ * aucun lien fiable vers un convoyeur), on applique un forfait de 50 %
  * plutôt que 0 : une marge nulle dans l'analyse masquerait la réalité métier.
  */
-const COUT_ANALYTIQUE_EXPR =
-  "CASE WHEN conv.role = 'admin' THEN COALESCE(m.price, 0) * 0.5 WHEN m.price_convoyeur IS NOT NULL THEN m.price_convoyeur WHEN m.created_by IS NOT NULL THEN COALESCE(m.price, 0) * 0.5 ELSE COALESCE(m.price, 0) * 0.5 END";
+const COUT_ADMIN_RATIO = "(2.0 / 3)";
 
-const COUT_ANALYTIQUE_MISSIONS_EXPR =
-  "CASE WHEN conv.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price, 0) * 0.5 END";
+const COUT_ANALYTIQUE_EXPR = `CASE WHEN conv.role = 'admin' THEN COALESCE(m.price, 0) * ${COUT_ADMIN_RATIO} WHEN m.price_convoyeur IS NOT NULL THEN m.price_convoyeur WHEN m.created_by IS NOT NULL THEN COALESCE(m.price, 0) * 0.5 ELSE COALESCE(m.price, 0) * 0.5 END`;
 
-const COUT_ANALYTIQUE_TOTAUX_EXPR =
-  "CASE WHEN c.role = 'admin' THEN COALESCE(missions.price, 0) * 0.5 WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price, 0) * 0.5 END";
+const COUT_ANALYTIQUE_MISSIONS_EXPR = `CASE WHEN conv.role = 'admin' THEN COALESCE(missions.price, 0) * ${COUT_ADMIN_RATIO} WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price, 0) * 0.5 END`;
+
+const COUT_ANALYTIQUE_TOTAUX_EXPR = `CASE WHEN c.role = 'admin' THEN COALESCE(missions.price, 0) * ${COUT_ADMIN_RATIO} WHEN missions.price_convoyeur IS NOT NULL THEN missions.price_convoyeur WHEN missions.created_by IS NOT NULL THEN COALESCE(missions.price, 0) * 0.5 ELSE COALESCE(missions.price, 0) * 0.5 END`;
 
 /**
  * Traduit les paramètres de période en bornes SQL.

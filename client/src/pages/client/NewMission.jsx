@@ -831,9 +831,9 @@ export default function NewMission() {
                     className="input-field"
                   >
                     <option value="">Sélectionnez</option>
-                    <option value="VL">VL</option>
-                    <option value="VUL">VUL</option>
-                    <option value="VUL_C3">VUL (péage classe 3)</option>
+                    <option value="VL">Véhicule léger (VL)</option>
+                    <option value="VUL">Véhicule utilitaire léger (VUL)</option>
+                    <option value="PL">Poids lourds (PL)</option>
                   </select>
                 </div>
 

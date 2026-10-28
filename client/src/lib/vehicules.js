@@ -37,6 +37,15 @@ export const TYPES_VEHICULE = [
     tarification: "utilitaire",
   },
   {
+    code: "PL",
+    label: "PL — Poids lourds",
+    categorie: "Gabarit",
+    classePeage: CLASSE_PEAGE.POIDS_LOURD,
+    volumeM3: null,
+    tarification: "utilitaire",
+  },
+  {
+    // Ancien gabarit, conservé pour les missions existantes.
     code: "VUL_C3",
     label: "VUL — péage classe 3",
     categorie: "Gabarit",
