@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "../../lib/api";
 import { libelle, classeDePeage } from "../../lib/vehicules";
@@ -32,8 +32,9 @@ import {
   Zap,
   RefreshCw,
   KeyRound,
-  Trash2,
   UserX,
+  Ban,
+  MoreHorizontal,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import MissionDocuments from "../../components/MissionDocuments";
@@ -61,7 +62,128 @@ const KAZE_STATUS_COLORS = {
   cancelled: "bg-red-500/10 text-red-400 border border-red-500/20",
 };
 
-export default function AdminMissions() {
+/**
+ * Menu « ⋯ » en bout de ligne : regroupe les actions possibles selon le
+ * statut de la mission. Positionné en `fixed` pour ne pas être rogné par
+ * le défilement horizontal du tableau ; se ferme au clic extérieur, à
+ * Échap et au défilement.
+ */
+function MenuActions({ actions, enCours }) {
+  const liste = actions.filter(Boolean);
+  const [ouvert, setOuvert] = useState(false);
+  const [pos, setPos] = useState({ top: 0, right: 0, haut: false });
+  const bouton = useRef(null);
+  const menu = useRef(null);
+
+  useEffect(() => {
+    if (!ouvert) return;
+    const fermer = (e) => {
+      if (
+        menu.current?.contains(e.target) ||
+        bouton.current?.contains(e.target)
+      )
+        return;
+      setOuvert(false);
+    };
+    const echap = (e) => e.key === "Escape" && setOuvert(false);
+    const defile = () => setOuvert(false);
+    document.addEventListener("mousedown", fermer);
+    document.addEventListener("keydown", echap);
+    window.addEventListener("scroll", defile, true);
+    window.addEventListener("resize", defile);
+    return () => {
+      document.removeEventListener("mousedown", fermer);
+      document.removeEventListener("keydown", echap);
+      window.removeEventListener("scroll", defile, true);
+      window.removeEventListener("resize", defile);
+    };
+  }, [ouvert]);
+
+  if (liste.length === 0) return null;
+
+  const basculer = () => {
+    if (!ouvert && bouton.current) {
+      const r = bouton.current.getBoundingClientRect();
+      // Ouvre vers le haut si la ligne est en bas de l'écran.
+      const haut = window.innerHeight - r.bottom < 60 + liste.length * 40;
+      setPos({
+        top: haut ? r.top - 6 : r.bottom + 6,
+        right: window.innerWidth - r.right,
+        haut,
+      });
+    }
+    setOuvert((o) => !o);
+  };
+
+  return (
+    <>
+      <button
+        ref={bouton}
+        type="button"
+        onClick={basculer}
+        disabled={enCours}
+        aria-haspopup="menu"
+        aria-expanded={ouvert}
+        aria-label="Actions sur la mission"
+        title="Actions"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dark-600 text-dark-300 hover:bg-dark-700 hover:text-white disabled:opacity-50"
+      >
+        {enCours ? (
+          <RefreshCw size={15} className="animate-spin" />
+        ) : (
+          <MoreHorizontal size={16} />
+        )}
+      </button>
+      {ouvert && (
+        <div
+          ref={menu}
+          role="menu"
+          className="fixed z-50 min-w-[230px] rounded-xl border border-dark-600 bg-dark-800 py-1.5 text-left shadow-2xl"
+          style={{
+            right: pos.right,
+            ...(pos.haut
+              ? { bottom: window.innerHeight - pos.top }
+              : { top: pos.top }),
+          }}
+        >
+          {liste.map((a) => {
+            const Icone = a.icone;
+            return (
+              <div key={a.libelle}>
+                {a.separateur && (
+                  <div className="my-1.5 border-t border-dark-700" />
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOuvert(false);
+                    a.onClick();
+                  }}
+                  className={`flex w-full items-start gap-3 px-3.5 py-2 text-sm hover:bg-dark-700 ${
+                    a.danger ? "text-red-400" : "text-dark-100"
+                  }`}
+                >
+                  <Icone size={15} className="mt-0.5 shrink-0" />
+                  <span>
+                    <span className="block">{a.libelle}</span>
+                    {a.note && (
+                      <span className="block text-xs text-dark-400">
+                        {a.note}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function AdminMissions({ integre = false } = {}) {
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get("status") || "";
 
@@ -83,7 +205,7 @@ export default function AdminMissions() {
   const [convoyeurCotationId, setConvoyeurCotationId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  const [annulationId, setAnnulationId] = useState(null);
 
   // Kaze
   const [kazeJobs, setKazeJobs] = useState([]);
@@ -412,30 +534,35 @@ export default function AdminMissions() {
     }
   };
 
-  // Suppression définitive : réservée aux dossiers non démarrés (le
-  // serveur refuse le reste), typiquement un devis refusé sans suite.
-  const handleDeleteMission = async (mission) => {
+  // Annulation = annulation sur Kaze puis suppression de la mission.
+  // Le serveur n'accepte de supprimer qu'une mission non démarrée ou déjà
+  // annulée : on passe donc d'abord par /annuler (qui prévient Kaze), puis
+  // on supprime.
+  const handleAnnulerMission = async (mission) => {
     const trajet = `${mission.departure_address?.split(",")[0]} → ${mission.arrival_address?.split(",")[0]}`;
     if (
       !window.confirm(
-        `Supprimer définitivement la mission « ${trajet} » ?\n\nCette action est irréversible.`,
+        `Annuler la mission « ${trajet} » ?\n\nElle sera annulée sur Kaze puis supprimée définitivement. Cette action est irréversible.`,
       )
     )
       return;
 
-    setDeletingId(mission.id);
+    setAnnulationId(mission.id);
     try {
+      if (mission.status !== "ANNULEE") {
+        await api.post(`/admin/missions/${mission.id}/annuler`);
+      }
       await api.delete(`/admin/missions/${mission.id}`);
-      toast.success("Mission supprimée.");
+      toast.success("Mission annulée et supprimée.");
       setMissions((prev) => prev.filter((m) => m.id !== mission.id));
     } catch (err) {
-      toast.error(
-        err.response?.data?.error || "Erreur lors de la suppression.",
-      );
+      toast.error(err.response?.data?.error || "Erreur lors de l'annulation.");
+      fetchMissions();
     } finally {
-      setDeletingId(null);
+      setAnnulationId(null);
     }
   };
+
 
   // Retrait sec : on enlève le convoyeur sans en désigner un autre.
   // La mission repasse en ACCEPTEE et réapparaît dans les missions à
@@ -675,7 +802,9 @@ export default function AdminMissions() {
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Gestion des missions</h1>
+          {!integre && (
+            <h1 className="text-2xl font-bold">Gestion des missions</h1>
+          )}
           <p className="text-dark-400 text-sm mt-1">
             {dlcCount} DLC + {kazeOnlyCount} Kaze — Visualisez, cotez et
             assignez les missions de convoyage.
@@ -1057,102 +1186,59 @@ export default function AdminMissions() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right">
-                      <div
-                        className="flex flex-wrap items-center gap-2 justify-end"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {m.source === "dlc" &&
-                          ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
-                            m.status,
-                          ) && (
-                            <button
-                              onClick={() => ouvrirMissionLecture(m)}
-                              className="btn-soft-warning btn-xs"
-                              title={
+                    <td
+                      className="py-3 px-4 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MenuActions
+                        enCours={
+                          annulationId === m.id ||
+                          recotationId === m.id ||
+                          retraitId === m.id
+                        }
+                        actions={[
+                          m.source === "dlc" &&
+                            ["EN_ATTENTE_DE_COTATION", "DEVIS_REFUSE"].includes(
+                              m.status,
+                            ) && {
+                              libelle:
                                 m.status === "DEVIS_REFUSE"
                                   ? "Recoter la mission"
-                                  : "Coter la mission"
-                              }
-                            >
-                              <Euro size={14} />
-                              {m.status === "DEVIS_REFUSE"
-                                ? "Recoter"
-                                : "Coter"}
-                            </button>
-                          )}
-                        {m.source === "dlc" &&
-                          [
-                            "EN_ATTENTE_DE_COTATION",
-                            "DEVIS_PROPOSE",
-                            "DEVIS_REFUSE",
-                            "ANNULEE",
-                          ].includes(m.status) && (
-                            <button
-                              onClick={() => handleDeleteMission(m)}
-                              disabled={deletingId === m.id}
-                              title="Supprimer définitivement"
-                              className="btn-soft-danger btn-icon btn-xs"
-                              aria-label="Supprimer définitivement"
-                            >
-                              {deletingId === m.id ? (
-                                <RefreshCw size={14} className="animate-spin" />
-                              ) : (
-                                <Trash2 size={14} />
-                              )}
-                            </button>
-                          )}
-                        {canAssign(m) && (
-                          <button
-                            onClick={() => openAssignModal(m)}
-                            className="btn-soft-success btn-icon btn-xs"
-                            title={
-                              m.convoyeur_name
-                                ? "Réassigner un convoyeur"
-                                : "Assigner un convoyeur"
-                            }
-                            aria-label={
-                              m.convoyeur_name
-                                ? "Réassigner un convoyeur"
-                                : "Assigner un convoyeur"
-                            }
-                          >
-                            <UserCheck size={14} />
-                          </button>
-                        )}
-                        {m.source === "dlc" && m.status === "ACCEPTEE" && (
-                          <button
-                            onClick={() => handleRecoterMissionAcceptee(m)}
-                            disabled={recotationId === m.id}
-                            className="btn-soft-warning btn-icon btn-xs"
-                            title="Recoter la mission"
-                            aria-label="Recoter la mission"
-                          >
-                            {recotationId === m.id ? (
-                              <RefreshCw size={14} className="animate-spin" />
-                            ) : (
-                              <Euro size={14} />
-                            )}
-                          </button>
-                        )}
-                        {m.source === "dlc" &&
-                          m.convoyeur_name &&
-                          !["LIVREE", "ANNULEE"].includes(m.status) && (
-                            <button
-                              onClick={() => handleRetirerConvoyeur(m)}
-                              disabled={retraitId === m.id}
-                              title="Retirer le convoyeur sans en assigner un autre"
-                              className="btn-soft-danger btn-icon btn-xs"
-                              aria-label="Retirer le convoyeur"
-                            >
-                              {retraitId === m.id ? (
-                                <RefreshCw size={14} className="animate-spin" />
-                              ) : (
-                                <UserX size={14} />
-                              )}
-                            </button>
-                          )}
-                      </div>
+                                  : "Coter la mission",
+                              icone: Euro,
+                              onClick: () => ouvrirMissionLecture(m),
+                            },
+                          m.source === "dlc" &&
+                            m.status === "ACCEPTEE" && {
+                              libelle: "Recoter la mission",
+                              icone: Euro,
+                              onClick: () => handleRecoterMissionAcceptee(m),
+                            },
+                          canAssign(m) && {
+                            libelle: m.convoyeur_name
+                              ? "Réassigner un convoyeur"
+                              : "Assigner un convoyeur",
+                            icone: UserCheck,
+                            onClick: () => openAssignModal(m),
+                          },
+                          m.source === "dlc" &&
+                            m.convoyeur_name &&
+                            !["LIVREE", "ANNULEE"].includes(m.status) && {
+                              libelle: "Retirer le convoyeur",
+                              icone: UserX,
+                              onClick: () => handleRetirerConvoyeur(m),
+                            },
+                          m.source === "dlc" &&
+                            m.status !== "LIVREE" && {
+                              libelle: "Annuler la mission",
+                              note: "Annule sur Kaze et supprime",
+                              icone: Ban,
+                              danger: true,
+                              separateur: true,
+                              onClick: () => handleAnnulerMission(m),
+                            },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}
