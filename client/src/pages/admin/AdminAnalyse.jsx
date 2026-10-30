@@ -36,7 +36,60 @@ import {
 // deviendrait faux si l'onglet reste ouvert au passage de minuit.
 const jour = (d) => d.toISOString().slice(0, 10);
 
+const debutSemaine = (date) => {
+  const d = new Date(date);
+  const decalage = (d.getDay() + 6) % 7; // Lundi = 0
+  d.setDate(d.getDate() - decalage);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const finSemaine = (date) => {
+  const d = debutSemaine(date);
+  d.setDate(d.getDate() + 6);
+  return d;
+};
+
+const semaineISO = (date) => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const jourISO = (d.getDay() + 6) % 7;
+  const jeudi = new Date(d);
+  jeudi.setDate(d.getDate() + 3 - jourISO);
+  const anIso = jeudi.getFullYear();
+  const semaine1 = debutSemaine(new Date(anIso, 0, 4));
+  const semaineNum =
+    1 +
+    Math.round((debutSemaine(jeudi) - semaine1) / (7 * 24 * 60 * 60 * 1000));
+  return `${anIso}-W${String(semaineNum).padStart(2, "0")}`;
+};
+
 const PERIODES = {
+  semaine: {
+    libelle: "Cette semaine",
+    bornes: () => {
+      const n = new Date();
+      return {
+        debut: jour(debutSemaine(n)),
+        fin: jour(n),
+      };
+    },
+  },
+  semaine_derniere: {
+    libelle: "Semaine dernière",
+    bornes: () => {
+      const n = new Date();
+      const debutSemaineCourante = debutSemaine(n);
+      const debutPrecedente = new Date(debutSemaineCourante);
+      debutPrecedente.setDate(debutPrecedente.getDate() - 7);
+      const finPrecedente = new Date(debutSemaineCourante);
+      finPrecedente.setDate(finPrecedente.getDate() - 1);
+      return {
+        debut: jour(debutPrecedente),
+        fin: jour(finPrecedente),
+      };
+    },
+  },
   mois: {
     libelle: "Ce mois-ci",
     bornes: () => {
@@ -369,6 +422,38 @@ const borneAnnee = (valeur) => {
   };
 };
 
+const borneSemaine = (valeur) => {
+  if (!/^\d{4}-W\d{2}$/.test(String(valeur || ""))) {
+    const n = new Date();
+    return {
+      debut: jour(debutSemaine(n)),
+      fin: jour(finSemaine(n)),
+    };
+  }
+
+  const [anTexte, semaineTexte] = String(valeur).split("-W");
+  const an = Number(anTexte);
+  const semaine = Number(semaineTexte);
+  if (!an || !semaine || semaine < 1 || semaine > 53) {
+    const n = new Date();
+    return {
+      debut: jour(debutSemaine(n)),
+      fin: jour(finSemaine(n)),
+    };
+  }
+
+  const lundiSemaine1 = debutSemaine(new Date(an, 0, 4));
+  const debut = new Date(lundiSemaine1);
+  debut.setDate(lundiSemaine1.getDate() + (semaine - 1) * 7);
+  const fin = new Date(debut);
+  fin.setDate(debut.getDate() + 6);
+
+  return {
+    debut: jour(debut),
+    fin: jour(fin),
+  };
+};
+
 export default function AdminAnalyse() {
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
@@ -377,6 +462,9 @@ export default function AdminAnalyse() {
     dateLocaleISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
   );
   const [customFin, setCustomFin] = useState(() => dateLocaleISO(new Date()));
+  const [customSemaine, setCustomSemaine] = useState(() =>
+    semaineISO(new Date()),
+  );
   const [customMois, setCustomMois] = useState(() => moisISO(new Date()));
   const [customAnnee, setCustomAnnee] = useState(() => anneeISO(new Date()));
   const [tri, setTri] = useState("ca_realise");
@@ -390,10 +478,11 @@ export default function AdminAnalyse() {
   const bornes = useMemo(() => {
     if (periode === "personnalisee")
       return { debut: customDebut, fin: customFin };
+    if (periode === "semaine_personnalisee") return borneSemaine(customSemaine);
     if (periode === "mois_personnalise") return borneMois(customMois);
     if (periode === "annee_personnalise") return borneAnnee(customAnnee);
     return PERIODES[periode].bornes();
-  }, [periode, customDebut, customFin, customMois, customAnnee]);
+  }, [periode, customDebut, customFin, customSemaine, customMois, customAnnee]);
 
   const queryKey = `${bornes.debut}|${bornes.fin}`;
 
@@ -541,6 +630,7 @@ export default function AdminAnalyse() {
               </option>
             ))}
             <option value="personnalisee">Période personnalisée</option>
+            <option value="semaine_personnalisee">Choisir une semaine</option>
             <option value="mois_personnalise">Choisir un mois</option>
             <option value="annee_personnalise">Choisir une année</option>
           </select>
@@ -561,6 +651,19 @@ export default function AdminAnalyse() {
                   type="date"
                   value={customFin}
                   onChange={(e) => setCustomFin(e.target.value)}
+                  className="input py-1.5 text-xs"
+                />
+              </label>
+            </div>
+          )}
+          {periode === "semaine_personnalisee" && (
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-xs text-dark-400">
+                <span>Semaine</span>
+                <input
+                  type="week"
+                  value={customSemaine}
+                  onChange={(e) => setCustomSemaine(e.target.value)}
                   className="input py-1.5 text-xs"
                 />
               </label>

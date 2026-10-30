@@ -35,6 +35,7 @@ import {
   UserX,
   Ban,
   MoreHorizontal,
+  ChevronLeft,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import MissionDocuments from "../../components/MissionDocuments";
@@ -192,6 +193,13 @@ export default function AdminMissions({ integre = false } = {}) {
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 1,
+  });
   const [priceModal, setPriceModal] = useState(null);
   // Le même panneau sert à consulter et à coter : en lecture seule on
   // masque simplement le formulaire de prix.
@@ -248,25 +256,35 @@ export default function AdminMissions({ integre = false } = {}) {
     const params = new URLSearchParams();
     if (statusFilter) params.set("status", statusFilter);
     if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    params.set("page", String(page));
+    params.set("limit", "50");
     const qs = params.toString() ? `?${params.toString()}` : "";
     api
       .get(`/admin/missions${qs}`)
-      .then((res) => setMissions(res.data.missions))
+      .then((res) => {
+        setMissions(res.data.missions || []);
+        const nextPagination = res.data.pagination || {};
+        setPagination({
+          page: Number(nextPagination.page || page || 1),
+          limit: Number(nextPagination.limit || 50),
+          total: Number(nextPagination.total || 0),
+          totalPages: Number(nextPagination.totalPages || 1),
+        });
+      })
       .catch((err) => {
         console.error(err);
         setError("Impossible de charger les missions.");
         toast.error("Erreur de chargement des missions.");
       })
       .finally(() => setLoading(false));
+  }, [statusFilter, searchQuery, page]);
+
+  useEffect(() => {
+    setPage(1);
   }, [statusFilter, searchQuery]);
 
-  // Debounce la recherche (250ms)
   useEffect(() => {
-    if (!searchQuery && !statusFilter) {
-      fetchMissions();
-      return;
-    }
-    const timer = setTimeout(fetchMissions, searchQuery ? 250 : 0);
+    const timer = setTimeout(() => fetchMissions(), searchQuery ? 250 : 0);
     return () => clearTimeout(timer);
   }, [fetchMissions]);
 
@@ -562,7 +580,6 @@ export default function AdminMissions({ integre = false } = {}) {
       setAnnulationId(null);
     }
   };
-
 
   // Retrait sec : on enlève le convoyeur sans en désigner un autre.
   // La mission repasse en ACCEPTEE et réapparaît dans les missions à
@@ -1252,6 +1269,39 @@ export default function AdminMissions({ integre = false } = {}) {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between py-4 px-3 bg-dark-700 border-t border-dark-600">
+              <div className="text-sm text-dark-400">
+                Page {pagination.page} / {pagination.totalPages} •{" "}
+                {pagination.total} mission(s)
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                  disabled={pagination.page === 1}
+                  className="btn-secondary flex items-center gap-2 text-sm py-2 px-4"
+                  title="Page précédente"
+                >
+                  <ChevronLeft size={16} />
+                  Précédente
+                </button>
+                <button
+                  onClick={() =>
+                    setPage((p) => Math.min(p + 1, pagination.totalPages))
+                  }
+                  disabled={pagination.page === pagination.totalPages}
+                  className="btn-secondary flex items-center gap-2 text-sm py-2 px-4"
+                  title="Page suivante"
+                >
+                  Suivante
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
