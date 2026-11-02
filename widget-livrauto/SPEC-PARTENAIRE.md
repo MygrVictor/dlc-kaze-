@@ -225,7 +225,7 @@ Règles :
 | ----- | --------------------------------------------------------------------------------- | ------------------ | ---------------- |
 | 1     | Widget : 4 écrans des maquettes, iframe en modale, fausse page Interenchères      | `widget-livrauto/` | ✅               |
 | 2     | Commandes au format « mission partenaire » (contacts séparés, source, commission) | `widget-livrauto/` | ✅               |
-| 3     | Signature CGV simulée → débloque le paiement                                      | `widget-livrauto/` | à faire          |
+| 3     | Signature CGV simulée → débloque le paiement                                      | `widget-livrauto/` | ✅               |
 | 4     | Stripe Checkout **mode test** + webhook local + écran « Paiement confirmé »       | `widget-livrauto/` | à faire          |
 | 5     | Démo espace partenaire (stats, rétribution, CSV)                                  | `widget-livrauto/` | à faire          |
 | 6     | Jonction : migrations additives, rôle `partenaire`                                | `server/`          | après validation |

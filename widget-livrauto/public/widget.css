@@ -230,6 +230,13 @@ body {
   background: var(--yellow);
   color: var(--navy);
 }
+/* Paiement bloqué tant que les CGV ne sont pas signées (maquette). */
+.lw-btn--locked,
+.lw-btn--locked:disabled {
+  background: #e4e0d8;
+  color: #9a958c;
+  opacity: 1;
+}
 .lw-btn--dark {
   background: var(--navy);
   color: #fff;

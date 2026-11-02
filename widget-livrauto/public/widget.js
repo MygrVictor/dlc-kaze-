@@ -400,25 +400,85 @@
     $("#cgv-sign").disabled = !this.checked;
   });
   $("#cgv-sign").addEventListener("click", function () {
-    state.cgvSignedAt = new Date();
-    var heure = state.cgvSignedAt.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
+    var btn = this;
+    showError("recap", "");
+    busy(btn, true);
+    post("/signature", {
+      quote_id: state.quote.quote_id,
+      client: state.client,
+      cgv_version: $("#cgv").getAttribute("data-version"),
+      accepte: $("#cgv-accept").checked,
+    })
+      .then(function (sig) {
+        state.signature = sig;
+        state.cgvSignedAt = new Date(sig.signed_at);
+        var heure = state.cgvSignedAt.toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        $("#cgv").classList.add("lw-cgv--signed");
+        $("#cgv-body").hidden = true;
+        $("#cgv-open").hidden = true;
+        $("#cgv-view").hidden = false;
+        bind("cgvIco", "✓");
+        bind("cgvTitle", "CGV signées électroniquement");
+        bind(
+          "cgvSub",
+          "Réf. " + sig.signature_ref + " · aujourd'hui à " + heure,
+        );
+        bind(
+          "confirmHint",
+          "Paiement sécurisé · un livreur vous sera assigné après paiement",
+        );
+        $("#confirmer").disabled = false;
+        $("#confirmer").classList.remove("lw-btn--locked");
+        bind("confirmIco", "▭");
+        notifyHeight();
+      })
+      .catch(function (err) {
+        showError("recap", err.message);
+        busy(btn, false);
+      });
+  });
+  $("#cgv-view").addEventListener("click", function () {
+    var body = $("#cgv-body");
+    body.hidden = !body.hidden;
+    $all(".lw-checkbox, #cgv-sign", body).forEach(function (el) {
+      el.hidden = true;
     });
-    $("#cgv").classList.add("lw-cgv--signed");
-    $("#cgv-body").hidden = true;
-    $("#cgv-open").hidden = true;
-    bind("cgvIco", "✓");
-    bind("cgvTitle", "CGV acceptées");
-    bind("cgvSub", "Aujourd'hui à " + heure);
-    bind("confirmHint", "Aucun prélèvement n'est effectué à cette étape.");
-    $("#confirmer").disabled = false;
     notifyHeight();
+  });
+
+  // Retour sur « Modifier » : coordonnées ou devis peuvent changer, la
+  // signature ne vaut plus et doit être refaite.
+  function reinitialiserSignature() {
+    state.signature = null;
+    state.cgvSignedAt = null;
+    $("#cgv").classList.remove("lw-cgv--signed");
+    $("#cgv-open").hidden = false;
+    $("#cgv-view").hidden = true;
+    $("#cgv-body").hidden = true;
+    $("#cgv-accept").checked = false;
+    $all(".lw-checkbox, #cgv-sign").forEach(function (el) {
+      el.hidden = false;
+    });
+    busy($("#cgv-sign"), false);
+    $("#cgv-sign").disabled = true;
+    bind("cgvIco", "▤");
+    bind("cgvTitle", "Conditions générales de livraison");
+    bind("cgvSub", "Signature électronique requise avant paiement");
+    bind("confirmHint", "Signez les CGV ci-dessus pour débloquer le paiement");
+    bind("confirmIco", "🔒");
+    $("#confirmer").disabled = true;
+    $("#confirmer").classList.add("lw-btn--locked");
+  }
+  $all('[data-back="coordonnees"]').forEach(function (b) {
+    b.addEventListener("click", reinitialiserSignature);
   });
 
   $("#confirmer").addEventListener("click", function () {
     var btn = this;
-    if (!state.cgvSignedAt || !state.quote) return;
+    if (!state.signature || !state.quote) return;
     showError("recap", "");
     busy(btn, true);
     post("/commande", {
@@ -426,7 +486,7 @@
       external_id: lot.externalId,
       quote_id: state.quote.quote_id,
       client: state.client,
-      cgv_acceptees: true,
+      signature_ref: state.signature.signature_ref,
     })
       .then(function (res) {
         bind("reference", "LA-" + res.mission_id);

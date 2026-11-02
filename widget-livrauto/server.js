@@ -173,8 +173,16 @@ app.post("/api/widget/estimation", async (req, res) => {
   }
 });
 
-app.post("/api/widget/commande", (req, res) => {
-  const { quote_id, client = {}, cgv_acceptees } = req.body || {};
+// ── Signature des CGV (simulée) ───────────────────────────
+// Remplace DocuSign dans le prototype. Le serveur, et non le navigateur,
+// enregistre la preuve : version des CGV, devis, signataire, horodatage,
+// IP et navigateur, scellés par une empreinte SHA-256. La commande exige
+// ensuite une signature valide pour ce devis et ce signataire.
+const CGV_VERSION = "2026-11-v1";
+const signatures = new Map(); // signature_ref → preuve
+
+app.post("/api/widget/signature", (req, res) => {
+  const { quote_id, client = {}, cgv_version, accepte } = req.body || {};
   const quote = quotes.get(quote_id);
 
   if (!quote || quote.consumed) {
@@ -183,10 +191,68 @@ app.post("/api/widget/commande", (req, res) => {
         "Ce devis a expiré ou a déjà été utilisé. Relancez une estimation.",
     });
   }
-  if (cgv_acceptees !== true) {
+  if (accepte !== true) {
     return res
       .status(400)
-      .json({ error: "Les conditions générales doivent être acceptées." });
+      .json({ error: "Vous devez accepter les conditions générales." });
+  }
+  if (cgv_version !== CGV_VERSION) {
+    return res.status(409).json({
+      error:
+        "Les conditions générales ont été mises à jour. Rechargez la page.",
+    });
+  }
+  const email = texte(client.email, 150).toLowerCase();
+  const nom =
+    `${texte(client.first_name, 80)} ${texte(client.last_name, 80)}`.trim();
+  if (!email || !nom) {
+    return res
+      .status(400)
+      .json({ error: "Coordonnées du signataire manquantes." });
+  }
+
+  const signed_at = new Date().toISOString();
+  const preuve = {
+    cgv_version: CGV_VERSION,
+    quote_id,
+    signataire_nom: nom,
+    signataire_email: email,
+    signed_at,
+    ip: req.ip,
+    user_agent: texte(req.get("user-agent"), 300),
+  };
+  const empreinte = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(preuve))
+    .digest("hex");
+  const signature_ref = `SIG-${empreinte.slice(0, 12).toUpperCase()}`;
+  signatures.set(signature_ref, { ...preuve, empreinte });
+
+  console.log("Signature CGV :", signature_ref, nom, signed_at);
+  return res
+    .status(201)
+    .json({ signature_ref, signed_at, cgv_version: CGV_VERSION });
+});
+
+app.post("/api/widget/commande", (req, res) => {
+  const { quote_id, client = {}, signature_ref } = req.body || {};
+  const quote = quotes.get(quote_id);
+
+  if (!quote || quote.consumed) {
+    return res.status(404).json({
+      error:
+        "Ce devis a expiré ou a déjà été utilisé. Relancez une estimation.",
+    });
+  }
+  const signature = signatures.get(signature_ref);
+  if (
+    !signature ||
+    signature.quote_id !== quote_id ||
+    signature.signataire_email !== texte(client.email, 150).toLowerCase()
+  ) {
+    return res
+      .status(400)
+      .json({ error: "Les conditions générales doivent être signées." });
   }
   if (
     !client.first_name ||
@@ -225,8 +291,10 @@ app.post("/api/widget/commande", (req, res) => {
     insured_value: quote.insured_value,
     price: quote.price_ht,
     price_ttc: quote.price_ttc,
-    signature_ref: null, // étape 3
-    signed_at: new Date().toISOString(),
+    signature_ref,
+    signed_at: signature.signed_at,
+    cgv_version: signature.cgv_version,
+    signature_hash: signature.empreinte,
     stripe_session_id: null, // étape 4
     paid_at: null,
     partner_commission: calculerCommission(partenaire, quote.price_ht),

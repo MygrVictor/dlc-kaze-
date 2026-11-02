@@ -235,13 +235,13 @@
             </div>
           </div>
 
-          <div class="lw-cgv" id="cgv">
+          <div class="lw-cgv" id="cgv" data-version="2026-11-v1">
             <div class="lw-cgv-head">
               <span class="lw-cgv-ico" data-bind="cgvIco">▤</span>
               <div>
                 <b data-bind="cgvTitle">Conditions générales de livraison</b>
                 <small data-bind="cgvSub"
-                  >Acceptation requise avant confirmation</small
+                  >Signature électronique requise avant paiement</small
                 >
               </div>
               <button
@@ -250,6 +250,9 @@
                 id="cgv-open"
               >
                 Signer ✍
+              </button>
+              <button type="button" class="lw-link" id="cgv-view" hidden>
+                Voir le document
               </button>
             </div>
             <div class="lw-cgv-body" id="cgv-body" hidden>
@@ -298,14 +301,15 @@
           <p class="lw-error" data-error="recap" hidden></p>
           <button
             type="button"
-            class="lw-btn lw-btn--primary"
+            class="lw-btn lw-btn--primary lw-btn--locked"
             id="confirmer"
             disabled
           >
-            🔒 Confirmer la livraison
+            <span data-bind="confirmIco">🔒</span> Payer et confirmer la
+            livraison
           </button>
           <p class="lw-foot" data-bind="confirmHint">
-            Acceptez les CGV ci-dessus pour confirmer.
+            Signez les CGV ci-dessus pour débloquer le paiement
           </p>
         </section>
 
