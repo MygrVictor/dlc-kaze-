@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 40" role="img" aria-label="Livr'Auto">
+  <!-- Logo provisoire redessiné d'après les maquettes.
+       À remplacer par le fichier officiel Livr'Auto dès qu'il est disponible. -->
+  <g transform="translate(2 6)">
+    <!-- carrosserie -->
+    <path d="M6 20 C6 12 12 6 22 5 L30 5 C38 5 43 10 46 16 L48 20 C50 21 50 24 48 25 L4 25 C2 24 2 21 6 20 Z"
+          fill="#f0c419" stroke="#0f1b2d" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- vitres -->
+    <path d="M15 14 C16 10 19 8 24 8 L24 15 Z" fill="#ffffff" stroke="#0f1b2d" stroke-width="1.2"/>
+    <path d="M27 8 L31 8 C35 8 38 11 40 15 L27 15 Z" fill="#ffffff" stroke="#0f1b2d" stroke-width="1.2"/>
+    <!-- roues -->
+    <circle cx="14" cy="25" r="5" fill="#0f1b2d"/>
+    <circle cx="14" cy="25" r="2" fill="#f0c419"/>
+    <circle cx="39" cy="25" r="5" fill="#0f1b2d"/>
+    <circle cx="39" cy="25" r="2" fill="#f0c419"/>
+  </g>
+  <text x="66" y="29" font-family="Arial Rounded MT Bold, Arial, Helvetica, sans-serif"
+        font-size="26" font-weight="700" letter-spacing="-0.5">
+    <tspan fill="#ffffff">Livr’</tspan><tspan fill="#f0c419">Auto</tspan>
+  </text>
+</svg>

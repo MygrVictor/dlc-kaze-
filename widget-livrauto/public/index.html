@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Livr'Auto — Estimation de livraison</title>
+    <link rel="stylesheet" href="widget.css" />
+  </head>
+  <body>
+    <div class="lw" id="lw">
+      <header class="lw-header">
+        <img src="logo-livrauto.svg" alt="Livr'Auto" class="lw-logo" />
+      </header>
+
+      <main class="lw-body">
+        <!-- ── Étape 1 : estimation ─────────────────────────── -->
+        <section data-step="estimation">
+          <p class="lw-eyebrow">
+            <span class="lw-ico">◎</span> Estimation · Convoyage
+          </p>
+          <h1 class="lw-title">Estimez le coût de votre livraison</h1>
+          <p class="lw-sub">
+            Indiquez simplement l'adresse de livraison pour obtenir un prix
+            indicatif immédiat, sans engagement.
+          </p>
+
+          <div class="lw-card">
+            <p class="lw-label lw-label--muted">
+              🔒 Départ <span data-bind="departLabel"></span>
+            </p>
+            <div class="lw-locked" data-bind="depart"></div>
+          </div>
+
+          <form class="lw-card" id="form-estimation" novalidate>
+            <label class="lw-label" for="dest"
+              >Adresse de destination <span class="lw-req">*</span></label
+            >
+            <div class="lw-autocomplete">
+              <input
+                id="dest"
+                class="lw-input"
+                name="destination"
+                autocomplete="off"
+                placeholder="12 rue de la République, 13001 Marseille"
+                required
+              />
+              <ul
+                class="lw-suggestions"
+                id="dest-suggestions"
+                role="listbox"
+                hidden
+              ></ul>
+            </div>
+            <p class="lw-error" data-error="estimation" hidden></p>
+            <button type="submit" class="lw-btn lw-btn--primary">
+              Estimer le coût
+            </button>
+          </form>
+
+          <div class="lw-result" data-bind="result" hidden>
+            <div class="lw-result-row">
+              <span>Distance estimée</span
+              ><strong data-bind="distance"></strong>
+            </div>
+            <div class="lw-result-row">
+              <span>Tarif indicatif tout compris</span
+              ><strong class="lw-price" data-bind="price"></strong>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="lw-btn lw-btn--primary"
+            id="go-coordonnees"
+            hidden
+          >
+            Commander cette livraison →
+          </button>
+        </section>
+
+        <!-- ── Étape 2 : coordonnées ────────────────────────── -->
+        <section data-step="coordonnees" hidden>
+          <p class="lw-eyebrow">
+            <span class="lw-ico">▤</span> Finalisation de la livraison
+          </p>
+          <h1 class="lw-title">Renseignez vos coordonnées</h1>
+          <p class="lw-sub">
+            Ces informations nous permettent d'organiser l'enlèvement et de vous
+            transmettre le suivi de votre livraison.
+          </p>
+
+          <div class="lw-card">
+            <p class="lw-label lw-label--caps">Ce qui vous attend</p>
+            <ol class="lw-timeline">
+              <li>
+                <span class="lw-dot">▤</span><b>Devis généré</b
+                ><small>Selon votre adresse de livraison</small>
+              </li>
+              <li>
+                <span class="lw-dot">▭</span><b>Paiement</b
+                ><small>Réglé en toute sécurité</small>
+              </li>
+              <li>
+                <span class="lw-dot">◉</span><b>Livreur assigné</b
+                ><small>Un pro dédié, sous 24 h</small>
+              </li>
+              <li>
+                <span class="lw-dot lw-dot--dark">⚿</span><b>Livraison</b
+                ><small>Remis chez vous, contre signature</small>
+              </li>
+            </ol>
+          </div>
+
+          <form class="lw-card" id="form-coordonnees" novalidate>
+            <div class="lw-grid">
+              <div>
+                <label class="lw-label" for="prenom"
+                  >Prénom <span class="lw-req">*</span></label
+                >
+                <input
+                  id="prenom"
+                  class="lw-input"
+                  name="prenom"
+                  autocomplete="given-name"
+                  required
+                />
+              </div>
+              <div>
+                <label class="lw-label" for="nom"
+                  >Nom <span class="lw-req">*</span></label
+                >
+                <input
+                  id="nom"
+                  class="lw-input"
+                  name="nom"
+                  autocomplete="family-name"
+                  required
+                />
+              </div>
+            </div>
+            <label class="lw-label" for="tel"
+              >Téléphone <span class="lw-req">*</span></label
+            >
+            <input
+              id="tel"
+              class="lw-input"
+              name="tel"
+              type="tel"
+              autocomplete="tel"
+              required
+            />
+            <label class="lw-label" for="email"
+              >Email <span class="lw-req">*</span></label
+            >
+            <input
+              id="email"
+              class="lw-input"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+            />
+
+            <hr class="lw-sep" />
+            <label class="lw-label" for="dest2"
+              >Adresse de livraison <span class="lw-req">*</span></label
+            >
+            <p class="lw-hint">
+              Reprise de votre simulation — modifiez-la si besoin, le prix sera
+              recalculé.
+            </p>
+            <input
+              id="dest2"
+              class="lw-input lw-input--dashed"
+              name="destination"
+              autocomplete="street-address"
+              required
+            />
+            <p class="lw-error" data-error="coordonnees" hidden></p>
+            <button type="submit" class="lw-btn lw-btn--primary">
+              Obtenir mon devis définitif →
+            </button>
+          </form>
+          <button type="button" class="lw-link" data-back="estimation">
+            ← Retour à l'estimation
+          </button>
+        </section>
+
+        <!-- ── Étape 3 : récapitulatif et CGV ───────────────── -->
+        <section data-step="recap" hidden>
+          <div class="lw-center">
+            <div class="lw-check">✓</div>
+            <p
+              class="lw-eyebrow lw-eyebrow--center"
+              data-bind="recapEyebrow"
+            ></p>
+            <h1 class="lw-title lw-title--center">
+              Félicitations, <span data-bind="prenom"></span> !
+            </h1>
+            <p class="lw-sub lw-sub--center">
+              Vérifiez vos informations avant de confirmer.
+            </p>
+          </div>
+
+          <div class="lw-card lw-recap">
+            <button
+              type="button"
+              class="lw-link lw-link--right"
+              data-back="coordonnees"
+            >
+              ✎ Modifier
+            </button>
+            <div class="lw-recap-row">
+              <span>Départ</span><b data-bind="depart"></b>
+            </div>
+            <div class="lw-recap-row">
+              <span>Destination</span><b data-bind="destination"></b>
+            </div>
+            <div class="lw-recap-row lw-recap-row--last">
+              <span>Contact</span>
+              <b
+                ><span data-bind="fullName"></span
+                ><small data-bind="contact"></small
+              ></b>
+            </div>
+          </div>
+
+          <div class="lw-result">
+            <div class="lw-result-row">
+              <span>Distance</span><strong data-bind="distance"></strong>
+            </div>
+            <div class="lw-result-row">
+              <span>Total à régler</span
+              ><strong class="lw-price" data-bind="price"></strong>
+            </div>
+          </div>
+
+          <div class="lw-cgv" id="cgv">
+            <div class="lw-cgv-head">
+              <span class="lw-cgv-ico" data-bind="cgvIco">▤</span>
+              <div>
+                <b data-bind="cgvTitle">Conditions générales de livraison</b>
+                <small data-bind="cgvSub"
+                  >Acceptation requise avant confirmation</small
+                >
+              </div>
+              <button
+                type="button"
+                class="lw-btn lw-btn--dark lw-btn--sm"
+                id="cgv-open"
+              >
+                Signer ✍
+              </button>
+            </div>
+            <div class="lw-cgv-body" id="cgv-body" hidden>
+              <div class="lw-cgv-text">
+                <p>
+                  <b>1. Objet.</b> Livr'Auto organise le convoyage du véhicule
+                  du point d'enlèvement indiqué jusqu'à l'adresse de livraison.
+                </p>
+                <p>
+                  <b>2. Prix.</b> Le prix affiché est ferme pour le trajet et le
+                  véhicule indiqués, toutes taxes comprises.
+                </p>
+                <p>
+                  <b>3. Enlèvement.</b> Le véhicule est retiré après validation
+                  par la maison de ventes (paiement de l'adjudication et frais
+                  réglés).
+                </p>
+                <p>
+                  <b>4. Livraison.</b> Le véhicule est remis contre signature
+                  d'un procès-verbal de livraison avec état des lieux.
+                </p>
+                <p>
+                  <b>5. Assurance.</b> Le véhicule est assuré pendant toute la
+                  durée du convoyage.
+                </p>
+                <p>
+                  <b>6. Annulation.</b> Annulation sans frais jusqu'à
+                  l'affectation d'un convoyeur.
+                </p>
+              </div>
+              <label class="lw-checkbox">
+                <input type="checkbox" id="cgv-accept" />
+                J'ai lu et j'accepte les conditions générales de livraison.
+              </label>
+              <button
+                type="button"
+                class="lw-btn lw-btn--dark"
+                id="cgv-sign"
+                disabled
+              >
+                Valider ma signature
+              </button>
+            </div>
+          </div>
+
+          <p class="lw-error" data-error="recap" hidden></p>
+          <button
+            type="button"
+            class="lw-btn lw-btn--primary"
+            id="confirmer"
+            disabled
+          >
+            🔒 Confirmer la livraison
+          </button>
+          <p class="lw-foot" data-bind="confirmHint">
+            Acceptez les CGV ci-dessus pour confirmer.
+          </p>
+        </section>
+
+        <!-- ── Étape 4 : confirmation ───────────────────────── -->
+        <section data-step="confirmation" hidden>
+          <div class="lw-center">
+            <div class="lw-check">✓</div>
+            <p class="lw-eyebrow lw-eyebrow--center">✓ Commande confirmée</p>
+            <h1 class="lw-title lw-title--center">
+              Merci, <span data-bind="prenom"></span> !
+            </h1>
+            <p class="lw-sub lw-sub--center">
+              Votre demande de livraison est bien enregistrée.
+            </p>
+          </div>
+
+          <div class="lw-card lw-recap">
+            <div class="lw-recap-row lw-recap-row--stack">
+              <span>Départ</span><b data-bind="depart"></b>
+            </div>
+            <div class="lw-recap-row lw-recap-row--stack">
+              <span>Destination</span><b data-bind="destination"></b>
+            </div>
+            <div class="lw-recap-row lw-recap-row--last">
+              <span data-bind="montantLabel">Montant à régler</span
+              ><b class="lw-amount" data-bind="price"></b>
+            </div>
+          </div>
+
+          <div class="lw-next">
+            <span class="lw-next-ico">☏</span>
+            <div>
+              <b>Prochaine étape</b>
+              <p>
+                Un membre de notre équipe vous contactera très prochainement
+                pour organiser les détails de l'enlèvement et de la livraison.
+                Référence : <span data-bind="reference"></span>
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="lw-btn lw-btn--primary"
+            id="retour-partenaire"
+          >
+            Retour à <span data-bind="partnerName"></span> →
+          </button>
+        </section>
+      </main>
+    </div>
+
+    <script src="widget.js" defer></script>
+  </body>
+</html>
