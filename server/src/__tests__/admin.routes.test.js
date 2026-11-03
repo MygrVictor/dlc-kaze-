@@ -449,7 +449,7 @@ describe("GET /api/admin/analyse", () => {
       appels.push({ sql, params });
       if (
         /AS missions_total,\s*$|AS ca_perdu/im.test(sql) &&
-        /WHERE created_at >= \$1/i.test(sql)
+        /missions\.created_at >= \$1/i.test(sql)
       ) {
         totauxVus += 1;
         return { rows: [totauxVus === 1 ? TOTAUX : precedent] };
@@ -493,7 +493,7 @@ describe("GET /api/admin/analyse", () => {
 
     await analyse("?debut=2026-03-01&fin=2026-03-31");
 
-    const totaux = appels.filter((a) => /WHERE created_at >= \$1/i.test(a.sql));
+    const totaux = appels.filter((a) => /missions\.created_at >= \$1/i.test(a.sql));
     expect(totaux).toHaveLength(2);
 
     const duree = (a) => a.params[1].getTime() - a.params[0].getTime();
@@ -515,7 +515,7 @@ describe("GET /api/admin/analyse", () => {
     await analyse("?debut=2026-01-01&fin=2026-12-31");
 
     const [courant] = appels.filter((a) =>
-      /WHERE created_at >= \$1/i.test(a.sql),
+      /missions\.created_at >= \$1/i.test(a.sql),
     );
     const [debut, fin] = courant.params;
 
@@ -591,7 +591,7 @@ describe("GET /api/admin/analyse", () => {
 
     await analyse();
 
-    const premier = appels.find((a) => /WHERE created_at >= \$1/i.test(a.sql));
+    const premier = appels.find((a) => /missions\.created_at >= \$1/i.test(a.sql));
     expect(premier.params[0].getFullYear()).toBe(new Date().getFullYear());
     expect(premier.params[0].getMonth()).toBe(0);
   });
@@ -602,7 +602,7 @@ describe("GET /api/admin/analyse", () => {
     const res = await analyse("?debut=pas-une-date&fin=n-importe-quoi");
 
     expect(res.status).toBe(200);
-    const premier = appels.find((a) => /WHERE created_at >= \$1/i.test(a.sql));
+    const premier = appels.find((a) => /missions\.created_at >= \$1/i.test(a.sql));
     expect(Number.isNaN(premier.params[0].getTime())).toBe(false);
     expect(Number.isNaN(premier.params[1].getTime())).toBe(false);
   });
