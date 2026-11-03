@@ -382,7 +382,7 @@ const migrate = async () => {
     DROP TRIGGER IF EXISTS trg_missions_delivered_at ON missions;
     CREATE TRIGGER trg_missions_delivered_at
       BEFORE INSERT OR UPDATE OF status, delivered_at ON missions
-      FOR EACH ROW EXECUTE FUNCTION missions_set_delivered_at();
+      FOR EACH ROW EXECUTE PROCEDURE missions_set_delivered_at();
 
     CREATE INDEX IF NOT EXISTS idx_missions_delivered_at
       ON missions(delivered_at) WHERE delivered_at IS NOT NULL;
