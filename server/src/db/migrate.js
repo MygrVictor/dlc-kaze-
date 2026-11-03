@@ -361,6 +361,47 @@ const migrate = async () => {
       WHERE source IS NOT NULL AND source_ref IS NOT NULL;
   `);
 
+  // Date de livraison réelle : `updated_at` bouge à chaque modification et
+  // ne peut pas servir de référence pour le CA / la marge réalisés.
+  // Un trigger la pose au passage en LIVREE (quel que soit le chemin de
+  // code : admin, convoyeur, synchro Kaze) et l'efface si on en sort.
+  await db.query(`
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+
+    CREATE OR REPLACE FUNCTION missions_set_delivered_at() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.status = 'LIVREE' THEN
+        NEW.delivered_at := COALESCE(NEW.delivered_at, NOW());
+      ELSE
+        NEW.delivered_at := NULL;
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_missions_delivered_at ON missions;
+    CREATE TRIGGER trg_missions_delivered_at
+      BEFORE INSERT OR UPDATE OF status, delivered_at ON missions
+      FOR EACH ROW EXECUTE FUNCTION missions_set_delivered_at();
+
+    CREATE INDEX IF NOT EXISTS idx_missions_delivered_at
+      ON missions(delivered_at) WHERE delivered_at IS NOT NULL;
+  `);
+
+  // Historique : pas de journal des statuts, `updated_at` est la meilleure
+  // approximation disponible pour les missions déjà livrées.
+  const rattrapageLivraison = await db.query(`
+    UPDATE missions
+       SET delivered_at = updated_at
+     WHERE status = 'LIVREE' AND delivered_at IS NULL
+    RETURNING id
+  `);
+  if (rattrapageLivraison.rowCount > 0) {
+    console.log(
+      `🛠️  delivered_at renseigné pour ${rattrapageLivraison.rowCount} mission(s) livrée(s).`,
+    );
+  }
+
   // Rattrapage historique : certaines missions ont pu rester en ACCEPTEE
   // alors qu'un convoyeur était déjà affecté. Elles doivent être en
   // ASSIGNEE pour être classées dans le bon onglet et les bons KPI.
