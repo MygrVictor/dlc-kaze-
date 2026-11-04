@@ -1,4 +1,7 @@
-const COOKIE_NAME = "dlc_token";
+// Nom configurable : en staging on utilise un nom distinct pour ne pas entrer
+// en collision avec le cookie de prod (même domaine parent drivelineconnect.com).
+const COOKIE_NAME =
+  String(process.env.AUTH_COOKIE_NAME || "dlc_token").trim() || "dlc_token";
 
 function parseJwtExpiresIn(value) {
   const source = String(value || "7d").trim();
