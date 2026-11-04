@@ -230,6 +230,26 @@ const authLimiter = rateLimit({
 app.use("/api/", globalLimiter);
 app.use("/api/auth/login", authLimiter);
 
+// ── Mode staging (STAGING_MODE=true) ─────────────────────────
+// Invisible pour l'utilisateur : le site reste hors des moteurs de
+// recherche et aucune candidature publique ne peut y entrer.
+if (process.env.STAGING_MODE === "true") {
+  app.use((_req, res, next) => {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+    next();
+  });
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain").send("User-agent: *\nDisallow: /\n");
+  });
+  app.post("/api/auth/demande", (_req, res) => {
+    res
+      .status(403)
+      .json({
+        error: "Les candidatures sont désactivées sur cet environnement.",
+      });
+  });
+}
+
 // ── Routes ───────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/missions", missionRoutes);
