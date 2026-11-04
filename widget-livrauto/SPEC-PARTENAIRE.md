@@ -217,6 +217,21 @@ Règles :
 - le prix n'est **jamais** envoyé par le navigateur : seul le `quote_id` l'est ;
 - les réponses ne contiennent ni prix convoyeur ni détail de grille.
 
+### Géocodage et distance
+
+| Étape | Service | Remarque |
+|---|---|---|
+| Départ | Coordonnées fournies par le partenaire (`fromLat`/`fromLng`) | Sinon géocodage BAN |
+| Arrivée | **Base Adresse Nationale**, côté serveur | Les coordonnées envoyées par le navigateur sont ignorées (falsifiables) |
+| Distance | **OpenRouteService**, profil voiture | Distance par la route |
+| Repli | Ligne droite × 1,22 | Sans clé, quota dépassé, timeout 4 s, point non routable |
+
+- Clé `ORS_API_KEY` (offre gratuite : 2 000 itinéraires/jour, 40/min), envoyée en en-tête.
+- Cache d'un trajet à ~100 m près pendant 7 jours ; les échecs ne sont pas mis en cache.
+- Minimum facturé : 5 km.
+- La méthode (`ors` ou `estimation`) est conservée dans le devis et la mission
+  (`distance_methode`) pour savoir comment chaque prix a été calculé.
+
 ---
 
 ## 11. Plan de développement

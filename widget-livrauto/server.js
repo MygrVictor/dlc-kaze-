@@ -15,10 +15,12 @@
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+// Configuration propre au widget (ORS_API_KEY…), distincte du .env de l'app.
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
+const { distanceRoutiere } = require("./distance");
 
 const PORT = process.env.WIDGET_PORT || 4100;
-const ROAD_FACTOR = 1.22;
 const VAT_RATE = 0.2;
 // Grille simplifiée de démonstration (HT). À remplacer par la vraie grille.
 const TARIF = { base: 60, parKm: 0.5, minimum: 120 };
@@ -77,16 +79,6 @@ const round2 = (n) => Math.round(n * 100) / 100;
 const texte = (v, max = 200) =>
   v == null ? "" : String(v).trim().slice(0, max);
 
-function haversineKm(a, b) {
-  const rad = (d) => (d * Math.PI) / 180;
-  const h =
-    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
-    Math.cos(rad(a.lat)) *
-      Math.cos(rad(b.lat)) *
-      Math.sin(rad(b.lng - a.lng) / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(h));
-}
-
 async function geocode(adresse) {
   const url = `https://api-adresse.data.gouv.fr/search/?limit=1&q=${encodeURIComponent(adresse)}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
@@ -130,6 +122,9 @@ app.post("/api/widget/estimation", async (req, res) => {
       Number.isFinite(lat) && Number.isFinite(lng)
         ? { lat, lng }
         : await geocode(adresseDep);
+    // Les coordonnées d'arrivée ne sont jamais prises du navigateur :
+    // l'acheteur pourrait les modifier pour payer moins. Le serveur
+    // géocode lui-même l'adresse saisie (BAN), puis calcule l'itinéraire.
     const to = await geocode(arrivee);
     if (!from || !to) {
       return res.status(422).json({
@@ -138,7 +133,8 @@ app.post("/api/widget/estimation", async (req, res) => {
       });
     }
 
-    const km = Math.max(5, haversineKm(from, to) * ROAD_FACTOR);
+    const distance = await distanceRoutiere(from, to);
+    const km = distance.km;
     const ht = round2(Math.max(TARIF.minimum, TARIF.base + TARIF.parKm * km));
     const ttc = round2(ht * (1 + VAT_RATE));
 
@@ -155,6 +151,9 @@ app.post("/api/widget/estimation", async (req, res) => {
       insured_value: Number(depart.insurance_value) || null,
       adresse_arrivee: arrivee,
       distance_km: Math.round(km),
+      distance_methode: distance.methode, // 'ors' ou 'estimation'
+      coords_depart: from,
+      coords_arrivee: to,
       price_ht: ht,
       price_ttc: ttc,
       expires_at: new Date(Date.now() + QUOTE_TTL_MS).toISOString(),
@@ -282,6 +281,7 @@ app.post("/api/widget/commande", (req, res) => {
     departure_address: quote.adresse_depart,
     arrival_address: quote.adresse_arrivee,
     distance_km: quote.distance_km,
+    distance_methode: quote.distance_methode,
     pickup_contact_name: quote.pickup.name || null,
     pickup_contact_phone: quote.pickup.phone || null,
     pickup_contact_email: quote.pickup.email || null,
