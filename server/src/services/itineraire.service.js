@@ -22,19 +22,29 @@ const ORS_TIMEOUT_MS = 6000;
 // à l'échelle d'une carte de France et allègent fortement la réponse.
 const POINTS_MAX = 400;
 
-let tableReady = false;
+// Promesse partagée : deux requêtes simultanées ne doivent pas lancer deux
+// CREATE TABLE en parallèle (Postgres lève alors pg_type_typname_nsp_index).
+let tablePromise = null;
 
-async function ensureTable() {
-  if (tableReady) return;
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS itineraires_cache (
-      cle         TEXT PRIMARY KEY,
-      distance_km NUMERIC(10, 2) NOT NULL,
-      geometrie   JSONB NOT NULL,
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-  tableReady = true;
+function ensureTable() {
+  if (!tablePromise) {
+    tablePromise = db
+      .query(
+        `CREATE TABLE IF NOT EXISTS itineraires_cache (
+          cle         TEXT PRIMARY KEY,
+          distance_km NUMERIC(10, 2) NOT NULL,
+          geometrie   JSONB NOT NULL,
+          created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )`,
+      )
+      .catch((err) => {
+        tablePromise = null;
+        // Course déjà perdue par une autre instance : la table existe.
+        if (err.code === "23505" || err.code === "42P07") return;
+        throw err;
+      });
+  }
+  return tablePromise;
 }
 
 function estCoordonnee(p) {
