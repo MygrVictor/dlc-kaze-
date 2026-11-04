@@ -8,6 +8,7 @@ const syncService = require("../services/sync.service");
 const emailService = require("../services/email.service");
 const telegramService = require("../services/telegram.service");
 const geocodingService = require("../services/geocoding.service");
+const itineraireService = require("../services/itineraire.service");
 const { auditLog, isValidEmail } = require("../middleware/security.middleware");
 const { creerLienReinitialisation } = require("../lib/password-reset");
 const { isDemoMission, isValidKazeDriverId } = require("../lib/demo-mission");
@@ -2207,6 +2208,25 @@ router.get("/missions/map", async (req, res, next) => {
       missions: features,
       kazeMissions: kazeFeatures,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Tracés routiers des missions affichées sur la carte (OpenRouteService).
+// Appelée après /missions/map : la carte s'affiche tout de suite en lignes
+// droites, puis les itinéraires remplacent les lignes au fur et à mesure.
+const TRAJETS_MAX_PAR_APPEL = 100;
+router.post("/missions/itineraires", async (req, res, next) => {
+  try {
+    const trajets = Array.isArray(req.body?.trajets)
+      ? req.body.trajets.slice(0, TRAJETS_MAX_PAR_APPEL).map((t) => ({
+          id: String(t?.id ?? "").slice(0, 80),
+          from: { lat: Number(t?.from?.lat), lng: Number(t?.from?.lng) },
+          to: { lat: Number(t?.to?.lat), lng: Number(t?.to?.lng) },
+        }))
+      : [];
+    res.json(await itineraireService.itinerairesEnLot(trajets));
   } catch (err) {
     next(err);
   }

@@ -417,6 +417,39 @@ export default function AdminMap() {
     [missions, activePhases],
   );
 
+  // Itinéraires routiers (OpenRouteService, mis en cache côté serveur).
+  // Sans clé ORS, le serveur ne renvoie rien et on garde les lignes droites.
+  const [itineraires, setItineraires] = useState({});
+  useEffect(() => {
+    const trajets = filtered
+      .filter((m) => m.departure && m.arrival && !itineraires[m.id])
+      .slice(0, 100)
+      .map((m) => ({ id: m.id, from: m.departure, to: m.arrival }));
+    if (!trajets.length) return undefined;
+    let annule = false;
+    let timer;
+    api
+      .post("/admin/missions/itineraires", { trajets })
+      .then((res) => {
+        if (annule) return;
+        const recu = res.data?.itineraires || {};
+        if (Object.keys(recu).length) {
+          setItineraires((prev) => ({ ...prev, ...recu }));
+        }
+        // Limite ORS (40/min) : on reprend plus tard pour le reste.
+        if (res.data?.ors_configure && res.data?.restants > 0) {
+          timer = setTimeout(() => {
+            if (!annule) setItineraires((prev) => ({ ...prev }));
+          }, 25000);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      annule = true;
+      clearTimeout(timer);
+    };
+  }, [filtered, itineraires]);
+
   const kazeJobsDedupes = useMemo(() => {
     const linkedKazeIds = new Set(
       missions
@@ -747,15 +780,22 @@ export default function AdminMap() {
                   {/* Ligne départ → arrivée */}
                   {m.departure && m.arrival && (
                     <Polyline
-                      positions={[
-                        [m.departure.lat, m.departure.lng],
-                        [m.arrival.lat, m.arrival.lng],
-                      ]}
+                      positions={
+                        itineraires[m.id]?.coords || [
+                          [m.departure.lat, m.departure.lng],
+                          [m.arrival.lat, m.arrival.lng],
+                        ]
+                      }
                       pathOptions={{
                         color: cfg.color,
                         weight: terminee ? 1.5 : 3,
                         opacity: terminee ? 0.35 : 0.9,
-                        dashArray: terminee ? "3 6" : "7 5",
+                        // Route réelle : trait plein ; ligne droite : pointillés.
+                        dashArray: terminee
+                          ? "3 6"
+                          : itineraires[m.id]?.coords
+                            ? null
+                            : "7 5",
                       }}
                     />
                   )}
