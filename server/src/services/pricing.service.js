@@ -1,5 +1,6 @@
 const db = require("../db");
 const { geocode } = require("./geocoding.service");
+const { itineraire } = require("./itineraire.service");
 const { trouverType } = require("../lib/vehicules");
 
 const VAT_RATE = 0.2;
@@ -174,8 +175,18 @@ async function computeAutomaticQuote({
     throw error;
   }
 
-  const directKm = haversineKm(from, to);
-  const roadKm = Math.max(5, round2(directKm * ROAD_FACTOR));
+  // Distance routière réelle (OpenRouteService, cache DB) ; à défaut,
+  // estimation à vol d'oiseau × ROAD_FACTOR pour ne jamais bloquer un devis.
+  let route = null;
+  try {
+    route = await itineraire(from, to);
+  } catch (err) {
+    console.warn("[pricing] itinéraire indisponible —", err.message);
+  }
+  const distanceMethode = route ? "ors" : "estimation";
+  const roadKm = route
+    ? Math.max(5, round2(route.distance_km))
+    : Math.max(5, round2(haversineKm(from, to) * ROAD_FACTOR));
 
   const vehicleType = normalizeVehicleType(type_vehicule);
   const rule = await resolveTariffRule(vehicleType, roadKm);
@@ -205,6 +216,7 @@ async function computeAutomaticQuote({
   return {
     vehicle_type: vehicleType,
     distance_km: roadKm,
+    distance_methode: distanceMethode,
     price_ht: priceHT,
     price_ttc: priceTTC,
     price_convoyeur_ht: convoyeur,
