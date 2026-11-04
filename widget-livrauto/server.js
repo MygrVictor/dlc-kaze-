@@ -53,7 +53,9 @@ function calculerCommission(partenaire, prixHT) {
 }
 
 const app = express();
-app.use(express.json({ limit: "20kb" }));
+// Limité aux routes du widget : monté dans l'app (staging), il ne doit pas
+// imposer sa limite de 20 ko aux autres routes.
+app.use("/api/widget", express.json({ limit: "20kb" }));
 
 // ── Page du widget : seule autorisée en iframe ──────────────
 app.use("/widget", (_req, res, next) => {
@@ -326,10 +328,15 @@ app.post("/api/widget/commande", (req, res) => {
   });
 });
 
-app.get("/", (_req, res) => res.redirect("/widget/demo/"));
+// Lancé seul (node widget-livrauto/server.js) : serveur autonome sur 4100.
+// Requis par l'app (staging, WIDGET_ENABLED=true) : simple sous-application.
+if (require.main === module) {
+  app.get("/", (_req, res) => res.redirect("/widget/demo/"));
+  app.listen(PORT, () => {
+    console.log(
+      `Widget Livr'Auto (test local) : http://localhost:${PORT}/widget/demo/`,
+    );
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(
-    `Widget Livr'Auto (test local) : http://localhost:${PORT}/widget/demo/`,
-  );
-});
+module.exports = app;

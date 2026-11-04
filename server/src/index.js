@@ -85,6 +85,16 @@ if (isProduction) {
   app.set("trust proxy", 1);
 }
 
+// ── Widget Livr'Auto (staging uniquement) ────────────────────
+// Monté AVANT helmet : la page /widget doit pouvoir s'afficher en iframe
+// chez le partenaire (CSP frame-ancestors propre au widget), ce que
+// l'X-Frame-Options DENY global interdirait. Seuls /widget et /api/widget
+// sont concernés ; tout le reste passe ensuite par la sécurité normale.
+if (process.env.WIDGET_ENABLED === "true") {
+  app.use(require("../../widget-livrauto/server"));
+  console.log("🧩  Widget Livr'Auto actif sur /widget/demo/");
+}
+
 // ── Sécurité — Headers ──────────────────────────────────────
 app.use(
   helmet({
