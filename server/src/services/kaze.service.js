@@ -1617,3 +1617,19 @@ module.exports = {
     SIGNATURE_CLIENT_NODE_ID,
   },
 };
+
+// ─── Faux Kaze (staging) ─────────────────────────────────────
+// En staging (STAGING_MODE=true), Kaze est simulé PAR DÉFAUT : une erreur
+// de configuration ne doit jamais créer de vraie mission ni prévenir de
+// vrais convoyeurs. KAZE_MOCK=false force le vrai Kaze ; KAZE_MOCK=true
+// active la simulation ailleurs (démo locale). Jamais en test unitaire.
+if (process.env.NODE_ENV !== "test") {
+  const choix = String(process.env.KAZE_MOCK || "").toLowerCase();
+  const simuler =
+    choix === "true" ||
+    (choix !== "false" && process.env.STAGING_MODE === "true");
+  if (simuler) {
+    console.log("🧪  Kaze SIMULÉ (faux Kaze) — aucun appel vers app.kaze.so");
+    module.exports = require("./kaze.mock").creerFauxKaze(module.exports);
+  }
+}
