@@ -19,11 +19,10 @@ const crypto = require("crypto");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
 const { distanceRoutiere } = require("./distance");
+const { prixVL } = require("./grille");
 
 const PORT = process.env.WIDGET_PORT || 4100;
 const VAT_RATE = 0.2;
-// Grille simplifiée de démonstration (HT). À remplacer par la vraie grille.
-const TARIF = { base: 60, parKm: 0.5, minimum: 120 };
 const QUOTE_TTL_MS = 30 * 24 * 3600 * 1000;
 const FICHIER_COMMANDES = path.join(__dirname, "commandes-test.json");
 
@@ -134,8 +133,10 @@ app.post("/api/widget/estimation", async (req, res) => {
     }
 
     const distance = await distanceRoutiere(from, to);
-    const km = distance.km;
-    const ht = round2(Math.max(TARIF.minimum, TARIF.base + TARIF.parKm * km));
+    const km = Math.round(distance.km);
+    // Grille VL Interenchères (HT), sur les km affichés à l'acheteur.
+    const tarif = prixVL(km);
+    const ht = tarif.price_ht;
     const ttc = round2(ht * (1 + VAT_RATE));
 
     const quote = {
@@ -150,8 +151,13 @@ app.post("/api/widget/estimation", async (req, res) => {
       },
       insured_value: Number(depart.insurance_value) || null,
       adresse_arrivee: arrivee,
-      distance_km: Math.round(km),
+      distance_km: km,
       distance_methode: distance.methode, // 'ors' ou 'estimation'
+      tarif: {
+        grille: "interencheres-vl",
+        prix_km: tarif.prix_km,
+        forfait: tarif.forfait,
+      },
       coords_depart: from,
       coords_arrivee: to,
       price_ht: ht,
