@@ -21,6 +21,9 @@ const ORS_TIMEOUT_MS = 6000;
 // Au-delà, la ligne est simplifiée : quelques centaines de points suffisent
 // à l'échelle d'une carte de France et allègent fortement la réponse.
 const POINTS_MAX = 400;
+// Un trajet qu'ORS ne sait pas calculer n'est retenté qu'après ce délai.
+const ECHEC_RETRY_JOURS = 7;
+const ECHEC = Object.freeze({ echec: true });
 
 // Promesse partagée : deux requêtes simultanées ne doivent pas lancer deux
 // CREATE TABLE en parallèle (Postgres lève alors pg_type_typname_nsp_index).
@@ -35,7 +38,12 @@ function ensureTable() {
           distance_km NUMERIC(10, 2) NOT NULL,
           geometrie   JSONB NOT NULL,
           created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )`,
+        );
+        -- Échecs mémorisés (géométrie nulle) pour ne pas consommer le quota
+        -- ORS à chaque affichage de la carte.
+        ALTER TABLE itineraires_cache ALTER COLUMN geometrie DROP NOT NULL;
+        ALTER TABLE itineraires_cache ALTER COLUMN distance_km DROP NOT NULL;
+        ALTER TABLE itineraires_cache ADD COLUMN IF NOT EXISTS echec TEXT;`,
       )
       .catch((err) => {
         tablePromise = null;
@@ -128,13 +136,17 @@ async function lireCache(cles) {
   await ensureTable();
   if (!cles.length) return new Map();
   const { rows } = await db.query(
-    `SELECT cle, distance_km, geometrie FROM itineraires_cache WHERE cle = ANY($1)`,
+    `SELECT cle, distance_km, geometrie FROM itineraires_cache
+      WHERE cle = ANY($1)
+        AND (geometrie IS NOT NULL OR created_at > NOW() - INTERVAL '${ECHEC_RETRY_JOURS} days')`,
     [cles],
   );
   return new Map(
     rows.map((r) => [
       r.cle,
-      { distance_km: Number(r.distance_km), coords: r.geometrie },
+      r.geometrie
+        ? { distance_km: Number(r.distance_km), coords: r.geometrie }
+        : ECHEC,
     ]),
   );
 }
@@ -148,7 +160,7 @@ async function itineraire(from, to) {
 
   const cle = cleTrajet(from, to);
   const enCache = (await lireCache([cle])).get(cle);
-  if (enCache) return enCache;
+  if (enCache) return enCache === ECHEC ? null : enCache;
 
   const apiKey = process.env.ORS_API_KEY;
   if (!apiKey) return null;
@@ -158,17 +170,37 @@ async function itineraire(from, to) {
     await db.query(
       `INSERT INTO itineraires_cache (cle, distance_km, geometrie)
        VALUES ($1, $2, $3)
-       ON CONFLICT (cle) DO NOTHING`,
+       ON CONFLICT (cle) DO UPDATE
+         SET distance_km = EXCLUDED.distance_km, geometrie = EXCLUDED.geometrie,
+             echec = NULL, created_at = NOW()`,
       [cle, trace.distance_km, JSON.stringify(trace.coords)],
     );
     return trace;
   } catch (err) {
-    // Un échec n'est pas mis en cache : le trajet sera retenté plus tard.
     console.warn(
       "[itineraire] ORS indisponible —",
       err.status || "",
       err.message,
     );
+    // Erreur propre au trajet (4xx hors quota) : on la mémorise pour ne
+    // pas la redemander à chaque affichage. Quota/réseau : on retentera.
+    if (
+      err.status &&
+      err.status >= 400 &&
+      err.status < 500 &&
+      err.status !== 429 &&
+      err.status !== 401 &&
+      err.status !== 403
+    ) {
+      await db
+        .query(
+          `INSERT INTO itineraires_cache (cle, echec) VALUES ($1, $2)
+           ON CONFLICT (cle) DO UPDATE SET echec = EXCLUDED.echec, created_at = NOW()
+           WHERE itineraires_cache.geometrie IS NULL`,
+          [cle, String(err.message).slice(0, 300)],
+        )
+        .catch(() => {});
+    }
     return null;
   }
 }
@@ -189,10 +221,12 @@ async function itinerairesEnLot(trajets, { nouveauxMax = 15 } = {}) {
   const connus = await lireCache([...new Set(cles)]);
 
   const resultats = {};
+  const echecs = [];
   const aCalculer = [];
   valides.forEach((t, i) => {
     const trace = connus.get(cles[i]);
-    if (trace) resultats[t.id] = trace;
+    if (trace === ECHEC) echecs.push(t.id);
+    else if (trace) resultats[t.id] = trace;
     else aCalculer.push(t);
   });
 
@@ -201,10 +235,12 @@ async function itinerairesEnLot(trajets, { nouveauxMax = 15 } = {}) {
   for (const t of lot) {
     const trace = await itineraire(t.from, t.to);
     if (trace) resultats[t.id] = trace;
+    else echecs.push(t.id);
   }
 
   return {
     itineraires: resultats,
+    echecs,
     restants: disponible ? aCalculer.length - lot.length : 0,
     ors_configure: disponible,
   };

@@ -432,7 +432,13 @@ export default function AdminMap() {
       .post("/admin/missions/itineraires", { trajets })
       .then((res) => {
         if (annule) return;
-        const recu = res.data?.itineraires || {};
+        const recu = { ...(res.data?.itineraires || {}) };
+        // Échecs et trajets non calculés ce tour-ci : marqués pour ne pas
+        // être redemandés en boucle (ligne droite conservée).
+        for (const id of res.data?.echecs || []) recu[id] = { echec: true };
+        if (!res.data?.ors_configure) {
+          for (const t of trajets) recu[t.id] = recu[t.id] || { echec: true };
+        }
         if (Object.keys(recu).length) {
           setItineraires((prev) => ({ ...prev, ...recu }));
         }
