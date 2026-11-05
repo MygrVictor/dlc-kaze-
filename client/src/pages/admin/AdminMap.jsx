@@ -464,7 +464,17 @@ export default function AdminMap() {
         .map((id) => String(id)),
     );
 
-    return kazeJobs.filter((j) => !linkedKazeIds.has(String(j.kaze_job_id)));
+    // Kaze nomme nos missions « DLC-<8 premiers caractères de l'id> » :
+    // ce lien vaut même quand kaze_mission_id n'a pas été renseigné.
+    const linkedRefs = new Set(
+      missions.map((m) => `DLC-${String(m.id).slice(0, 8)}`.toUpperCase()),
+    );
+
+    return kazeJobs.filter(
+      (j) =>
+        !linkedKazeIds.has(String(j.kaze_job_id)) &&
+        !linkedRefs.has(String(j.kaze_reference || "").toUpperCase()),
+    );
   }, [missions, kazeJobs]);
 
   const kazeFiltres = useMemo(
