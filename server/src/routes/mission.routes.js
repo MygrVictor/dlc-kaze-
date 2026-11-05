@@ -28,6 +28,9 @@ const {
   isValidPhone,
 } = require("../middleware/security.middleware");
 const { isDemoMission, isDemoMissionPayload } = require("../lib/demo-mission");
+const {
+  statistiquesClient,
+} = require("../services/statistiques-client.service");
 
 const router = express.Router();
 const ROLES_CONVOYABLES = ["convoyeur", "admin"];
@@ -548,6 +551,24 @@ router.post(
     }
   },
 );
+
+// ═════════════════════════════════════════════════════════════
+// Client : Statistiques d'activité (convoyages, kilométrage)
+// ═════════════════════════════════════════════════════════════
+router.get("/mes-statistiques", authorize("client"), async (req, res, next) => {
+  try {
+    const { debut, fin, granularite } = req.query;
+    const perimetre = await perimetreClient(req.user);
+    const stats = await statistiquesClient(perimetre, {
+      debut,
+      fin,
+      granularite,
+    });
+    res.json(stats);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ═════════════════════════════════════════════════════════════
 // Client : Lister ses missions

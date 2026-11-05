@@ -215,6 +215,19 @@ function ecrireEchecsConsecutifs(n) {
 }
 
 /**
+ * Message lisible d'une erreur. Une connexion refusée (base arrêtée) lève
+ * une AggregateError au `message` vide : le journal n'affichait alors
+ * qu'un « Erreur sync Kaze: » muet.
+ */
+function messageErreur(err) {
+  if (err?.message) return err.message;
+  if (Array.isArray(err?.errors) && err.errors.length) {
+    return err.errors.map((e) => e?.message || String(e)).join(" ; ");
+  }
+  return err?.code || String(err);
+}
+
+/**
  * Synchronise les statuts Kaze → DLC pour toutes les missions liées.
  */
 async function syncKazeStatuses() {
@@ -225,7 +238,7 @@ async function syncKazeStatuses() {
     await avecVerrouSync(syncKazeStatusesInterne);
     ecrireEchecsConsecutifs(0);
   } catch (err) {
-    console.error("❌ Erreur sync Kaze:", err.message);
+    console.error("❌ Erreur sync Kaze:", messageErreur(err));
     // Un échec isolé (Kaze lent, base saturée une seconde) se rattrape
     // tout seul à la sync suivante : on n'alerte que si la panne dure.
     const echecs = lireEchecsConsecutifs() + 1;
@@ -459,7 +472,7 @@ async function syncKazeStatusesInterne() {
       );
     }
   } catch (err) {
-    console.error("❌ Erreur sync Kaze:", err.message);
+    console.error("❌ Erreur sync Kaze:", messageErreur(err));
   }
 }
 

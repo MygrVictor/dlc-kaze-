@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
+import GoogleAnalytics from "../components/GoogleAnalytics";
 
 const LIENS = [
   { label: "Accueil", href: "/" },
@@ -273,6 +274,7 @@ export default function PublicLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
+      <GoogleAnalytics />
 
       {/* ──  ───────────────────────────────────── */}
       <footer

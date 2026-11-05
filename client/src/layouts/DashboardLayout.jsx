@@ -49,6 +49,8 @@ const NAV_ITEMS = {
       path: "/client/documents",
       icon: FolderOpen,
     },
+    // Rubrique « Analyse » client masquée tant qu'elle n'est pas finalisée.
+    // { label: "Analyse", path: "/client/analyse", icon: TrendingUp },
   ],
   admin: [
     { label: "Tableau de bord", path: "/admin", icon: BarChart3 },
