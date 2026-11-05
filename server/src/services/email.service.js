@@ -536,7 +536,8 @@ async function notifyMissionACoter(mission, client) {
       <div class="info-row"><span class="info-label">Véhicule</span><span class="info-value">${vehicule}${mission.vehicle_plate ? ` (${mission.vehicle_plate})` : ""}</span></div>
       <div class="info-row"><span class="info-label">Départ</span><span class="info-value">${mission.departure_address || "—"}</span></div>
       <div class="info-row"><span class="info-label">Arrivée</span><span class="info-value">${mission.arrival_address || "—"}</span></div>
-      ${mission.departure_date ? `<div class="info-row"><span class="info-label">Date souhaitée</span><span class="info-value">${new Date(mission.departure_date).toLocaleDateString("fr-FR")}</span></div>` : ""}
+      ${mission.desired_pickup_date ? `<div class="info-row"><span class="info-label">Enlèvement souhaité</span><span class="info-value">${new Date(mission.desired_pickup_date).toLocaleDateString("fr-FR")}</span></div>` : ""}
+      ${mission.desired_delivery_date ? `<div class="info-row"><span class="info-label">Livraison au plus tard</span><span class="info-value">${new Date(mission.desired_delivery_date).toLocaleDateString("fr-FR")}</span></div>` : ""}
     </div>
     <p style="text-align: center;">
       <a href="${process.env.CLIENT_URL}/admin/missions" class="btn">Coter cette mission</a>

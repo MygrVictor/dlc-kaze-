@@ -373,11 +373,16 @@ function generateDevisPDF(mission, client) {
   // ── Colonne droite : ENLÈVEMENT ──
   let yR = titreSection("ENLÈVEMENT (DÉPART)", xR, yStart);
   yR = texte(mission.departure_address || "—", xR, yR, { gras: true });
-  if (mission.departure_date) {
-    yR = texte(`Date : ${formatDate(mission.departure_date)}`, xR, yR, {
-      taille: 8,
-      muted: true,
-    });
+  // departure_date/arrival_date valent le lundi de la semaine de création
+  // (date technique envoyée à Kaze) : seules les dates souhaitées par le
+  // client ont un sens sur un devis.
+  if (mission.desired_pickup_date) {
+    yR = texte(
+      `Enlèvement souhaité : ${formatDate(mission.desired_pickup_date)}`,
+      xR,
+      yR,
+      { taille: 8, muted: true },
+    );
   }
   if (mission.departure_contact_name) {
     yR = texte(
@@ -398,11 +403,13 @@ function generateDevisPDF(mission, client) {
   yR += 10;
   yR = titreSection("LIVRAISON (ARRIVÉE)", xR, yR);
   yR = texte(mission.arrival_address || "—", xR, yR, { gras: true });
-  if (mission.arrival_date) {
-    yR = texte(`Date : ${formatDate(mission.arrival_date)}`, xR, yR, {
-      taille: 8,
-      muted: true,
-    });
+  if (mission.desired_delivery_date) {
+    yR = texte(
+      `Livraison au plus tard : ${formatDate(mission.desired_delivery_date)}`,
+      xR,
+      yR,
+      { taille: 8, muted: true },
+    );
   }
   if (mission.arrival_contact_name) {
     yR = texte(
@@ -691,13 +698,25 @@ function generateDevisGroupePDF(missions, client) {
     .text(first.arrival_address || "—", 320, yr, { width: 225 });
   yr += doc.heightOfString(first.arrival_address || "—", { width: 225 });
 
-  if (first.departure_date) {
+  if (first.desired_pickup_date || first.desired_delivery_date) {
     yr += 8;
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(`Enlèvement : ${formatDateShort(first.departure_date)}`, 320, yr);
-    yr += 12;
+    doc.fontSize(8).fillColor(COLORS.muted);
+    if (first.desired_pickup_date) {
+      doc.text(
+        `Enlèvement souhaité : ${formatDateShort(first.desired_pickup_date)}`,
+        320,
+        yr,
+      );
+      yr += 12;
+    }
+    if (first.desired_delivery_date) {
+      doc.text(
+        `Livraison au plus tard : ${formatDateShort(first.desired_delivery_date)}`,
+        320,
+        yr,
+      );
+      yr += 12;
+    }
   }
 
   // ── TABLEAU DES VÉHICULES ─────────────────────────────────────

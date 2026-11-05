@@ -1525,23 +1525,25 @@ export default function AdminDashboard() {
                     {formatDate(detailModal.created_at)}
                   </p>
                 </div>
-                {detailModal.departure_date && (
+                {detailModal.desired_pickup_date && (
                   <div className="p-3 bg-dark-700/50 rounded-lg">
                     <p className="text-xs text-dark-400 mb-1 flex items-center gap-1">
                       <MapPin size={12} className="text-green-400" /> Enlèvement
+                      souhaité
                     </p>
                     <p className="text-sm font-medium">
-                      {formatDate(detailModal.departure_date)}
+                      {formatDate(detailModal.desired_pickup_date)}
                     </p>
                   </div>
                 )}
-                {detailModal.arrival_date && (
+                {detailModal.desired_delivery_date && (
                   <div className="p-3 bg-dark-700/50 rounded-lg">
                     <p className="text-xs text-dark-400 mb-1 flex items-center gap-1">
-                      <MapPin size={12} className="text-red-400" /> Livraison
+                      <MapPin size={12} className="text-red-400" /> Livraison au
+                      plus tard
                     </p>
                     <p className="text-sm font-medium">
-                      {formatDate(detailModal.arrival_date)}
+                      {formatDate(detailModal.desired_delivery_date)}
                     </p>
                   </div>
                 )}
