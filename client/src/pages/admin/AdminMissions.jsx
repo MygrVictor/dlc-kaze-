@@ -1491,10 +1491,10 @@ export default function AdminMissions({ integre = false } = {}) {
                   <p className="text-sm font-medium mb-1">
                     {priceModal.departure_address}
                   </p>
-                  {priceModal.departure_date && (
+                  {priceModal.desired_pickup_date && (
                     <p className="flex items-center gap-1.5 text-xs text-dark-400 mb-2">
                       <Calendar size={12} />
-                      {formatDate(priceModal.departure_date)}
+                      Souhaité le {formatDate(priceModal.desired_pickup_date)}
                     </p>
                   )}
                   {priceModal.departure_contact_name && (
@@ -1528,10 +1528,11 @@ export default function AdminMissions({ integre = false } = {}) {
                   <p className="text-sm font-medium mb-1">
                     {priceModal.arrival_address}
                   </p>
-                  {priceModal.arrival_date && (
+                  {priceModal.desired_delivery_date && (
                     <p className="flex items-center gap-1.5 text-xs text-dark-400 mb-2">
                       <Calendar size={12} />
-                      {formatDate(priceModal.arrival_date)}
+                      Au plus tard le{" "}
+                      {formatDate(priceModal.desired_delivery_date)}
                     </p>
                   )}
                   {priceModal.arrival_contact_name && (

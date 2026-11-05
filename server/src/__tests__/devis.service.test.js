@@ -251,13 +251,22 @@ describe("Trajet", () => {
     expect(texte()).toContain("1 place Bellecour, Lyon");
   });
 
-  it("formate les dates en français", () => {
+  it("affiche les dates souhaitées par le client, en français", () => {
     generateDevisPDF(
-      { ...missionMinimale(), departure_date: "2026-08-12T09:30:00Z" },
+      {
+        ...missionMinimale(),
+        // Date technique Kaze (lundi de la semaine) : jamais affichée.
+        departure_date: "2026-11-02T00:00:00Z",
+        arrival_date: "2026-11-02T00:00:00Z",
+        desired_pickup_date: "2026-08-12T09:30:00Z",
+        desired_delivery_date: "2026-11-13T00:00:00Z",
+      },
       CLIENT,
     );
 
-    expect(texte()).toMatch(/Date : 12 août 2026/);
+    expect(texte()).toMatch(/Enlèvement souhaité : 12 août 2026/);
+    expect(texte()).toMatch(/Livraison au plus tard : 13 novembre 2026/);
+    expect(texte()).not.toMatch(/2 novembre 2026/);
   });
 
   it("associe le contact et son téléphone", () => {
