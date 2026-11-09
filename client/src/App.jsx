@@ -30,6 +30,7 @@ const ClientDevis = lazy(() => import("./pages/client/ClientDevis"));
 const ClientFactures = lazy(() => import("./pages/client/ClientFactures"));
 const ClientRecaps = lazy(() => import("./pages/client/ClientRecaps"));
 const ClientDocuments = lazy(() => import("./pages/client/ClientDocuments"));
+const ClientAnalyse = lazy(() => import("./pages/client/ClientAnalyse"));
 
 // Pages Admin
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -148,6 +149,8 @@ export default function App() {
           <Route path="factures" element={<ClientFactures />} />
           <Route path="recaps" element={<ClientRecaps />} />
           <Route path="documents" element={<ClientDocuments />} />
+          {/* Analyse client masquée tant qu'elle n'est pas finalisée :
+          <Route path="analyse" element={<ClientAnalyse />} /> */}
         </Route>
 
         {/* ── Dashboard Admin ──────────────────── */}

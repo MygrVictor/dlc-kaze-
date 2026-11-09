@@ -99,8 +99,14 @@ function consulterEtouffoir(empreinte, maintenant = Date.now()) {
  * Compose le message d'alerte au format MarkdownV2.
  */
 function composerAlerte({ contexte, message, detail, occurrences }) {
+  // Le local partage souvent le salon d'alertes de la prod : sans cette
+  // mention, une base locale arrêtée ressemblait à une panne en production.
+  const origine =
+    process.env.NODE_ENV === "production"
+      ? "PROD"
+      : `LOCAL — ${require("os").hostname()}`;
   const lignes = [
-    "🚨 *Erreur DLC*",
+    `🚨 *Erreur DLC* \\[${echapper(origine)}\\]`,
     "",
     `*Où* : ${echapper(contexte)}`,
     `*Quoi* : ${echapper(message)}`,
@@ -138,7 +144,13 @@ function composerAlerte({ contexte, message, detail, occurrences }) {
  * @returns {Promise<{alerte: boolean, etouffee?: boolean}>}
  */
 async function alerter({ contexte, erreur, detail }) {
-  const message = erreur instanceof Error ? erreur.message : String(erreur);
+  const message =
+    erreur instanceof Error
+      ? erreur.message ||
+        (erreur.errors || []).map((e) => e?.message).join(" ; ") ||
+        erreur.code ||
+        erreur.name
+      : String(erreur);
   const empreinte = empreinter(contexte, message);
   const { envoyer, occurrences } = consulterEtouffoir(empreinte);
 

@@ -441,10 +441,10 @@ router.get("/stats", async (_req, res, next) => {
 //
 // Deux conventions structurent toute cette section :
 //
-// 1. Le CA est compté sur `created_at` (date de la demande), pas sur
-//    la date de livraison. Une mission créée en mars et livrée en avril
-//    reste donc rattachée à mars — c'est la convention la plus lisible
-//    pour comparer deux périodes de même longueur.
+// 1. Le CA, le coût et la marge réalisés sont comptés sur `delivered_at`
+//    (date de livraison), jamais à la création. Une mission créée en mars
+//    et livrée en avril compte dans le CA d'avril. Seuls les indicateurs
+//    commerciaux (demandes, devis, engagé) restent sur `created_at`.
 //
 // 2. « Réalisé » = LIVREE uniquement. « Engagé » = ACCEPTEE, ASSIGNEE,
 //    EN_COURS et LIVREE. Les deux sont renvoyés séparément : mélanger
@@ -457,6 +457,18 @@ router.get("/stats", async (_req, res, next) => {
 //   - mission convoyée par un admin DLC : coût estimé à 50 % du CA mission
 // Deux sources pour un même chiffre finiraient sinon par diverger.
 // ══════════════════════════════════════════════════════════════
+
+/**
+ * Convention de dates :
+ *   - réalisé (livrées, CA, coût, marge) → `delivered_at` dans la période ;
+ *   - activité commerciale (demandes, devis, engagé) → `created_at`.
+ * Ainsi le nombre de véhicules livrés et la marge affichée portent sur
+ * les mêmes missions.
+ */
+const crePeriode = (t) => `(${t}.created_at >= $1 AND ${t}.created_at <= $2)`;
+const livrePeriode = (t) =>
+  `(${t}.status = 'LIVREE' AND ${t}.delivered_at >= $1 AND ${t}.delivered_at <= $2)`;
+const dansPeriode = (t) => `(${crePeriode(t)} OR ${livrePeriode(t)})`;
 
 /** Statuts qui engagent le client — le devis est signé. */
 const STATUTS_ENGAGES = ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"];
@@ -537,24 +549,24 @@ function periodePrecedente(debutBorne, finBorne) {
 /** Agrégats d'ensemble sur un intervalle. */
 const SQL_TOTAUX = `
   SELECT
-    COUNT(*)                                                   AS missions_total,
-    COUNT(*) FILTER (WHERE status = 'LIVREE')                  AS missions_livrees,
-    COUNT(*) FILTER (WHERE status = 'DEVIS_PROPOSE')           AS devis_en_attente,
-    COUNT(*) FILTER (WHERE status = 'DEVIS_REFUSE')            AS devis_refuses,
-    COUNT(*) FILTER (WHERE status = 'ANNULEE')                 AS annulees,
-    COUNT(*) FILTER (WHERE status = ANY($3))                   AS missions_engagees,
-    COALESCE(SUM(price)           FILTER (WHERE status = 'LIVREE'), 0)   AS ca_realise,
-    COALESCE(SUM(${COUT_ANALYTIQUE_TOTAUX_EXPR}) FILTER (WHERE status = 'LIVREE'), 0)   AS cout_realise,
-    COALESCE(SUM(price)           FILTER (WHERE status = ANY($3)), 0)    AS ca_engage,
-    COALESCE(SUM(${COUT_ANALYTIQUE_TOTAUX_EXPR}) FILTER (WHERE status = ANY($3)), 0)    AS cout_engage,
-    COALESCE(SUM(price)           FILTER (WHERE status = 'DEVIS_REFUSE'), 0) AS ca_perdu
+    COUNT(*) FILTER (WHERE ${crePeriode("missions")})          AS missions_total,
+    COUNT(*) FILTER (WHERE ${livrePeriode("missions")})        AS missions_livrees,
+    COUNT(*) FILTER (WHERE ${crePeriode("missions")} AND status = 'DEVIS_PROPOSE') AS devis_en_attente,
+    COUNT(*) FILTER (WHERE ${crePeriode("missions")} AND status = 'DEVIS_REFUSE')  AS devis_refuses,
+    COUNT(*) FILTER (WHERE ${crePeriode("missions")} AND status = 'ANNULEE')       AS annulees,
+    COUNT(*) FILTER (WHERE ${crePeriode("missions")} AND status = ANY($3))         AS missions_engagees,
+    COALESCE(SUM(price)           FILTER (WHERE ${livrePeriode("missions")}), 0)   AS ca_realise,
+    COALESCE(SUM(${COUT_ANALYTIQUE_TOTAUX_EXPR}) FILTER (WHERE ${livrePeriode("missions")}), 0)   AS cout_realise,
+    COALESCE(SUM(price)           FILTER (WHERE ${crePeriode("missions")} AND status = ANY($3)), 0)    AS ca_engage,
+    COALESCE(SUM(${COUT_ANALYTIQUE_TOTAUX_EXPR}) FILTER (WHERE ${crePeriode("missions")} AND status = ANY($3)), 0)    AS cout_engage,
+    COALESCE(SUM(price)           FILTER (WHERE ${crePeriode("missions")} AND status = 'DEVIS_REFUSE'), 0) AS ca_perdu
   FROM missions
   -- La jointure ne remonte que l'identifiant et le rôle : ramener toute la
   -- table des comptes ferait entrer un second created_at dans la portée et
   -- rendrait la clause WHERE ambiguë.
   LEFT JOIN (SELECT id, role FROM users) c ON c.id = convoyeur_id
   LEFT JOIN (SELECT id, email FROM users) u ON u.id = client_id
-  WHERE created_at >= $1 AND created_at <= $2
+  WHERE ${dansPeriode("missions")}
   ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
 `;
 
@@ -607,13 +619,13 @@ router.get("/analyse", async (req, res, next) => {
 
     const SQL_LIVRAISONS_PAR_JOUR = `
       SELECT
-        to_char(date_trunc('day', missions.updated_at), 'YYYY-MM-DD') AS periode,
+        to_char(date_trunc('day', missions.delivered_at), 'YYYY-MM-DD') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY 1
       ORDER BY 1
@@ -621,13 +633,13 @@ router.get("/analyse", async (req, res, next) => {
 
     const SQL_LIVRAISONS_PAR_SEMAINE = `
       SELECT
-        to_char(date_trunc('week', missions.updated_at), 'IYYY-"S"IW') AS periode,
+        to_char(date_trunc('week', missions.delivered_at), 'IYYY-"S"IW') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY 1
       ORDER BY 1
@@ -635,13 +647,13 @@ router.get("/analyse", async (req, res, next) => {
 
     const SQL_LIVRAISONS_PAR_MOIS = `
       SELECT
-        to_char(date_trunc('month', missions.updated_at), 'YYYY-MM') AS periode,
+        to_char(date_trunc('month', missions.delivered_at), 'YYYY-MM') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY 1
       ORDER BY 1
@@ -649,13 +661,13 @@ router.get("/analyse", async (req, res, next) => {
 
     const SQL_LIVRAISONS_PAR_AN = `
       SELECT
-        to_char(date_trunc('year', missions.updated_at), 'YYYY') AS periode,
+        to_char(date_trunc('year', missions.delivered_at), 'YYYY') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY 1
       ORDER BY 1
@@ -665,13 +677,13 @@ router.get("/analyse", async (req, res, next) => {
       SELECT
         missions.client_id,
         COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
-        to_char(date_trunc('day', missions.updated_at), 'YYYY-MM-DD') AS periode,
+        to_char(date_trunc('day', missions.delivered_at), 'YYYY-MM-DD') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY missions.client_id, client_label, periode
       ORDER BY client_label, periode
@@ -681,13 +693,13 @@ router.get("/analyse", async (req, res, next) => {
       SELECT
         missions.client_id,
         COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
-        to_char(date_trunc('week', missions.updated_at), 'IYYY-"S"IW') AS periode,
+        to_char(date_trunc('week', missions.delivered_at), 'IYYY-"S"IW') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY missions.client_id, client_label, periode
       ORDER BY client_label, periode
@@ -697,13 +709,13 @@ router.get("/analyse", async (req, res, next) => {
       SELECT
         missions.client_id,
         COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
-        to_char(date_trunc('month', missions.updated_at), 'YYYY-MM') AS periode,
+        to_char(date_trunc('month', missions.delivered_at), 'YYYY-MM') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY missions.client_id, client_label, periode
       ORDER BY client_label, periode
@@ -713,13 +725,13 @@ router.get("/analyse", async (req, res, next) => {
       SELECT
         missions.client_id,
         COALESCE(NULLIF(u.company, ''), NULLIF(u.full_name, ''), u.email, 'Client inconnu') AS client_label,
-        to_char(date_trunc('year', missions.updated_at), 'YYYY') AS periode,
+        to_char(date_trunc('year', missions.delivered_at), 'YYYY') AS periode,
         COUNT(*) AS livrees
       FROM missions
       LEFT JOIN users u ON u.id = missions.client_id
       WHERE missions.status = 'LIVREE'
-        AND missions.updated_at >= $1
-        AND missions.updated_at <= $2
+        AND missions.delivered_at >= $1
+        AND missions.delivered_at <= $2
         ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
       GROUP BY missions.client_id, client_label, periode
       ORDER BY client_label, periode
@@ -749,17 +761,17 @@ router.get("/analyse", async (req, res, next) => {
       db.query(
         `SELECT
              u.id, u.full_name, u.email, u.company,
-             COUNT(m.*)                                                  AS missions_total,
-             COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
-             COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
-             COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
-             COALESCE(SUM(${COUT_ANALYTIQUE_EXPR}) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise,
-             COALESCE(SUM(m.price)           FILTER (WHERE m.status = ANY($3)), 0)  AS ca_engage,
+             COUNT(m.*) FILTER (WHERE ${crePeriode("m")})               AS missions_total,
+             COUNT(m.*) FILTER (WHERE ${livrePeriode("m")})             AS missions_livrees,
+             COUNT(m.*) FILTER (WHERE ${crePeriode("m")} AND m.status = 'DEVIS_REFUSE') AS devis_refuses,
+             COALESCE(SUM(m.price)           FILTER (WHERE ${livrePeriode("m")}), 0) AS ca_realise,
+             COALESCE(SUM(${COUT_ANALYTIQUE_EXPR}) FILTER (WHERE ${livrePeriode("m")}), 0) AS cout_realise,
+             COALESCE(SUM(m.price)           FILTER (WHERE ${crePeriode("m")} AND m.status = ANY($3)), 0)  AS ca_engage,
              MAX(m.created_at)                                           AS derniere_mission
            FROM users u
            JOIN missions m ON m.client_id = u.id
            LEFT JOIN users conv ON conv.id = m.convoyeur_id
-           WHERE m.created_at >= $1 AND m.created_at <= $2
+           WHERE ${dansPeriode("m")}
              ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
            GROUP BY u.id, u.full_name, u.email, u.company
            ORDER BY ca_realise DESC, missions_total DESC`,
@@ -770,14 +782,14 @@ router.get("/analyse", async (req, res, next) => {
       db.query(
         `SELECT
              c.id, c.full_name, c.email,
-             COUNT(m.*)                                                  AS missions_total,
-             COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
-             COALESCE(SUM(m.price_convoyeur) FILTER (WHERE m.status = 'LIVREE'), 0) AS montant_du,
-             COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_genere
+             COUNT(m.*) FILTER (WHERE ${crePeriode("m")})               AS missions_total,
+             COUNT(m.*) FILTER (WHERE ${livrePeriode("m")})             AS missions_livrees,
+             COALESCE(SUM(m.price_convoyeur) FILTER (WHERE ${livrePeriode("m")}), 0) AS montant_du,
+             COALESCE(SUM(m.price)           FILTER (WHERE ${livrePeriode("m")}), 0) AS ca_genere
            FROM users c
            JOIN missions m ON m.convoyeur_id = c.id
            LEFT JOIN users u ON u.id = m.client_id
-           WHERE m.created_at >= $1 AND m.created_at <= $2
+           WHERE ${dansPeriode("m")}
            ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
            GROUP BY c.id, c.full_name, c.email
            ORDER BY missions_livrees DESC, montant_du DESC`,
@@ -788,19 +800,34 @@ router.get("/analyse", async (req, res, next) => {
       // cette courbe sert à voir la saisonnalité, la borner à la
       // période choisie la viderait de son sens.
       db.query(
-        `SELECT
-             to_char(date_trunc('month', missions.created_at), 'YYYY-MM') AS mois,
-             COUNT(*)                                                     AS missions,
-             COUNT(*) FILTER (WHERE missions.status = 'LIVREE')           AS livrees,
-             COALESCE(SUM(missions.price) FILTER (WHERE missions.status = 'LIVREE'), 0) AS ca,
-             COALESCE(SUM(${COUT_ANALYTIQUE_MISSIONS_EXPR}) FILTER (WHERE missions.status = 'LIVREE'), 0) AS cout
-           FROM missions
-              LEFT JOIN users u ON u.id = missions.client_id
-              LEFT JOIN users conv ON conv.id = missions.convoyeur_id
-            WHERE missions.created_at >= date_trunc('month', NOW()) - INTERVAL '11 months'
+        // Demandes rattachées au mois de création ; livraisons, CA et marge
+        // au mois de livraison.
+        `WITH base AS (
+           SELECT missions.status, missions.price, missions.created_at, missions.delivered_at,
+                  ${COUT_ANALYTIQUE_MISSIONS_EXPR} AS cout_calc
+             FROM missions
+             LEFT JOIN users u ON u.id = missions.client_id
+             LEFT JOIN users conv ON conv.id = missions.convoyeur_id
+            WHERE (missions.created_at >= date_trunc('month', NOW()) - INTERVAL '11 months'
+                   OR missions.delivered_at >= date_trunc('month', NOW()) - INTERVAL '11 months')
               ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("missions", "u")}` : ""}
-           GROUP BY 1
-           ORDER BY 1`,
+         ), lignes AS (
+           SELECT date_trunc('month', created_at) AS m, 1 AS missions, 0 AS livrees,
+                  0::numeric AS ca, 0::numeric AS cout
+             FROM base
+           UNION ALL
+           SELECT date_trunc('month', delivered_at), 0, 1,
+                  COALESCE(price, 0)::numeric, COALESCE(cout_calc, 0)::numeric
+             FROM base
+            WHERE status = 'LIVREE' AND delivered_at IS NOT NULL
+         )
+         SELECT to_char(m, 'YYYY-MM') AS mois,
+                SUM(missions) AS missions, SUM(livrees) AS livrees,
+                SUM(ca) AS ca, SUM(cout) AS cout
+           FROM lignes
+          WHERE m >= date_trunc('month', NOW()) - INTERVAL '11 months'
+          GROUP BY 1
+          ORDER BY 1`,
       ),
 
       // Volumes de convoyages livrés, ventilés par granularité.
@@ -929,15 +956,15 @@ router.get("/analyse/export-csv", async (req, res, next) => {
     const { rows } = await db.query(
       `SELECT
          u.full_name, u.email, u.company,
-         COUNT(m.*)                                                  AS missions_total,
-         COUNT(m.*) FILTER (WHERE m.status = 'LIVREE')               AS missions_livrees,
-         COUNT(m.*) FILTER (WHERE m.status = 'DEVIS_REFUSE')         AS devis_refuses,
-         COALESCE(SUM(m.price)           FILTER (WHERE m.status = 'LIVREE'), 0) AS ca_realise,
-         COALESCE(SUM(${COUT_ANALYTIQUE_EXPR}) FILTER (WHERE m.status = 'LIVREE'), 0) AS cout_realise
+         COUNT(m.*) FILTER (WHERE ${crePeriode("m")})               AS missions_total,
+         COUNT(m.*) FILTER (WHERE ${livrePeriode("m")})             AS missions_livrees,
+         COUNT(m.*) FILTER (WHERE ${crePeriode("m")} AND m.status = 'DEVIS_REFUSE') AS devis_refuses,
+         COALESCE(SUM(m.price)           FILTER (WHERE ${livrePeriode("m")}), 0) AS ca_realise,
+         COALESCE(SUM(${COUT_ANALYTIQUE_EXPR}) FILTER (WHERE ${livrePeriode("m")}), 0) AS cout_realise
        FROM users u
        JOIN missions m ON m.client_id = u.id
        LEFT JOIN users conv ON conv.id = m.convoyeur_id
-       WHERE m.created_at >= $1 AND m.created_at <= $2
+       WHERE ${dansPeriode("m")}
       ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
        GROUP BY u.id, u.full_name, u.email, u.company
        ORDER BY ca_realise DESC`,

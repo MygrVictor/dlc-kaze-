@@ -38,6 +38,20 @@ const KAZE_API_KEY = process.env.KAZE_API_KEY;
 const KAZE_TARGET_ID =
   process.env.KAZE_TARGET_ID || "ffbb89b8-b714-4fe3-9d7b-42dfafdbe6ba";
 
+// ─── Interrupteur (staging / recette) ─────────────────────────
+// KAZE_DISABLED=true coupe TOUT appel à Kaze, même si des identifiants
+// traînent dans le .env (copie de celui de prod). Lu à chaque appel pour
+// qu'aucune mission de test ne puisse partir chez Kaze.
+function kazeDesactive() {
+  return /^(1|true|yes|oui)$/i.test(String(process.env.KAZE_DISABLED || ""));
+}
+
+function assertKazeActif() {
+  if (kazeDesactive()) {
+    throw new Error("Kaze désactivé (KAZE_DISABLED) — aucun appel envoyé.");
+  }
+}
+
 // ─── Token store ─────────────────────────────────────────────
 let jwtToken = null;
 let constantToken = null;
@@ -80,6 +94,7 @@ const circuitBreaker = {
 
 // ─── Retry avec backoff exponentiel ──────────────────────────
 async function withRetry(fn, { maxRetries = 3, label = "Kaze" } = {}) {
+  assertKazeActif();
   if (circuitBreaker.isOpen()) {
     throw new Error(
       `Circuit breaker ouvert — API Kaze indisponible (${circuitBreaker.failures} échecs)`,
@@ -130,6 +145,7 @@ async function withRetry(fn, { maxRetries = 3, label = "Kaze" } = {}) {
  * Response: { token, jwt: { access_token, token_type }, ... }
  */
 async function authenticate() {
+  assertKazeActif();
   if (!KAZE_LOGIN || !KAZE_PASSWORD) {
     throw new Error(
       "KAZE_LOGIN et KAZE_PASSWORD doivent être configurés dans .env",
@@ -189,6 +205,7 @@ async function getAuthHeaders() {
 
 // ─── Intercepteur : injecte le JWT automatiquement ───────────
 kazeClient.interceptors.request.use(async (config) => {
+  assertKazeActif();
   const headers = await getAuthHeaders();
   Object.assign(config.headers, headers);
   return config;
