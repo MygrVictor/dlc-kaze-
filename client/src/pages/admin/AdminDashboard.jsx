@@ -1,6 +1,67 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
+
+/**
+ * Active / coupe la diffusion des missions dans le salon Telegram des
+ * convoyeurs. Le réglage est global et conservé en base.
+ */
+function InterrupteurTelegram() {
+  const [actives, setActives] = useState(null);
+  const [enCours, setEnCours] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/admin/parametres/telegram")
+      .then(({ data }) => setActives(Boolean(data.annoncesActives)))
+      .catch(() => setActives(null));
+  }, []);
+
+  const basculer = async () => {
+    const cible = !actives;
+    if (
+      !cible &&
+      !window.confirm(
+        "Couper les annonces Telegram ? Les nouvelles missions ne seront plus publiées aux convoyeurs.",
+      )
+    )
+      return;
+    setEnCours(true);
+    try {
+      const { data } = await api.put("/admin/parametres/telegram", {
+        annoncesActives: cible,
+      });
+      setActives(Boolean(data.annoncesActives));
+    } catch {
+      window.alert("Impossible de modifier le réglage Telegram.");
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  if (actives === null) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={basculer}
+      disabled={enCours}
+      title={
+        actives
+          ? "Les nouvelles missions sont annoncées sur Telegram — cliquer pour couper"
+          : "Annonces Telegram coupées — cliquer pour réactiver"
+      }
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex-1 sm:flex-none justify-center ${
+        actives
+          ? "bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20"
+          : "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20"
+      }`}
+    >
+      <Send size={15} />
+      <span>Telegram {actives ? "ON" : "OFF"}</span>
+    </button>
+  );
+}
 import {
   STATUS_LABELS,
   STATUS_COLORS,
@@ -420,6 +481,7 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 mt-3 sm:mt-0 w-full sm:w-auto">
+          <InterrupteurTelegram />
           {/* Le formulaire complet remplace l'ancienne fenêtre : c'est
               celui du client, avec les champs propres à l'administration. */}
           <Link

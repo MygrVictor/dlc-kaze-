@@ -21,11 +21,40 @@
  *   TELEGRAM_CHAT_ID    Identifiant du salon (ex. -1001234567890)
  */
 const axios = require("axios");
+const db = require("../db");
 
 const JETON = process.env.TELEGRAM_BOT_TOKEN;
 const SALON = process.env.TELEGRAM_CHAT_ID;
 
 const actif = Boolean(JETON && SALON);
+
+// ── Interrupteur admin ──────────────────────────────────────────
+// Stocké en base (table app_settings) pour survivre aux redémarrages.
+// Absent ou illisible = annonces actives : une panne de lecture ne doit
+// pas couper silencieusement la diffusion des missions.
+const CLE_ANNONCES = "telegram_annonces_actives";
+
+async function annoncesActivees() {
+  try {
+    const { rows } = await db.query(
+      "SELECT value FROM app_settings WHERE key = $1",
+      [CLE_ANNONCES],
+    );
+    return rows[0] ? rows[0].value !== "false" : true;
+  } catch {
+    return true;
+  }
+}
+
+async function definirAnnoncesActivees(valeur) {
+  await db.query(
+    `INSERT INTO app_settings (key, value, updated_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+    [CLE_ANNONCES, valeur ? "true" : "false"],
+  );
+  return Boolean(valeur);
+}
 
 if (actif) {
   console.log(`📣 Telegram configuré (salon ${SALON})`);
@@ -148,6 +177,11 @@ function messageErreur(err) {
 async function annoncerMissionDisponible(mission, lienMission) {
   if (!mission) return { publie: false };
 
+  if (!(await annoncesActivees())) {
+    console.log("📣 Annonces Telegram désactivées par l'admin — rien publié.");
+    return { publie: false, desactive: true };
+  }
+
   try {
     const { messageId } = await publier(composerAnnonce(mission, lienMission));
     return { publie: true, messageId: messageId || null };
@@ -220,6 +254,8 @@ module.exports = {
   annoncerMissionDisponible,
   supprimerMessageAnnonce,
   verifierConfiguration,
+  annoncesActivees,
+  definirAnnoncesActivees,
   // Exportés pour les tests
   composerAnnonce,
   echapper,

@@ -27,6 +27,35 @@ const router = express.Router();
 
 router.use(authenticate, authorize("admin"));
 
+// ── Annonces Telegram : interrupteur admin ────────────────────────
+router.get("/parametres/telegram", async (_req, res, next) => {
+  try {
+    res.json({
+      annoncesActives: await telegramService.annoncesActivees(),
+      configure: Boolean(telegramService.actif),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/parametres/telegram", async (req, res, next) => {
+  try {
+    if (typeof req.body?.annoncesActives !== "boolean") {
+      return res
+        .status(400)
+        .json({ error: "annoncesActives doit être true ou false." });
+    }
+    const valeur = await telegramService.definirAnnoncesActivees(
+      req.body.annoncesActives,
+    );
+    auditLog("TELEGRAM_ANNONCES", req.user?.id, { actives: valeur });
+    res.json({ annoncesActives: valeur });
+  } catch (err) {
+    next(err);
+  }
+});
+
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KAZE_ID_REGEX =

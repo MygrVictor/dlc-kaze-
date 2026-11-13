@@ -239,6 +239,13 @@ const migrate = async () => {
     -- même pas à l'adresse du compte.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS recap_disabled BOOLEAN NOT NULL DEFAULT false;
 
+    -- Réglages globaux modifiables par l'admin (ex. annonces Telegram).
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key        VARCHAR(100) PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     -- Référence interne administration (numéro de commande / bon de
     -- commande). Ce champ n'est pas destiné aux convoyeurs.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS purchase_order_number VARCHAR(150);

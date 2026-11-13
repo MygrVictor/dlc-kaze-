@@ -8,6 +8,9 @@
  * faire rejeter le message entier par Telegram.
  */
 jest.mock("axios");
+jest.mock("../db", () => ({
+  query: jest.fn().mockResolvedValue({ rows: [] }),
+}));
 
 const axios = require("axios");
 const telegram = require("../services/telegram.service");
