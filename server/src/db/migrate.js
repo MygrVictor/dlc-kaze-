@@ -235,6 +235,10 @@ const migrate = async () => {
     -- Vide = on retombe sur l'email du compte.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS recap_email VARCHAR(255);
 
+    -- Coché à la création : aucun récapitulatif Kaze n'est envoyé,
+    -- même pas à l'adresse du compte.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS recap_disabled BOOLEAN NOT NULL DEFAULT false;
+
     -- Référence interne administration (numéro de commande / bon de
     -- commande). Ce champ n'est pas destiné aux convoyeurs.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS purchase_order_number VARCHAR(150);

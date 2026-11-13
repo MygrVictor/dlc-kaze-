@@ -55,6 +55,18 @@ jest.mock("../services/geocoding.service", () => ({
 }));
 
 const db = require("../db");
+
+// La plaque est désormais obligatoire : les tests qui ne portent pas
+// sur elle reçoivent une immatriculation valide par défaut.
+const avecPlaque = (payload) => {
+  if (Array.isArray(payload.vehicles)) {
+    return {
+      ...payload,
+      vehicles: payload.vehicles.map((v) => ({ plate: "AA-123-BB", ...v })),
+    };
+  }
+  return { vehiclePlate: "AA-123-BB", ...payload };
+};
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
 const telegramService = require("../services/telegram.service");
@@ -186,7 +198,7 @@ describe("POST /api/missions — création", () => {
     request(app)
       .post("/api/missions")
       .set("Authorization", `Bearer ${tokenFor(CLIENT)}`)
-      .send(payload);
+      .send(avecPlaque(payload));
 
   it("refuse si l'adresse de départ est absente", async () => {
     mockDb(CLIENT);
@@ -329,7 +341,7 @@ describe("POST /api/missions — création", () => {
     // structure de livraison et sa raison sociale + les métadonnées
     // supplémentaires introduites par l'évolution de création + la date
     // d'enlèvement souhaitée.
-    expect(params).toHaveLength(46);
+    expect(params).toHaveLength(47);
     expect(params).toEqual(
       expect.arrayContaining([
         CLIENT.id,
@@ -393,6 +405,54 @@ describe("POST /api/missions — création", () => {
     // test : c'est l'absence de chaîne vide parmi les valeurs qui importe.
     expect(params).not.toContain("");
   });
+
+  it.each([[""], ["ABC123"], ["1234-AB-56"], ["AA-12-BB"]])(
+    "refuse l'immatriculation %p",
+    async (plate) => {
+      mockDb(CLIENT);
+      const res = await creer({
+        departureAddress: "Paris",
+        arrivalAddress: "Lyon",
+        vehicles: [{ plate }],
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/AA-123-BB/);
+    },
+  );
+
+  it("normalise une immatriculation saisie sans tirets", async () => {
+    let params;
+    mockDb(CLIENT, (sql, p) => {
+      if (/INSERT INTO missions/i.test(sql)) {
+        params = p;
+        return { rows: [{ id: MISSION_ID }] };
+      }
+    });
+    await creer({
+      departureAddress: "Paris",
+      arrivalAddress: "Lyon",
+      vehicles: [{ plate: "ab 123 cd" }],
+    });
+    expect(params[1]).toBe("AB-123-CD");
+  });
+
+  it("n'enregistre aucun destinataire quand le récap est désactivé", async () => {
+    let params;
+    mockDb(CLIENT, (sql, p) => {
+      if (/INSERT INTO missions/i.test(sql)) {
+        params = p;
+        return { rows: [{ id: MISSION_ID }] };
+      }
+    });
+    await creer({
+      departureAddress: "Paris",
+      arrivalAddress: "Lyon",
+      recapEmail: "compta@entreprise.fr",
+      recapDisabled: true,
+    });
+    expect(params).not.toContain("compta@entreprise.fr");
+    expect(params[params.length - 1]).toBe(true);
+  });
 });
 
 // ═════════════════════════════════════════════════════════════
@@ -405,7 +465,7 @@ describe("POST /api/missions — dates et urgence", () => {
     request(app)
       .post("/api/missions")
       .set("Authorization", `Bearer ${tokenFor(CLIENT)}`)
-      .send(payload);
+      .send(avecPlaque(payload));
 
   /** Capture les paramètres de l'INSERT. */
   const capturer = () => {
@@ -644,7 +704,7 @@ describe("POST /api/missions — dates et urgence", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(capture.params).toHaveLength(46);
+      expect(capture.params).toHaveLength(47);
       expect(capture.sql).toMatch(/service_handover/);
     });
   });
@@ -674,7 +734,7 @@ describe("POST /api/missions — variantes de véhicules", () => {
     request(app)
       .post("/api/missions")
       .set("Authorization", `Bearer ${tokenFor(CLIENT)}`)
-      .send(payload);
+      .send(avecPlaque(payload));
 
   it("crée une mission par véhicule fourni", async () => {
     mockDb(CLIENT, (sql) => {

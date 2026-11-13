@@ -76,6 +76,31 @@ export function telephoneValide(saisie) {
  * Plus strict que `telephoneValide` : les convoyeurs sont prévenus de
  * leurs missions par Telegram, qui repose sur un numéro mobile.
  */
+/**
+ * Immatriculation française au format SIV : AA-123-BB.
+ * Tirets et espaces facultatifs à la saisie, normalisés ensuite.
+ */
+export const PLAQUE_SIV = /^[A-Z]{2}-?\d{3}-?[A-Z]{2}$/;
+
+export function normaliserPlaque(saisie) {
+  const brut = String(saisie || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 7);
+  // Ajoute les tirets au fil de la saisie : AA → AA-1 → AA-123-B
+  if (brut.length <= 2) return brut;
+  if (brut.length <= 5) return `${brut.slice(0, 2)}-${brut.slice(2)}`;
+  return `${brut.slice(0, 2)}-${brut.slice(2, 5)}-${brut.slice(5)}`;
+}
+
+export function plaqueValide(saisie) {
+  return PLAQUE_SIV.test(
+    String(saisie || "")
+      .trim()
+      .toUpperCase(),
+  );
+}
+
 export function mobileValide(saisie) {
   const analyse = analyser(saisie);
   if (!analyse) return false;

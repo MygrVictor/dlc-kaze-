@@ -285,7 +285,20 @@ function segmentTarifaire(code) {
   return type ? type.tarification : "berline";
 }
 
+/**
+ * Immatriculation française au format SIV (AA-123-BB). Tirets et
+ * espaces tolérés en entrée ; renvoie la forme normalisée ou null.
+ */
+function normaliserPlaque(saisie) {
+  const brut = String(saisie || "")
+    .toUpperCase()
+    .replace(/[\s-]/g, "");
+  if (!/^[A-Z]{2}\d{3}[A-Z]{2}$/.test(brut)) return null;
+  return `${brut.slice(0, 2)}-${brut.slice(2, 5)}-${brut.slice(5)}`;
+}
+
 module.exports = {
+  normaliserPlaque,
   TYPES_VEHICULE,
   CLASSE_PEAGE,
   SEUIL_UTILITAIRE_M3,

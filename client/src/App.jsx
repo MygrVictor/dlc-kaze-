@@ -149,8 +149,7 @@ export default function App() {
           <Route path="factures" element={<ClientFactures />} />
           <Route path="recaps" element={<ClientRecaps />} />
           <Route path="documents" element={<ClientDocuments />} />
-          {/* Analyse client masquée tant qu'elle n'est pas finalisée :
-          <Route path="analyse" element={<ClientAnalyse />} /> */}
+          <Route path="analyse" element={<ClientAnalyse />} />
         </Route>
 
         {/* ── Dashboard Admin ──────────────────── */}

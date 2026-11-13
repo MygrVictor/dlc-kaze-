@@ -20,7 +20,11 @@ const {
   peutConsulter,
   estTitulaire,
 } = require("../db/perimetre");
-const { classeDePeage, estUtilitaire12m3 } = require("../lib/vehicules");
+const {
+  classeDePeage,
+  estUtilitaire12m3,
+  normaliserPlaque,
+} = require("../lib/vehicules");
 const {
   createMissionLimiter,
   validateUUIDParams,
@@ -169,7 +173,10 @@ router.post(
       } = req.body;
 
       // Destinataire du récapitulatif Kaze, choisi en tête de formulaire.
-      const { recapEmail } = req.body;
+      // `recapDisabled` : le client a coché « ne pas envoyer de
+      // récapitulatif ». Aucun mail ne part, pas même vers le compte.
+      const recapDisabled = Boolean(req.body.recapDisabled);
+      const recapEmail = recapDisabled ? null : req.body.recapEmail;
 
       // Date souhaitée par le client et marqueur d'urgence : deux notions
       // internes à DLC, jamais transmises à Kaze.
@@ -312,6 +319,19 @@ router.post(
         ];
       }
 
+      // Plaque obligatoire, au format SIV : c'est elle qui identifie le
+      // véhicule chez Kaze, sur le PV et auprès du convoyeur.
+      for (const [i, v] of vehicleList.entries()) {
+        const plaque = normaliserPlaque(v?.plate);
+        if (!plaque) {
+          const rang = vehicleList.length > 1 ? ` (véhicule ${i + 1})` : "";
+          return res.status(400).json({
+            error: `Immatriculation${rang} obligatoire au format AA-123-BB.`,
+          });
+        }
+        v.plate = plaque;
+      }
+
       const createdMissions = [];
 
       // Toute mission est datée du lundi de la semaine en cours : c'est
@@ -342,7 +362,7 @@ router.post(
             emergency_contact_name, emergency_phone, emergency_contact_email,
             comments, desired_delivery_date, is_urgent, batch_id, status,
             recap_email, price, price_convoyeur, created_by,
-            purchase_order_number, desired_pickup_date
+            purchase_order_number, desired_pickup_date, recap_disabled
           ) VALUES (
             $1,
             $2, $3, $4, $5, $6,
@@ -359,7 +379,7 @@ router.post(
             $31, $32, $33,
             $34, $35, $36, $37, $39,
             $38, $40, $41, $42,
-            $45, $46
+            $45, $46, $47
           ) RETURNING *`,
           [
             clientId,
@@ -414,6 +434,7 @@ router.post(
             arrivalStructureName || null,
             purchaseOrderNumber ? String(purchaseOrderNumber).trim() : null,
             departureDate || null,
+            recapDisabled,
           ],
         );
 

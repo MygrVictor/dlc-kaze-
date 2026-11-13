@@ -1183,7 +1183,9 @@ const createMission = async (mission) => {
       // second l'a sous les yeux au moment où le mail partirait. Leurs
       // adresses restent stockées pour que le convoyeur les joigne.
       // ──────────────────────────────────────────────────────
-      const recapEmails = mission.recap_email || mission.client_email;
+      const recapEmails = mission.recap_disabled
+        ? null
+        : mission.recap_email || mission.client_email;
 
       if (recapEmails) {
         const clientSignature = findNode(workflow, {

@@ -7,7 +7,12 @@ import {
   classeDePeage,
   estUtilitaire12m3,
 } from "../../lib/vehicules";
-import { emailValide, telephoneValide } from "../../lib/validation";
+import {
+  emailValide,
+  telephoneValide,
+  normaliserPlaque,
+  plaqueValide,
+} from "../../lib/validation";
 import { compresserImage } from "../../lib/compresserImage";
 import {
   Car,
@@ -180,6 +185,7 @@ export default function NewMission() {
   // peut vouloir le router ailleurs — comptabilité, gestionnaire de
   // flotte, client final.
   const [recapEmail, setRecapEmail] = useState("");
+  const [recapDisabled, setRecapDisabled] = useState(false);
 
   useEffect(() => {
     // L'utilisateur arrive parfois avant que le contexte soit résolu :
@@ -299,9 +305,9 @@ export default function NewMission() {
         // L'admin ne reçoit pas de devis : ce qui l'engage, c'est la
         // rémunération annoncée aux convoyeurs.
         if (estAdmin) return Number(priceConvoyeur) > 0;
-        return recapEmailValide;
+        return recapDisabled || recapEmailValide;
       case 1:
-        return vehicles.every((v) => v.plate || v.vin || v.model);
+        return vehicles.every((v) => plaqueValide(v.plate));
       case 2:
         return (
           departure.address.trim() !== "" &&
@@ -335,7 +341,8 @@ export default function NewMission() {
         : user?.id || null;
 
       const payload = {
-        recapEmail: recapEmail.trim() || null,
+        recapEmail: recapDisabled ? null : recapEmail.trim() || null,
+        recapDisabled,
         vehicles: vehicles.map((v) => ({
           plate: v.plate,
           vin: v.vin,
@@ -641,21 +648,33 @@ export default function NewMission() {
             </p>
 
             <div>
+              <label className="flex items-center gap-2 text-sm text-dark-300 mb-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={recapDisabled}
+                  onChange={(e) => setRecapDisabled(e.target.checked)}
+                />
+                Ne pas envoyer de récapitulatif pour cette mission
+              </label>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Adresse de réception <span className="text-red-400">*</span>
+                Adresse de réception{" "}
+                {!recapDisabled && <span className="text-red-400">*</span>}
               </label>
               <input
                 type="email"
-                className="input-field"
+                className="input-field disabled:opacity-50"
                 value={recapEmail}
                 onChange={(e) => setRecapEmail(e.target.value)}
                 placeholder="vous@entreprise.fr"
+                disabled={recapDisabled}
               />
-              {recapEmail.trim() !== "" && !recapEmailValide && (
-                <p className="text-xs text-red-400 mt-2">
-                  Adresse email invalide.
-                </p>
-              )}
+              {!recapDisabled &&
+                recapEmail.trim() !== "" &&
+                !recapEmailValide && (
+                  <p className="text-xs text-red-400 mt-2">
+                    Adresse email invalide.
+                  </p>
+                )}
               {user?.email && recapEmail.trim() === user.email && (
                 <p className="text-xs text-dark-500 mt-2">
                   Adresse de votre compte.
@@ -748,16 +767,26 @@ export default function NewMission() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                    Immatriculation
+                    Immatriculation <span className="text-red-400">*</span>
                   </label>
                   <input
                     value={v.plate}
                     onChange={(e) =>
-                      updateVehicle(idx, "plate", e.target.value.toUpperCase())
+                      updateVehicle(
+                        idx,
+                        "plate",
+                        normaliserPlaque(e.target.value),
+                      )
                     }
-                    className="input-field"
+                    className="input-field font-mono"
                     placeholder="AA-123-BB"
+                    maxLength={9}
                   />
+                  {v.plate && !plaqueValide(v.plate) && (
+                    <p className="text-xs text-red-400 mt-2">
+                      Format attendu : AA-123-BB.
+                    </p>
+                  )}
                 </div>
 
                 <div>
