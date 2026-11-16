@@ -9,7 +9,11 @@ const emailService = require("../services/email.service");
 const telegramService = require("../services/telegram.service");
 const geocodingService = require("../services/geocoding.service");
 const itineraireService = require("../services/itineraire.service");
-const { auditLog, isValidEmail } = require("../middleware/security.middleware");
+const {
+  auditLog,
+  isValidEmail,
+  isValidPhone,
+} = require("../middleware/security.middleware");
 const { creerLienReinitialisation } = require("../lib/password-reset");
 const { isDemoMission, isValidKazeDriverId } = require("../lib/demo-mission");
 const fs = require("fs");
@@ -1568,6 +1572,57 @@ router.patch("/users/:id/email", async (req, res, next) => {
     res.json({
       user: updated.rows[0],
       message: "Email mis à jour.",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Met à jour le téléphone d'un client ou d'un convoyeur.
+ * Vide = numéro effacé.
+ */
+router.patch("/users/:id/phone", async (req, res, next) => {
+  try {
+    const phone = String(req.body?.phone ?? "").trim();
+
+    if (phone && (phone.length > 30 || !isValidPhone(phone))) {
+      return res.status(400).json({ error: "Numéro de téléphone invalide." });
+    }
+
+    const { rows } = await db.query(
+      "SELECT id, role, phone FROM users WHERE id = $1",
+      [req.params.id],
+    );
+    const cible = rows[0];
+    if (!cible)
+      return res.status(404).json({ error: "Utilisateur introuvable." });
+
+    if (!["client", "convoyeur"].includes(cible.role)) {
+      return res.status(400).json({
+        error:
+          "Seuls les comptes clients et convoyeurs peuvent être modifiés ici.",
+      });
+    }
+
+    const updated = await db.query(
+      `UPDATE users SET phone = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, email, full_name, role, phone`,
+      [phone || null, req.params.id],
+    );
+
+    auditLog("ADMIN_PHONE_UPDATED", req.user.id, {
+      ip: req.ip,
+      targetUserId: req.params.id,
+      targetRole: cible.role,
+      oldPhone: cible.phone,
+      newPhone: phone || null,
+    });
+
+    res.json({
+      user: updated.rows[0],
+      message: phone ? "Téléphone mis à jour." : "Téléphone effacé.",
     });
   } catch (err) {
     next(err);

@@ -134,6 +134,9 @@ export default function AdminUsers() {
   const [emailModal, setEmailModal] = useState(null); // user obj
   const [emailInput, setEmailInput] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
+  const [phoneModal, setPhoneModal] = useState(null);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [phoneSaving, setPhoneSaving] = useState(false);
 
   // Envoi en cours, par identifiant : le tableau peut compter des
   // dizaines de lignes, un indicateur global ne dirait pas laquelle.
@@ -239,6 +242,30 @@ export default function AdminUsers() {
       );
     } finally {
       setEmailSaving(false);
+    }
+  };
+
+  const openPhoneModal = (u) => {
+    setPhoneModal(u);
+    setPhoneInput(u.phone || "");
+  };
+
+  const handleUpdatePhone = async () => {
+    if (!phoneModal) return;
+    setPhoneSaving(true);
+    try {
+      const { data } = await api.patch(`/admin/users/${phoneModal.id}/phone`, {
+        phone: phoneInput.trim(),
+      });
+      toast.success(data.message || "Téléphone mis à jour.");
+      setPhoneModal(null);
+      fetchUsers();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.error || "Erreur lors de la mise à jour.",
+      );
+    } finally {
+      setPhoneSaving(false);
     }
   };
 
@@ -883,6 +910,15 @@ export default function AdminUsers() {
                   )}
                   {u.role !== "admin" && (
                     <button
+                      onClick={() => openPhoneModal(u)}
+                      className="p-1.5 rounded-lg text-dark-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                      title="Modifier le téléphone"
+                    >
+                      <Phone size={15} />
+                    </button>
+                  )}
+                  {u.role !== "admin" && (
+                    <button
                       onClick={() => handleEnvoyerReset(u)}
                       disabled={envoiReset[u.id]}
                       className="p-1.5 rounded-lg text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
@@ -970,6 +1006,56 @@ export default function AdminUsers() {
               </button>
               <button
                 onClick={() => setEmailModal(null)}
+                className="btn-secondary flex-1"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal modification téléphone */}
+      {phoneModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">
+                Modifier le téléphone — {phoneModal.full_name}
+              </h3>
+              <button
+                onClick={() => setPhoneModal(null)}
+                className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-dark-400 mb-4">
+              Laisser vide pour effacer le numéro.
+            </p>
+
+            <label className="block text-xs text-dark-400 mb-1">
+              Nouveau téléphone
+            </label>
+            <input
+              type="tel"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              className="input-field mb-4"
+              placeholder="06 12 34 56 78"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleUpdatePhone}
+                disabled={phoneSaving}
+                className="btn-primary flex-1"
+              >
+                {phoneSaving ? "Enregistrement…" : "Enregistrer"}
+              </button>
+              <button
+                onClick={() => setPhoneModal(null)}
                 className="btn-secondary flex-1"
               >
                 Annuler
