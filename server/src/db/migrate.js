@@ -239,6 +239,10 @@ const migrate = async () => {
     -- même pas à l'adresse du compte.
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS recap_disabled BOOLEAN NOT NULL DEFAULT false;
 
+    -- Note de l'admin adressée au client avec le devis (visible client,
+    -- jamais transmise au convoyeur ni à Kaze).
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS devis_note_client TEXT;
+
     -- Réglages globaux modifiables par l'admin (ex. annonces Telegram).
     CREATE TABLE IF NOT EXISTS app_settings (
       key        VARCHAR(100) PRIMARY KEY,

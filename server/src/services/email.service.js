@@ -211,9 +211,18 @@ function baseTemplate(content) {
 /**
  * Notifier le client qu'un devis a été proposé.
  */
-async function notifyDevisPropose(clientEmail, clientName, mission, price) {
+async function notifyDevisPropose(
+  clientEmail,
+  clientName,
+  mission,
+  price,
+  noteClient = null,
+) {
   const priceHT = parseFloat(price).toFixed(2);
   const priceTTC = (parseFloat(price) * 1.2).toFixed(2);
+  const blocNote = noteClient
+    ? `<div class="info-box"><p style="margin:0 0 6px;font-weight:600;">Message de notre équipe</p><p style="margin:0;white-space:pre-wrap;">${echapperHtml(noteClient)}</p></div>`
+    : "";
 
   const html = baseTemplate(`
     <h2>Bonjour ${clientName},</h2>
@@ -227,6 +236,7 @@ async function notifyDevisPropose(clientEmail, clientName, mission, price) {
       <span class="price">${priceHT} € HT</span><br>
       <span style="color: #64748b; font-size: 14px;">soit ${priceTTC} € TTC</span>
     </p>
+    ${blocNote}
     <p style="text-align: center;">
       <a href="${process.env.CLIENT_URL}/client/missions/${mission.id}" class="btn">Voir le devis</a>
     </p>

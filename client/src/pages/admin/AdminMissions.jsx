@@ -208,6 +208,8 @@ export default function AdminMissions({ integre = false } = {}) {
   const [priceValue, setPriceValue] = useState("");
   const [priceConvoyeurValue, setPriceConvoyeurValue] = useState("");
   const [adminCommentValue, setAdminCommentValue] = useState("");
+  // Note jointe au devis, adressée au client (jamais au convoyeur).
+  const [noteClientValue, setNoteClientValue] = useState("");
   // L'administrateur convoie lui-même une partie des missions : cocher
   // retient celle-ci pour lui dès la cotation.
   const [prendreLaMission, setPrendreLaMission] = useState(false);
@@ -504,6 +506,7 @@ export default function AdminMissions({ integre = false } = {}) {
     setPriceValue("");
     setPriceConvoyeurValue("");
     setAdminCommentValue(mission.convoyeur_comments || "");
+    setNoteClientValue(mission.devis_note_client || "");
     setPrendreLaMission(false);
     setConvoyeurCotationId("");
     chargerConvoyeurs();
@@ -531,6 +534,7 @@ export default function AdminMissions({ integre = false } = {}) {
         price: Number(priceValue),
         price_convoyeur: Number(priceConvoyeurValue),
         convoyeur_comments: adminCommentValue.trim() || null,
+        note_client: noteClientValue.trim() || null,
         assignerAdmin: prendreLaMission,
         convoyeurId: convoyeurCotationId || undefined,
       });
@@ -543,6 +547,7 @@ export default function AdminMissions({ integre = false } = {}) {
       setPriceValue("");
       setPriceConvoyeurValue("");
       setAdminCommentValue("");
+      setNoteClientValue("");
       setPrendreLaMission(false);
       setConvoyeurCotationId("");
       fetchMissions();
@@ -1786,6 +1791,24 @@ export default function AdminMissions({ integre = false } = {}) {
                         )}
                       </div>
                     )}
+
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Note au client (jointe au devis)
+                    </label>
+                    <textarea
+                      value={noteClientValue}
+                      onChange={(e) => setNoteClientValue(e.target.value)}
+                      rows={3}
+                      maxLength={2000}
+                      className="input-field resize-none"
+                      placeholder="Ex. Tarif incluant le retour du convoyeur ; enlèvement possible dès lundi."
+                    />
+                    <p className="text-xs text-dark-500 mt-1">
+                      Envoyée dans l'email du devis et affichée dans l'espace
+                      client. Jamais visible par le convoyeur.
+                    </p>
+                  </div>
 
                   <div className="mb-3">
                     <label className="block text-sm font-medium text-dark-300 mb-1.5">

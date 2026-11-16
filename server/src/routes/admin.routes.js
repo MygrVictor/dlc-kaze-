@@ -2357,7 +2357,15 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
       convoyeurId,
       convoyeur_comments,
       comments,
+      note_client,
     } = req.body;
+    if (typeof note_client === "string" && note_client.length > 2000) {
+      return res
+        .status(400)
+        .json({ error: "Note au client : 2000 caractères maximum." });
+    }
+    const noteClient =
+      typeof note_client === "string" ? note_client.trim() || null : null;
     if (!price || isNaN(price) || Number(price) <= 0) {
       return res
         .status(400)
@@ -2436,7 +2444,7 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
 
     const updated = await db.query(
       `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
-              convoyeur_comments = $4,
+              convoyeur_comments = $4, devis_note_client = $6,
               status = 'DEVIS_PROPOSE', updated_at = NOW()
        WHERE id = $5 RETURNING *`,
       // Cocher « je prends cette mission » retient le convoyeur dès la
@@ -2451,6 +2459,7 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
         convoyeurRetenu,
         commentaireConvoyeur,
         mission.id,
+        noteClient,
       ],
     );
 
@@ -2465,6 +2474,7 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
           clientRows[0].full_name,
           mission,
           price,
+          noteClient,
         );
       }
     } catch (emailErr) {

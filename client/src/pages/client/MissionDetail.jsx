@@ -281,6 +281,16 @@ export default function MissionDetail() {
               </button>
             </div>
           </div>
+          {mission.devis_note_client && (
+            <div className="mt-4 text-sm bg-dark-900/50 rounded-lg p-3 border border-dark-700">
+              <p className="text-dark-400 text-xs mb-1">
+                Message de notre équipe
+              </p>
+              <p className="text-dark-200 whitespace-pre-wrap">
+                {mission.devis_note_client}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

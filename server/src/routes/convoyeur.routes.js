@@ -106,6 +106,8 @@ function missionPourConvoyeur(mission) {
 
   const copie = { ...mission };
   delete copie.comments;
+  // Note commerciale adressée au client avec le devis.
+  delete copie.devis_note_client;
 
   if (copie.raw && typeof copie.raw === "object") {
     const brut = { ...copie.raw };
