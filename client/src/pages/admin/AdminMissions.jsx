@@ -190,6 +190,12 @@ export default function AdminMissions({ integre = false } = {}) {
   const initialStatus = searchParams.get("status") || "";
 
   const [missions, setMissions] = useState([]);
+  // Nombre de paires (trajets aller) d'une commande de restitution.
+  const nbPaires = (restitutionId) =>
+    missions.filter(
+      (x) =>
+        x.restitution_id === restitutionId && Number(x.ordre_trajet || 1) === 1,
+    ).length || 1;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
@@ -1103,6 +1109,12 @@ export default function AdminMissions({ integre = false } = {}) {
                         {m.departure_address}
                         {m.arrival_address ? ` → ${m.arrival_address}` : ""}
                       </span>
+                      {m.restitution_id && (
+                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 align-middle">
+                          Restitution ·{" "}
+                          {Number(m.ordre_trajet) === 2 ? "retour" : "aller"}
+                        </span>
+                      )}
                       {m.is_urgent && (
                         <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40 align-middle">
                           <AlertTriangle size={10} />
@@ -1714,8 +1726,21 @@ export default function AdminMissions({ integre = false } = {}) {
                 <>
                   <div className="mb-3">
                     <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                      Prix client (€)
+                      {priceModal.restitution_id
+                        ? "Prix client par paire (aller + retour) (€)"
+                        : "Prix client (€)"}
                     </label>
+                    {priceModal.restitution_id && (
+                      <p className="text-xs text-purple-300 mb-2">
+                        {nbPaires(priceModal.restitution_id)} paire(s) → total
+                        devis :{" "}
+                        {(
+                          (Number(priceValue) || 0) *
+                          nbPaires(priceModal.restitution_id)
+                        ).toFixed(2)}{" "}
+                        €. Montant réparti 50/50 aller/retour.
+                      </p>
+                    )}
                     <div className="relative">
                       <Euro
                         size={18}

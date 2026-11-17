@@ -2497,6 +2497,66 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
         : null
       : mission.convoyeur_comments;
 
+    // ── Restitution : un prix par paire, saisi une fois pour toute la
+    // commande (adresses communes). Réparti 50/50 entre l'aller et le
+    // retour de chaque paire. Un convoyeur pré-affecté ne peut l'être
+    // que s'il n'y a qu'une paire : il ne conduit qu'un véhicule à la fois.
+    if (mission.restitution_id) {
+      const { rows: groupe } = await db.query(
+        `SELECT id, paire_id FROM missions
+          WHERE restitution_id = $1
+            AND status IN ('EN_ATTENTE_DE_COTATION', 'DEVIS_REFUSE')`,
+        [mission.restitution_id],
+      );
+      const nbPaires = new Set(groupe.map((m) => m.paire_id)).size || 1;
+      if (convoyeurRetenu && nbPaires > 1) {
+        return res.status(400).json({
+          error:
+            "Plusieurs restitutions : un convoyeur par paire. Assignez-les après acceptation du devis.",
+        });
+      }
+      const moitie = (p) => Math.round((Number(p) / 2) * 100) / 100;
+      const { rows: maj } = await db.query(
+        `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
+                convoyeur_comments = $4, devis_note_client = $5,
+                status = 'DEVIS_PROPOSE', updated_at = NOW()
+          WHERE id = ANY($6) RETURNING *`,
+        [
+          moitie(price),
+          moitie(price_convoyeur),
+          convoyeurRetenu,
+          commentaireConvoyeur,
+          noteClient,
+          groupe.map((m) => m.id),
+        ],
+      );
+
+      const total = Math.round(Number(price) * nbPaires * 100) / 100;
+      try {
+        const { rows: clientRows } = await db.query(
+          "SELECT email, full_name FROM users WHERE id = $1",
+          [mission.client_id],
+        );
+        if (clientRows[0]) {
+          await emailService.notifyDevisPropose(
+            clientRows[0].email,
+            clientRows[0].full_name,
+            mission,
+            total,
+            noteClient,
+          );
+        }
+      } catch (emailErr) {
+        console.error("⚠️ Email devis non envoyé :", emailErr.message);
+      }
+
+      return res.json({
+        mission: maj.find((m) => m.id === mission.id) || maj[0],
+        restitution: { paires: nbPaires, prixParPaire: Number(price), total },
+        message: `Devis proposé : ${nbPaires} restitution(s) × ${price} € = ${total} € HT.`,
+      });
+    }
+
     const updated = await db.query(
       `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
               convoyeur_comments = $4, devis_note_client = $6,
@@ -2910,7 +2970,47 @@ router.post("/missions/:id/attribuer-convoyeur", async (req, res, next) => {
       kazeSync.error = "Ce convoyeur n'a pas de compte Kaze lié.";
     }
 
-    res.json({ mission, kazeSync });
+    // Restitution : l'aller et le retour d'une paire vont au même
+    // convoyeur. Les autres paires de la commande ne sont pas touchées.
+    let paire = null;
+    if (mission.paire_id) {
+      const { rows: soeurs } = await db.query(
+        `UPDATE missions
+            SET convoyeur_id = $1,
+                status = CASE WHEN status = 'ACCEPTEE' THEN 'ASSIGNEE' ELSE status END,
+                updated_at = NOW()
+          WHERE paire_id = $2 AND id != $3
+            AND status NOT IN ('LIVREE', 'ANNULEE')
+          RETURNING *`,
+        [convoyeurId, mission.paire_id, mission.id],
+      );
+      paire = soeurs.map((s) => s.id);
+      for (const soeur of soeurs) {
+        // L'annonce de la paire est portée par l'aller : si c'est le retour
+        // qu'on assigne, on retire l'annonce restée dans le salon.
+        if (soeur.telegram_message_id) {
+          await telegramService
+            .supprimerMessageAnnonce(
+              soeur.telegram_message_id,
+              soeur.telegram_chat_id || process.env.TELEGRAM_CHAT_ID,
+            )
+            .catch(() => {});
+        }
+        if (missionDemo || !assignedKazeDriverId) continue;
+        try {
+          const idKaze = await syncService.ensureKazeMission(soeur);
+          if (idKaze)
+            await kazeService.assignDriver(idKaze, assignedKazeDriverId);
+        } catch (kazeErr) {
+          console.error(
+            `⚠️ Kaze : assignation du trajet lié ${soeur.id} échouée :`,
+            kazeErr.message,
+          );
+        }
+      }
+    }
+
+    res.json({ mission, kazeSync, paire });
   } catch (err) {
     next(err);
   }
@@ -3073,6 +3173,34 @@ router.post("/missions/:id/retirer-convoyeur", async (req, res, next) => {
       }
     } else {
       kazeSync.error = "Aucune assignation Kaze à retirer.";
+    }
+
+    // Restitution : retirer le convoyeur de l'aller le retire aussi du
+    // retour de la même paire.
+    if (mission.paire_id) {
+      const { rows: soeurs } = await db.query(
+        `UPDATE missions
+            SET convoyeur_id = NULL, status = 'ACCEPTEE', updated_at = NOW()
+          WHERE paire_id = $1 AND id != $2
+            AND convoyeur_id = $3
+            AND status NOT IN ('LIVREE', 'ANNULEE', 'EN_COURS')
+          RETURNING *`,
+        [mission.paire_id, mission.id, mission.convoyeur_id],
+      );
+      for (const soeur of soeurs) {
+        if (!soeur.kaze_mission_id || !ancienKazeDriverId) continue;
+        try {
+          await kazeService.unassignDriver(
+            soeur.kaze_mission_id,
+            ancienKazeDriverId,
+          );
+        } catch (kazeErr) {
+          console.error(
+            `⚠️ Kaze : retrait du trajet lié ${soeur.id} échoué :`,
+            kazeErr.message,
+          );
+        }
+      }
     }
 
     const relancerTelegram = req.body?.relancerTelegram !== false;

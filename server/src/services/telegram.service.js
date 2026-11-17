@@ -107,8 +107,19 @@ function composerAnnonce(mission, lienMission) {
     `*Véhicule* : ${echapper(vehicule)}`,
     `*Départ* : ${echapper(mission.departure_address)}`,
     `*Arrivée* : ${echapper(mission.arrival_address)}`,
-    `*Rémunération* : ${echapper(remuneration)}`,
   ];
+
+  if (mission.restitution_retour_address) {
+    lignes[0] = mission.is_urgent
+      ? "*RESTITUTION URGENTE \\(aller \\+ retour\\)*"
+      : "*Restitution disponible \\(aller \\+ retour\\)*";
+    lignes.push(
+      `*Retour* : ${echapper(mission.restitution_retour_address)}`,
+      "_Échange de véhicule à l'arrivée, même convoyeur pour les deux trajets\\._",
+    );
+  }
+
+  lignes.push(`*Rémunération* : ${echapper(remuneration)}`);
 
   if (mission.departure_date) {
     const date = new Date(mission.departure_date);
@@ -180,6 +191,35 @@ async function annoncerMissionDisponible(mission, lienMission) {
   if (!(await annoncesActivees())) {
     console.log("📣 Annonces Telegram désactivées par l'admin — rien publié.");
     return { publie: false, desactive: true };
+  }
+
+  // Restitution : une seule annonce par paire, portée par l'aller. Le
+  // retour n'est jamais annoncé seul : il suit l'aller chez le même
+  // convoyeur.
+  if (mission.paire_id) {
+    if (Number(mission.ordre_trajet) === 2) {
+      return { publie: false, retourDePaire: true };
+    }
+    try {
+      const { rows } = await db.query(
+        `SELECT arrival_address, price_convoyeur, desired_delivery_date
+           FROM missions
+          WHERE paire_id = $1 AND ordre_trajet = 2
+          LIMIT 1`,
+        [mission.paire_id],
+      );
+      if (rows[0]) {
+        const aller = Number(mission.price_convoyeur || 0);
+        const retour = Number(rows[0].price_convoyeur || 0);
+        mission = {
+          ...mission,
+          restitution_retour_address: rows[0].arrival_address,
+          price_convoyeur: aller + retour || mission.price_convoyeur,
+        };
+      }
+    } catch (err) {
+      console.warn("⚠️ Telegram : retour de paire illisible —", err.message);
+    }
   }
 
   try {

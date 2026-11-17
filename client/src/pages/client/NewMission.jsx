@@ -195,6 +195,53 @@ export default function NewMission() {
 
   const [vehicles, setVehicles] = useState([emptyVehicle()]);
 
+  // ── Restitution ──
+  // Chaque paire : un véhicule livré A → B et un véhicule repris sur place,
+  // ramené en A ou livré en C (choix unique pour toute la commande).
+  const emptyPaire = () => ({
+    livre: emptyVehicle(),
+    repris: emptyVehicle(),
+    dateEnlevement: "",
+    dateEchange: "",
+    dateRetour: "",
+  });
+  const [modeRestitution, setModeRestitution] = useState(false);
+  const [paires, setPaires] = useState([emptyPaire()]);
+  const [retourMode, setRetourMode] = useState("depart");
+  const [retour, setRetour] = useState({
+    structure: "",
+    structureName: "",
+    contactName: "",
+    contactPhone: "",
+    contactEmail: "",
+    instructions: "",
+    address: "",
+  });
+  const updatePaire = (idx, champ, valeur) =>
+    setPaires((ps) =>
+      ps.map((p, i) => (i === idx ? { ...p, [champ]: valeur } : p)),
+    );
+  const updateVehiculePaire = (idx, role, champ, valeur) =>
+    setPaires((ps) =>
+      ps.map((p, i) =>
+        i === idx ? { ...p, [role]: { ...p[role], [champ]: valeur } } : p,
+      ),
+    );
+  const ajouterPaire = () =>
+    setPaires((ps) => {
+      const derniere = ps[ps.length - 1];
+      return [
+        ...ps,
+        {
+          ...emptyPaire(),
+          // Les dates de la paire précédente servent de point de départ.
+          dateEnlevement: derniere?.dateEnlevement || "",
+          dateEchange: derniere?.dateEchange || "",
+          dateRetour: derniere?.dateRetour || "",
+        },
+      ];
+    });
+
   const [departure, setDeparture] = useState({
     structure: "",
     structureName: "",
@@ -307,6 +354,11 @@ export default function NewMission() {
         if (estAdmin) return Number(priceConvoyeur) > 0;
         return recapDisabled || recapEmailValide;
       case 1:
+        if (modeRestitution) {
+          return paires.every(
+            (p) => plaqueValide(p.livre.plate) && plaqueValide(p.repris.plate),
+          );
+        }
         return vehicles.every((v) => plaqueValide(v.plate));
       case 2:
         return (
@@ -318,7 +370,12 @@ export default function NewMission() {
         return (
           arrival.address.trim() !== "" &&
           !erreurTelephone(arrival.contactPhone) &&
-          !erreurEmail(arrival.contactEmail)
+          !erreurEmail(arrival.contactEmail) &&
+          (!modeRestitution ||
+            retourMode === "depart" ||
+            (retour.address.trim() !== "" &&
+              !erreurTelephone(retour.contactPhone) &&
+              !erreurEmail(retour.contactEmail)))
         );
       case 4:
         return (
@@ -340,17 +397,35 @@ export default function NewMission() {
         ? selectedClientId || user?.id || null
         : user?.id || null;
 
+      const versVehicule = (v) => ({
+        plate: v.plate,
+        vin: v.vin,
+        brand: v.brand,
+        model: v.model,
+        vehicleType: v.vehicleType,
+        energy: v.energy,
+      });
+
       const payload = {
         recapEmail: recapDisabled ? null : recapEmail.trim() || null,
         recapDisabled,
-        vehicles: vehicles.map((v) => ({
-          plate: v.plate,
-          vin: v.vin,
-          brand: v.brand,
-          model: v.model,
-          vehicleType: v.vehicleType,
-          energy: v.energy,
-        })),
+        ...(modeRestitution
+          ? {
+              restitution: {
+                paires: paires.map((p) => ({
+                  livre: versVehicule(p.livre),
+                  repris: versVehicule(p.repris),
+                  dateEnlevement: p.dateEnlevement || null,
+                  dateEchange: p.dateEchange || null,
+                  dateRetour: p.dateRetour || null,
+                })),
+                retour:
+                  retourMode === "autre"
+                    ? { mode: "autre", ...retour }
+                    : { mode: "depart" },
+              },
+            }
+          : { vehicles: vehicles.map(versVehicule) }),
         departureAddress: departure.address,
         departureDate: departure.date || null,
         departureStructure: departure.structure || null,
@@ -440,9 +515,11 @@ export default function NewMission() {
       }
 
       toast.success(
-        count > 1
-          ? `${count} missions créées ! Vous recevrez un devis comprenants toutes les missions.`
-          : "Mission créée ! Vous recevrez un devis sous 24h.",
+        modeRestitution
+          ? `${paires.length} restitution(s) créée(s) ! Vous recevrez un devis unique.`
+          : count > 1
+            ? `${count} missions créées ! Vous recevrez un devis comprenant toutes les missions.`
+            : "Mission créée ! Vous recevrez un devis sous 24h.",
       );
       navigate("/client");
     } catch (err) {
@@ -745,162 +822,364 @@ export default function NewMission() {
       {/* ═══════════ ÉTAPE 2 : VÉHICULE ═══════════ */}
       {step === 1 && (
         <div className="space-y-4">
-          {vehicles.map((v, idx) => (
-            <div key={idx} className="card relative">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Car size={20} className="text-primary-400" />
-                  Véhicule {vehicles.length > 1 ? `#${idx + 1}` : ""}
-                </h3>
-                {vehicles.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeVehicle(idx)}
-                    className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                    title="Supprimer ce véhicule"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </div>
+          <div className="card">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={modeRestitution}
+                onChange={(e) => setModeRestitution(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                <span className="block font-semibold">
+                  Restitution (échange de véhicules)
+                </span>
+                <span className="block text-xs text-dark-400 mt-0.5">
+                  Le convoyeur livre un véhicule et repart avec un autre, ramené
+                  au point de départ ou livré à une autre adresse.
+                </span>
+              </span>
+            </label>
+          </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                    Immatriculation <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    value={v.plate}
-                    onChange={(e) =>
-                      updateVehicle(
-                        idx,
-                        "plate",
-                        normaliserPlaque(e.target.value),
-                      )
-                    }
-                    className="input-field font-mono"
-                    placeholder="AA-123-BB"
-                    maxLength={9}
-                  />
-                  {v.plate && !plaqueValide(v.plate) && (
-                    <p className="text-xs text-red-400 mt-2">
-                      Format attendu : AA-123-BB.
-                    </p>
+          {modeRestitution && (
+            <>
+              {paires.map((p, idx) => (
+                <div key={idx} className="card space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Car size={20} className="text-primary-400" />
+                      Restitution #{idx + 1}
+                    </h3>
+                    {paires.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPaires((ps) => ps.filter((_, i) => i !== idx))
+                        }
+                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
+                        title="Supprimer cette restitution"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                  {[
+                    ["livre", "Véhicule livré"],
+                    ["repris", "Véhicule repris"],
+                  ].map(([role, titre]) => (
+                    <div key={role}>
+                      <p className="text-sm font-medium text-primary-400 mb-2">
+                        {titre}
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <input
+                            value={p[role].plate}
+                            onChange={(e) =>
+                              updateVehiculePaire(
+                                idx,
+                                role,
+                                "plate",
+                                normaliserPlaque(e.target.value),
+                              )
+                            }
+                            className="input-field font-mono"
+                            placeholder="Immatriculation AA-123-BB *"
+                            maxLength={9}
+                          />
+                          {p[role].plate && !plaqueValide(p[role].plate) && (
+                            <p className="text-xs text-red-400 mt-1">
+                              Format attendu : AA-123-BB.
+                            </p>
+                          )}
+                        </div>
+                        <input
+                          value={p[role].vin}
+                          onChange={(e) =>
+                            updateVehiculePaire(
+                              idx,
+                              role,
+                              "vin",
+                              e.target.value.toUpperCase().slice(0, 17),
+                            )
+                          }
+                          className="input-field font-mono"
+                          placeholder="VIN (17 car.)"
+                          maxLength={17}
+                        />
+                        <select
+                          value={p[role].brand}
+                          onChange={(e) =>
+                            updateVehiculePaire(
+                              idx,
+                              role,
+                              "brand",
+                              e.target.value,
+                            )
+                          }
+                          className="input-field"
+                        >
+                          <option value="">Marque</option>
+                          {BRANDS.map((b) => (
+                            <option key={b} value={b}>
+                              {b}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          value={p[role].model}
+                          onChange={(e) =>
+                            updateVehiculePaire(
+                              idx,
+                              role,
+                              "model",
+                              e.target.value,
+                            )
+                          }
+                          className="input-field"
+                          placeholder="Modèle"
+                        />
+                        <select
+                          value={p[role].vehicleType}
+                          onChange={(e) =>
+                            updateVehiculePaire(
+                              idx,
+                              role,
+                              "vehicleType",
+                              e.target.value,
+                            )
+                          }
+                          className="input-field"
+                        >
+                          <option value="">Gabarit</option>
+                          <option value="VL">VL</option>
+                          <option value="VUL">VUL</option>
+                          <option value="PL">PL</option>
+                        </select>
+                        <select
+                          value={p[role].energy}
+                          onChange={(e) =>
+                            updateVehiculePaire(
+                              idx,
+                              role,
+                              "energy",
+                              e.target.value,
+                            )
+                          }
+                          className="input-field"
+                        >
+                          <option value="">Énergie</option>
+                          {ENERGIES.map((en) => (
+                            <option key={en} value={en}>
+                              {en}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                      ["dateEnlevement", "Enlèvement au départ"],
+                      ["dateEchange", "Échange sur place"],
+                      ["dateRetour", "Livraison du véhicule repris"],
+                    ].map(([champ, libelle]) => (
+                      <div key={champ}>
+                        <label className="block text-xs text-dark-400 mb-1">
+                          {libelle}
+                        </label>
+                        <input
+                          type="date"
+                          value={p[champ]}
+                          onChange={(e) =>
+                            updatePaire(idx, champ, e.target.value)
+                          }
+                          className="input-field"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={ajouterPaire}
+                className="w-full py-3 border-2 border-dashed border-dark-600 hover:border-primary-500 rounded-xl text-dark-400 hover:text-primary-400 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={20} />
+                Ajouter une restitution
+              </button>
+              <p className="text-sm text-primary-400 text-center">
+                {paires.length} restitution(s) → {paires.length * 2} trajets, un
+                seul devis.
+              </p>
+            </>
+          )}
+
+          {!modeRestitution &&
+            vehicles.map((v, idx) => (
+              <div key={idx} className="card relative">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Car size={20} className="text-primary-400" />
+                    Véhicule {vehicles.length > 1 ? `#${idx + 1}` : ""}
+                  </h3>
+                  {vehicles.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeVehicle(idx)}
+                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      title="Supprimer ce véhicule"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                    N° de châssis (VIN)
-                    <span className="text-dark-500 text-xs ml-1">17 car.</span>
-                  </label>
-                  <input
-                    value={v.vin}
-                    onChange={(e) =>
-                      updateVehicle(
-                        idx,
-                        "vin",
-                        e.target.value.toUpperCase().slice(0, 17),
-                      )
-                    }
-                    className="input-field font-mono"
-                    placeholder="17 caractères"
-                    maxLength={17}
-                  />
-                  {v.vin && v.vin.length !== 17 && v.vin.length > 0 && (
-                    <p className="text-xs text-yellow-400 mt-1">
-                      {v.vin.length}/17 caractères
-                    </p>
-                  )}
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Immatriculation <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      value={v.plate}
+                      onChange={(e) =>
+                        updateVehicle(
+                          idx,
+                          "plate",
+                          normaliserPlaque(e.target.value),
+                        )
+                      }
+                      className="input-field font-mono"
+                      placeholder="AA-123-BB"
+                      maxLength={9}
+                    />
+                    {v.plate && !plaqueValide(v.plate) && (
+                      <p className="text-xs text-red-400 mt-2">
+                        Format attendu : AA-123-BB.
+                      </p>
+                    )}
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                    Marque
-                  </label>
-                  <select
-                    value={v.brand}
-                    onChange={(e) =>
-                      updateVehicle(idx, "brand", e.target.value)
-                    }
-                    className="input-field"
-                  >
-                    <option value="">Sélectionnez</option>
-                    {BRANDS.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      N° de châssis (VIN)
+                      <span className="text-dark-500 text-xs ml-1">
+                        17 car.
+                      </span>
+                    </label>
+                    <input
+                      value={v.vin}
+                      onChange={(e) =>
+                        updateVehicle(
+                          idx,
+                          "vin",
+                          e.target.value.toUpperCase().slice(0, 17),
+                        )
+                      }
+                      className="input-field font-mono"
+                      placeholder="17 caractères"
+                      maxLength={17}
+                    />
+                    {v.vin && v.vin.length !== 17 && v.vin.length > 0 && (
+                      <p className="text-xs text-yellow-400 mt-1">
+                        {v.vin.length}/17 caractères
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Marque
+                    </label>
+                    <select
+                      value={v.brand}
+                      onChange={(e) =>
+                        updateVehicle(idx, "brand", e.target.value)
+                      }
+                      className="input-field"
+                    >
+                      <option value="">Sélectionnez</option>
+                      {BRANDS.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Modèle de véhicule
+                    </label>
+                    <input
+                      value={v.model}
+                      onChange={(e) =>
+                        updateVehicle(idx, "model", e.target.value)
+                      }
+                      className="input-field"
+                      placeholder="Marque et modèle"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      Type / gabarit du véhicule
+                    </label>
+                    <select
+                      value={v.vehicleType}
+                      onChange={(e) =>
+                        updateVehicle(idx, "vehicleType", e.target.value)
+                      }
+                      className="input-field"
+                    >
+                      <option value="">Sélectionnez</option>
+                      <option value="VL">Véhicule léger (VL)</option>
+                      <option value="VUL">
+                        Véhicule utilitaire léger (VUL)
                       </option>
-                    ))}
-                  </select>
-                </div>
+                      <option value="PL">Poids lourds (PL)</option>
+                    </select>
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                    Modèle de véhicule
-                  </label>
-                  <input
-                    value={v.model}
-                    onChange={(e) =>
-                      updateVehicle(idx, "model", e.target.value)
-                    }
-                    className="input-field"
-                    placeholder="Marque et modèle"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                    Type / gabarit du véhicule
-                  </label>
-                  <select
-                    value={v.vehicleType}
-                    onChange={(e) =>
-                      updateVehicle(idx, "vehicleType", e.target.value)
-                    }
-                    className="input-field"
-                  >
-                    <option value="">Sélectionnez</option>
-                    <option value="VL">Véhicule léger (VL)</option>
-                    <option value="VUL">Véhicule utilitaire léger (VUL)</option>
-                    <option value="PL">Poids lourds (PL)</option>
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                    <Fuel size={14} className="inline mr-1" />
-                    Type d'énergie
-                  </label>
-                  <select
-                    value={v.energy}
-                    onChange={(e) =>
-                      updateVehicle(idx, "energy", e.target.value)
-                    }
-                    className="input-field"
-                  >
-                    <option value="">Sélectionnez</option>
-                    {ENERGIES.map((e) => (
-                      <option key={e} value={e}>
-                        {e}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                      <Fuel size={14} className="inline mr-1" />
+                      Type d'énergie
+                    </label>
+                    <select
+                      value={v.energy}
+                      onChange={(e) =>
+                        updateVehicle(idx, "energy", e.target.value)
+                      }
+                      className="input-field"
+                    >
+                      <option value="">Sélectionnez</option>
+                      {ENERGIES.map((e) => (
+                        <option key={e} value={e}>
+                          {e}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {/* Bouton ajouter véhicule */}
-          <button
-            type="button"
-            onClick={addVehicle}
-            className="w-full py-3 border-2 border-dashed border-dark-600 hover:border-primary-500 rounded-xl text-dark-400 hover:text-primary-400 transition-all flex items-center justify-center gap-2"
-          >
-            <Plus size={20} />
-            Ajouter un véhicule
-          </button>
+          {!modeRestitution && (
+            <button
+              type="button"
+              onClick={addVehicle}
+              className="w-full py-3 border-2 border-dashed border-dark-600 hover:border-primary-500 rounded-xl text-dark-400 hover:text-primary-400 transition-all flex items-center justify-center gap-2"
+            >
+              <Plus size={20} />
+              Ajouter un véhicule
+            </button>
+          )}
 
-          {vehicles.length > 1 && (
+          {!modeRestitution && vehicles.length > 1 && (
             <p className="text-sm text-primary-400 text-center">
               {vehicles.length} véhicules → {vehicles.length} missions seront
               créées avec la même logistique.
@@ -1045,7 +1324,7 @@ export default function NewMission() {
               />
             </div>
 
-            <div>
+            <div className={modeRestitution ? "hidden" : ""}>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Enlèvement possible à partir du
               </label>
@@ -1198,7 +1477,7 @@ export default function NewMission() {
               />
             </div>
 
-            <div>
+            <div className={modeRestitution ? "hidden" : ""}>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Date de livraison souhaitée
               </label>
@@ -1253,6 +1532,100 @@ export default function NewMission() {
                 </span>
               </button>
             </div>
+
+            {modeRestitution && (
+              <div className="md:col-span-2 border-t border-white/10 pt-4 space-y-3">
+                <p className="font-semibold">
+                  Destination des véhicules repris
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {[
+                    ["depart", "Ramener au point de départ"],
+                    ["autre", "Livrer à une autre adresse"],
+                  ].map(([val, lib]) => (
+                    <label
+                      key={val}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="retourMode"
+                        checked={retourMode === val}
+                        onChange={() => setRetourMode(val)}
+                      />
+                      <span className="text-sm">{lib}</span>
+                    </label>
+                  ))}
+                </div>
+                {retourMode === "autre" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input
+                      value={retour.structureName}
+                      onChange={(e) =>
+                        setRetour({ ...retour, structureName: e.target.value })
+                      }
+                      className="input-field"
+                      placeholder="Nom de la structure"
+                    />
+                    <input
+                      value={retour.contactName}
+                      onChange={(e) =>
+                        setRetour({ ...retour, contactName: e.target.value })
+                      }
+                      className="input-field"
+                      placeholder="Nom du contact"
+                    />
+                    <div>
+                      <input
+                        value={retour.contactPhone}
+                        onChange={(e) =>
+                          setRetour({ ...retour, contactPhone: e.target.value })
+                        }
+                        className="input-field"
+                        placeholder="Téléphone"
+                      />
+                      {erreurTelephone(retour.contactPhone) && (
+                        <p className="text-xs text-red-400 mt-1">
+                          {erreurTelephone(retour.contactPhone)}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        value={retour.contactEmail}
+                        onChange={(e) =>
+                          setRetour({ ...retour, contactEmail: e.target.value })
+                        }
+                        className="input-field"
+                        placeholder="Email"
+                      />
+                      {erreurEmail(retour.contactEmail) && (
+                        <p className="text-xs text-red-400 mt-1">
+                          {erreurEmail(retour.contactEmail)}
+                        </p>
+                      )}
+                    </div>
+                    <input
+                      value={retour.address}
+                      onChange={(e) =>
+                        setRetour({ ...retour, address: e.target.value })
+                      }
+                      className="input-field md:col-span-2"
+                      placeholder="Adresse de livraison des véhicules repris *"
+                    />
+                    <textarea
+                      value={retour.instructions}
+                      onChange={(e) =>
+                        setRetour({ ...retour, instructions: e.target.value })
+                      }
+                      className="input-field md:col-span-2"
+                      rows={2}
+                      placeholder="Instructions"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

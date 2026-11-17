@@ -243,6 +243,16 @@ const migrate = async () => {
     -- jamais transmise au convoyeur ni à Kaze).
     ALTER TABLE missions ADD COLUMN IF NOT EXISTS devis_note_client TEXT;
 
+    -- Restitution : chaque paire = un aller A → B (véhicule livré) et un
+    -- retour B → A ou B → C (véhicule repris), conduits par le même
+    -- convoyeur. restitution_id regroupe toute la commande (un devis),
+    -- paire_id relie l'aller et le retour, ordre_trajet : 1 aller, 2 retour.
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS restitution_id UUID;
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS paire_id UUID;
+    ALTER TABLE missions ADD COLUMN IF NOT EXISTS ordre_trajet SMALLINT;
+    CREATE INDEX IF NOT EXISTS idx_missions_restitution ON missions (restitution_id) WHERE restitution_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_missions_paire ON missions (paire_id) WHERE paire_id IS NOT NULL;
+
     -- Réglages globaux modifiables par l'admin (ex. annonces Telegram).
     CREATE TABLE IF NOT EXISTS app_settings (
       key        VARCHAR(100) PRIMARY KEY,

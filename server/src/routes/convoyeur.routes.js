@@ -575,6 +575,7 @@ router.get("/missions-disponibles-count", async (req, res, next) => {
          LEFT JOIN users u ON u.id = m.client_id
         WHERE m.status = 'ACCEPTEE'
           AND m.convoyeur_id IS NULL
+          AND COALESCE(m.ordre_trajet, 1) = 1
           ${
             masquerDemoPourCeCompte
               ? `AND NOT (
@@ -616,10 +617,21 @@ router.get("/missions-disponibles", async (req, res, next) => {
               m.departure_address, m.departure_date,
               m.arrival_address, m.arrival_date,
               m.price_convoyeur AS price, m.status, m.kaze_mission_id,
-              m.created_at
+              m.created_at, m.paire_id,
+              r.arrival_address AS retour_address,
+              r.desired_delivery_date AS retour_date,
+              CASE WHEN r.id IS NOT NULL
+                   THEN COALESCE(m.price_convoyeur, 0) + COALESCE(r.price_convoyeur, 0)
+              END AS price_paire
        FROM missions m
        LEFT JOIN users u ON u.id = m.client_id
+       LEFT JOIN missions r
+              ON m.paire_id IS NOT NULL
+             AND r.paire_id = m.paire_id
+             AND r.ordre_trajet = 2
        WHERE m.convoyeur_id IS NULL AND m.status = 'ACCEPTEE'
+         -- Restitution : la paire n'apparaît qu'une fois, via son aller.
+         AND COALESCE(m.ordre_trajet, 1) = 1
          ${
            masquerDemoPourCeCompte
              ? `AND NOT (
@@ -810,6 +822,24 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
 
     const updatedMission = updated.rows[0];
 
+    // Restitution : prendre l'aller, c'est prendre aussi le retour de la
+    // même paire (échange de véhicule sur place, même convoyeur).
+    const trajetsLies = [];
+    if (mission.paire_id) {
+      const { rows: soeurs } = await db.query(
+        `UPDATE missions
+            SET convoyeur_id = $1, status = 'ASSIGNEE', updated_at = NOW()
+          WHERE paire_id = $2 AND id != $3
+            AND convoyeur_id IS NULL AND status = 'ACCEPTEE'
+          RETURNING *`,
+        [req.user.id, mission.paire_id, mission.id],
+      );
+      trajetsLies.push(...soeurs);
+      for (const soeur of soeurs) {
+        await effacerAnnonceTelegramSiBesoin(soeur);
+      }
+    }
+
     // Une mission prise ne doit plus rester affichée dans le salon.
     // Effacement best-effort : un échec Telegram n'empêche jamais la prise.
     await effacerAnnonceTelegramSiBesoin(mission);
@@ -841,6 +871,22 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
           );
           updatedMission.kaze_mission_id = kazeMissionId;
           kazeSync.synced = true;
+          for (const soeur of trajetsLies) {
+            try {
+              const idSoeur = await syncService.ensureKazeMission(soeur);
+              if (idSoeur) {
+                await kazeService.assignDriver(
+                  idSoeur,
+                  req.user.kaze_driver_id,
+                );
+              }
+            } catch (errSoeur) {
+              console.error(
+                `⚠️ Kaze : assignation du retour ${soeur.id} échouée :`,
+                errSoeur.message,
+              );
+            }
+          }
           console.log(
             `✅ Kaze : convoyeur ${req.user.kaze_driver_id} assigné à la mission ${kazeMissionId}`,
           );
@@ -869,7 +915,10 @@ router.post("/missions/:id/prendre", async (req, res, next) => {
 
     res.json({
       mission: updatedMission,
-      message: "Mission prise avec succès !",
+      trajetsLies: trajetsLies.map((m) => m.id),
+      message: trajetsLies.length
+        ? "Restitution prise : l'aller et le retour vous sont attribués."
+        : "Mission prise avec succès !",
       kazeSync,
     });
   } catch (err) {

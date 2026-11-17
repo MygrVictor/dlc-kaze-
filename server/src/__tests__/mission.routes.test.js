@@ -341,7 +341,7 @@ describe("POST /api/missions — création", () => {
     // structure de livraison et sa raison sociale + les métadonnées
     // supplémentaires introduites par l'évolution de création + la date
     // d'enlèvement souhaitée.
-    expect(params).toHaveLength(47);
+    expect(params).toHaveLength(50);
     expect(params).toEqual(
       expect.arrayContaining([
         CLIENT.id,
@@ -451,7 +451,75 @@ describe("POST /api/missions — création", () => {
       recapDisabled: true,
     });
     expect(params).not.toContain("compta@entreprise.fr");
-    expect(params[params.length - 1]).toBe(true);
+    expect(params[46]).toBe(true);
+  });
+
+  describe("restitution", () => {
+    const paire = (n) => ({
+      livre: { plate: `AA-${100 + n}-BB` },
+      repris: { plate: `CC-${100 + n}-DD` },
+      dateEnlevement: "2026-12-01",
+      dateEchange: "2026-12-02",
+      dateRetour: "2026-12-03",
+    });
+
+    const capturer = () => {
+      const inserts = [];
+      mockDb(CLIENT, (sql, p) => {
+        if (/INSERT INTO missions/i.test(sql)) {
+          inserts.push(p);
+          return { rows: [{ id: `m${inserts.length}` }] };
+        }
+      });
+      return inserts;
+    };
+
+    it("crée un aller et un retour par paire, retour au point de départ", async () => {
+      const inserts = capturer();
+      await creer({
+        departureAddress: "Paris",
+        arrivalAddress: "Lyon",
+        restitution: {
+          paires: [paire(1), paire(2)],
+          retour: { mode: "depart" },
+        },
+      });
+      expect(inserts).toHaveLength(4);
+      const ordres = inserts.map((p) => p[49]);
+      expect(ordres).toEqual([1, 2, 1, 2]);
+      // Même commande pour tout le monde, une paire par couple aller/retour.
+      expect(new Set(inserts.map((p) => p[47])).size).toBe(1);
+      expect(inserts[0][48]).toBe(inserts[1][48]);
+      expect(inserts[0][48]).not.toBe(inserts[2][48]);
+      // Aller : véhicule livré ; retour : véhicule repris, ramené à Paris.
+      expect(inserts[0]).toContain("AA-101-BB");
+      expect(inserts[1]).toContain("CC-101-DD");
+      expect(inserts[1]).toContain("Paris");
+    });
+
+    it("exige une adresse quand le retour va ailleurs", async () => {
+      capturer();
+      const res = await creer({
+        departureAddress: "Paris",
+        arrivalAddress: "Lyon",
+        restitution: { paires: [paire(1)], retour: { mode: "autre" } },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it("livre les véhicules repris à l'adresse C", async () => {
+      const inserts = capturer();
+      await creer({
+        departureAddress: "Paris",
+        arrivalAddress: "Lyon",
+        restitution: {
+          paires: [paire(1)],
+          retour: { mode: "autre", address: "Marseille" },
+        },
+      });
+      expect(inserts).toHaveLength(2);
+      expect(inserts[1]).toContain("Marseille");
+    });
   });
 });
 
@@ -704,7 +772,7 @@ describe("POST /api/missions — dates et urgence", () => {
       });
 
       expect(res.status).toBe(201);
-      expect(capture.params).toHaveLength(47);
+      expect(capture.params).toHaveLength(50);
       expect(capture.sql).toMatch(/service_handover/);
     });
   });

@@ -72,7 +72,9 @@ export default function MissionsDisponibles() {
           `/convoyeur/missions/${mission.id}/prendre`,
         );
         toast.success(
-          "Mission prise avec succès ! Elle apparaît dans votre planning.",
+          data?.trajetsLies?.length
+            ? "Restitution prise : l'aller et le retour sont dans votre planning."
+            : "Mission prise avec succès ! Elle apparaît dans votre planning.",
         );
       }
       // Retirer la mission de la liste
@@ -182,6 +184,19 @@ export default function MissionsDisponibles() {
                     </p>
                   </div>
                 </div>
+                {mission.retour_address && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-purple-300">
+                        Restitution — retour avec le véhicule repris
+                      </p>
+                      <p className="text-white font-medium break-words">
+                        {mission.retour_address}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Véhicule & Prix */}
@@ -195,7 +210,11 @@ export default function MissionsDisponibles() {
                 <div className="flex items-center gap-2 text-sm">
                   <Euro className="w-4 h-4 text-yellow-400" />
                   <span className="text-yellow-400 font-bold">
-                    {mission.price ? `${mission.price} €` : "—"}
+                    {mission.price_paire
+                      ? `${mission.price_paire} € (aller + retour)`
+                      : mission.price
+                        ? `${mission.price} €`
+                        : "—"}
                   </span>
                 </div>
               </div>

@@ -319,17 +319,171 @@ router.post(
         ];
       }
 
-      // Plaque obligatoire, au format SIV : c'est elle qui identifie le
-      // véhicule chez Kaze, sur le PV et auprès du convoyeur.
-      for (const [i, v] of vehicleList.entries()) {
-        const plaque = normaliserPlaque(v?.plate);
-        if (!plaque) {
-          const rang = vehicleList.length > 1 ? ` (véhicule ${i + 1})` : "";
+      // ── Coordonnées communes à toute la commande ──
+      const pointDepart = {
+        address: departureAddress,
+        structure: departureStructure,
+        structureName: departureStructureName,
+        contactName: departureContactName,
+        contactPhone: departureContactPhone,
+        contactEmail: departureContactEmail,
+        instructions: departureInstructions,
+      };
+      const pointLivraison = {
+        address: arrivalAddress,
+        structure: arrivalStructure,
+        structureName: arrivalStructureName,
+        contactName: arrivalContactName,
+        contactPhone: arrivalContactPhone,
+        contactEmail: arrivalContactEmail,
+        instructions: arrivalInstructions,
+      };
+
+      // ── Restitution ──
+      // Chaque paire = un véhicule livré A → B + un véhicule repris
+      // B → A (ou B → C). Adresses communes à toute la commande (une
+      // seule cotation), dates propres à chaque paire. Un convoyeur par
+      // paire. Pas de mélange avec des livraisons simples.
+      const restitution = req.body.restitution;
+      const estRestitution = restitution && Array.isArray(restitution.paires);
+      let trajets;
+
+      if (estRestitution) {
+        const paires = restitution.paires;
+        if (paires.length === 0 || paires.length > 20) {
           return res.status(400).json({
-            error: `Immatriculation${rang} obligatoire au format AA-123-BB.`,
+            error: "Restitution : entre 1 et 20 paires de véhicules.",
           });
         }
-        v.plate = plaque;
+
+        const retour = restitution.retour || {};
+        let pointRetour;
+        if (retour.mode === "autre") {
+          if (!String(retour.address || "").trim()) {
+            return res
+              .status(400)
+              .json({ error: "Restitution : adresse de retour obligatoire." });
+          }
+          if (
+            retour.contactEmail &&
+            !isValidEmail(String(retour.contactEmail).trim())
+          ) {
+            return res.status(400).json({
+              error: "Email du contact de retour : adresse invalide.",
+            });
+          }
+          if (
+            retour.contactPhone &&
+            !isValidPhone(String(retour.contactPhone).trim())
+          ) {
+            return res.status(400).json({
+              error: "Téléphone du contact de retour : numéro invalide.",
+            });
+          }
+          for (const [champ, max] of [
+            ["contactName", 150],
+            ["contactPhone", 120],
+            ["structureName", 150],
+          ]) {
+            if (retour[champ] && String(retour[champ]).length > max) {
+              return res.status(400).json({
+                error: `Retour : ${champ} trop long (${max} caractères maximum).`,
+              });
+            }
+          }
+          pointRetour = {
+            address: String(retour.address).trim(),
+            structure: retour.structure,
+            structureName: retour.structureName,
+            contactName: retour.contactName,
+            contactPhone: retour.contactPhone,
+            contactEmail: retour.contactEmail,
+            instructions: retour.instructions,
+          };
+        } else {
+          pointRetour = pointDepart;
+        }
+
+        // Un convoyeur par paire : pré-affecter un seul convoyeur à
+        // plusieurs paires lui ferait conduire deux véhicules à la fois.
+        if (convoyeurPreassigneId && paires.length > 1) {
+          return res.status(400).json({
+            error:
+              "Plusieurs restitutions : un convoyeur par paire. Assignez-les après création.",
+          });
+        }
+
+        // Prix saisis par paire, répartis 50/50 entre l'aller et le retour.
+        const moitie = (p) =>
+          p ? Math.round((Number(p) / 2) * 100) / 100 : null;
+
+        trajets = [];
+        const restitutionId = crypto.randomUUID();
+        for (const [i, p] of paires.entries()) {
+          const livre = { ...(p?.livre || {}) };
+          const repris = { ...(p?.repris || {}) };
+          for (const [v, role] of [
+            [livre, "livré"],
+            [repris, "repris"],
+          ]) {
+            const plaque = normaliserPlaque(v.plate);
+            if (!plaque) {
+              return res.status(400).json({
+                error: `Immatriculation du véhicule ${role} (restitution ${i + 1}) obligatoire au format AA-123-BB.`,
+              });
+            }
+            v.plate = plaque;
+          }
+          const paireId = crypto.randomUUID();
+          const commun = { restitutionId, paireId };
+          trajets.push({
+            ...commun,
+            ordre: 1,
+            v: livre,
+            dep: pointDepart,
+            arr: pointLivraison,
+            desiredPickup: p.dateEnlevement || null,
+            desiredDelivery: p.dateEchange || null,
+            prixClient: moitie(priceClient),
+            prixConvoyeur: moitie(priceConvoyeur),
+          });
+          trajets.push({
+            ...commun,
+            ordre: 2,
+            v: repris,
+            dep: pointLivraison,
+            arr: pointRetour,
+            desiredPickup: p.dateEchange || null,
+            desiredDelivery: p.dateRetour || p.dateEchange || null,
+            prixClient: moitie(priceClient),
+            prixConvoyeur: moitie(priceConvoyeur),
+          });
+        }
+      } else {
+        // Plaque obligatoire, au format SIV : c'est elle qui identifie le
+        // véhicule chez Kaze, sur le PV et auprès du convoyeur.
+        for (const [i, v] of vehicleList.entries()) {
+          const plaque = normaliserPlaque(v?.plate);
+          if (!plaque) {
+            const rang = vehicleList.length > 1 ? ` (véhicule ${i + 1})` : "";
+            return res.status(400).json({
+              error: `Immatriculation${rang} obligatoire au format AA-123-BB.`,
+            });
+          }
+          v.plate = plaque;
+        }
+        trajets = vehicleList.map((v) => ({
+          v,
+          dep: pointDepart,
+          arr: pointLivraison,
+          desiredPickup: departureDate || null,
+          desiredDelivery: desiredDeliveryDate || null,
+          prixClient: priceClient || null,
+          prixConvoyeur: priceConvoyeur || null,
+          restitutionId: null,
+          paireId: null,
+          ordre: null,
+        }));
       }
 
       const createdMissions = [];
@@ -344,7 +498,8 @@ router.post(
       // client : le lot permet d'en tirer un devis unique et chiffré.
       const batchId = crypto.randomUUID();
 
-      for (const v of vehicleList) {
+      for (const t of trajets) {
+        const { v, dep, arr } = t;
         const { rows } = await db.query(
           `INSERT INTO missions (
             client_id,
@@ -362,7 +517,8 @@ router.post(
             emergency_contact_name, emergency_phone, emergency_contact_email,
             comments, desired_delivery_date, is_urgent, batch_id, status,
             recap_email, price, price_convoyeur, created_by,
-            purchase_order_number, desired_pickup_date, recap_disabled
+            purchase_order_number, desired_pickup_date, recap_disabled,
+            restitution_id, paire_id, ordre_trajet
           ) VALUES (
             $1,
             $2, $3, $4, $5, $6,
@@ -379,7 +535,8 @@ router.post(
             $31, $32, $33,
             $34, $35, $36, $37, $39,
             $38, $40, $41, $42,
-            $45, $46, $47
+            $45, $46, $47,
+            $48, $49, $50
           ) RETURNING *`,
           [
             clientId,
@@ -396,20 +553,20 @@ router.post(
             // n'a pas à les saisir, et ils ne peuvent pas se contredire.
             estUtilitaire12m3(v.vehicleType || v.type),
             classeDePeage(v.vehicleType || v.type),
-            departureAddress,
+            dep.address,
             dateOperationnelle,
-            departureStructure || null,
-            departureStructureName || null,
-            departureContactName || null,
-            departureContactPhone || null,
-            departureContactEmail || null,
-            departureInstructions || null,
-            arrivalAddress,
+            dep.structure || null,
+            dep.structureName || null,
+            dep.contactName || null,
+            dep.contactPhone || null,
+            dep.contactEmail || null,
+            dep.instructions || null,
+            arr.address,
             dateOperationnelle,
-            arrivalContactName || null,
-            arrivalContactPhone || null,
-            arrivalContactEmail || null,
-            arrivalInstructions || null,
+            arr.contactName || null,
+            arr.contactPhone || null,
+            arr.contactEmail || null,
+            arr.instructions || null,
             serviceRefuel || false,
             serviceDocumentManagement || null,
             Boolean(serviceHandover),
@@ -418,23 +575,26 @@ router.post(
             emergencyPhone || null,
             emergencyContactEmail || null,
             comments || null,
-            desiredDeliveryDate || null,
+            t.desiredDelivery,
             Boolean(isUrgent),
             batchId,
             // Vide = le service Kaze retombera sur l'email du compte.
             recapEmail || null,
             statutInitial,
-            priceClient || null,
-            priceConvoyeur || null,
+            t.prixClient,
+            t.prixConvoyeur,
             estAdmin ? req.user.id : null,
             // $43, $44 — ajoutés après coup, d'où leur position en fin de
             // tableau : renuméroter les quarante-deux autres ferait courir
             // un risque de décalage sans rien apporter.
-            arrivalStructure || null,
-            arrivalStructureName || null,
+            arr.structure || null,
+            arr.structureName || null,
             purchaseOrderNumber ? String(purchaseOrderNumber).trim() : null,
-            departureDate || null,
+            t.desiredPickup,
             recapDisabled,
+            t.restitutionId,
+            t.paireId,
+            t.ordre,
           ],
         );
 
@@ -946,65 +1106,93 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
         );
       }
 
-      // 2. Passer le statut en ACCEPTEE — ou directement en ASSIGNEE si un
-      //    convoyeur a été retenu dès la cotation. Dans ce cas la mission ne
-      //    doit pas transiter par la bourse : elle y serait visible le temps
-      //    qu'un autre s'en saisisse.
-      const preAssignee = Boolean(mission.convoyeur_id);
-      await client.query(
-        `UPDATE missions SET status = $1, updated_at = NOW() WHERE id = $2`,
-        [preAssignee ? "ASSIGNEE" : "ACCEPTEE", mission.id],
-      );
-
-      // 3. Envoyer la mission à l'API Kaze
-      let kazeMissionId = null;
-      try {
-        if (!(await isDemoMission(db, mission))) {
-          const kazeResponse = await kazeService.createMission(mission);
-          kazeMissionId = kazeResponse.id || kazeResponse.mission_id;
-
-          await client.query(
-            `UPDATE missions SET kaze_mission_id = $1, updated_at = NOW() WHERE id = $2`,
-            [kazeMissionId, mission.id],
-          );
-
-          // Le convoyeur retenu est déclaré à Kaze dans la foulée : sans quoi
-          // la mission y resterait sans intervenant, et lui ne la verrait pas.
-          if (preAssignee && kazeMissionId) {
-            const { rows: retenu } = await client.query(
-              "SELECT kaze_driver_id FROM users WHERE id = $1",
-              [mission.convoyeur_id],
-            );
-            if (retenu[0]?.kaze_driver_id) {
-              await kazeService.assignDriver(
-                kazeMissionId,
-                retenu[0].kaze_driver_id,
-              );
-            } else {
-              console.error(
-                `⚠️ Mission ${mission.id} pré-assignée à un compte sans liaison Kaze.`,
-              );
-            }
-          }
-        }
-      } catch (kazeErr) {
-        console.error(
-          `⚠️  Erreur Kaze (mission acceptée localement, retry en queue) : ${kazeErr.message}`,
+      // Restitution : un seul devis pour toute la commande, donc une seule
+      // acceptation qui engage toutes les paires.
+      let lot = [mission];
+      if (mission.restitution_id) {
+        const { rows: groupe } = await client.query(
+          `SELECT * FROM missions
+            WHERE restitution_id = $1 AND status = 'DEVIS_PROPOSE'
+            ORDER BY created_at ASC, ordre_trajet ASC
+            FOR UPDATE`,
+          [mission.restitution_id],
         );
+        if (groupe.length) lot = groupe;
       }
 
-      return { kazeMissionId, preAssignee };
+      let kazeMissionIdPrincipal = null;
+      const acceptees = [];
+
+      for (const m of lot) {
+        // 2. Passer le statut en ACCEPTEE — ou directement en ASSIGNEE si un
+        //    convoyeur a été retenu dès la cotation. Dans ce cas la mission ne
+        //    doit pas transiter par la bourse : elle y serait visible le temps
+        //    qu'un autre s'en saisisse.
+        const preAssignee = Boolean(m.convoyeur_id);
+        await client.query(
+          `UPDATE missions SET status = $1, updated_at = NOW() WHERE id = $2`,
+          [preAssignee ? "ASSIGNEE" : "ACCEPTEE", m.id],
+        );
+
+        // 3. Envoyer la mission à l'API Kaze
+        let kazeMissionId = null;
+        try {
+          if (!(await isDemoMission(db, m))) {
+            const kazeResponse = await kazeService.createMission(m);
+            kazeMissionId = kazeResponse.id || kazeResponse.mission_id;
+
+            await client.query(
+              `UPDATE missions SET kaze_mission_id = $1, updated_at = NOW() WHERE id = $2`,
+              [kazeMissionId, m.id],
+            );
+
+            // Le convoyeur retenu est déclaré à Kaze dans la foulée : sans quoi
+            // la mission y resterait sans intervenant, et lui ne la verrait pas.
+            if (preAssignee && kazeMissionId) {
+              const { rows: retenu } = await client.query(
+                "SELECT kaze_driver_id FROM users WHERE id = $1",
+                [m.convoyeur_id],
+              );
+              if (retenu[0]?.kaze_driver_id) {
+                await kazeService.assignDriver(
+                  kazeMissionId,
+                  retenu[0].kaze_driver_id,
+                );
+              } else {
+                console.error(
+                  `⚠️ Mission ${m.id} pré-assignée à un compte sans liaison Kaze.`,
+                );
+              }
+            }
+          }
+        } catch (kazeErr) {
+          console.error(
+            `⚠️  Erreur Kaze (mission acceptée localement, retry en queue) : ${kazeErr.message}`,
+          );
+        }
+
+        if (m.id === mission.id) kazeMissionIdPrincipal = kazeMissionId;
+        acceptees.push({ id: m.id, preAssignee });
+      }
+
+      return {
+        kazeMissionId: kazeMissionIdPrincipal,
+        preAssignee: Boolean(mission.convoyeur_id),
+        acceptees,
+      };
     });
 
-    // 4. Annoncer la mission aux convoyeurs (asynchrone, ne bloque pas
+    // 4. Annoncer les missions aux convoyeurs (asynchrone, ne bloque pas
     //    la réponse). Le canal est Telegram : une mission = un message
-    //    dans le salon commun. Une mission déjà pourvue n'est annoncée
-    //    à personne.
+    //    dans le salon commun (une paire de restitution = un message, le
+    //    service ignore les retours). Une mission déjà pourvue n'est
+    //    annoncée à personne.
     try {
-      if (!result.preAssignee) {
+      for (const { id: idAcceptee, preAssignee } of result.acceptees) {
+        if (preAssignee) continue;
         const { rows: fullMission } = await db.query(
           "SELECT * FROM missions WHERE id = $1",
-          [req.body?.missionId || req.params.id],
+          [idAcceptee],
         );
 
         if (fullMission[0]) {
@@ -1092,6 +1280,16 @@ router.post("/:id/refuser", authorize("client"), async (req, res, next) => {
         RETURNING *`,
       [motif, mission.id],
     );
+
+    // Restitution : devis unique, le refus vaut pour toute la commande.
+    if (mission.restitution_id) {
+      await db.query(
+        `UPDATE missions
+            SET status = 'DEVIS_REFUSE', refus_motif = $1, refused_at = NOW(), updated_at = NOW()
+          WHERE restitution_id = $2 AND status = 'DEVIS_PROPOSE'`,
+        [motif, mission.restitution_id],
+      );
+    }
 
     // Alerter l'équipe (non bloquant : le refus reste enregistré même si
     // l'email échoue).
