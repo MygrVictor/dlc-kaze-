@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import CrispChat from "../components/CrispChat";
+import { ESTSTAGING } from "../lib/staging";
 
 const NAV_ITEMS = {
   client: [
@@ -356,6 +357,16 @@ export default function DashboardLayout() {
 
         {/* Content */}
         <main className="flex-1 min-w-0 overflow-x-hidden p-3 sm:p-6 lg:p-8">
+          {ESTSTAGING &&
+            (user?.role === "admin" || user?.role === "client") &&
+            !location.pathname.endsWith("/banc-de-test") && (
+              <Link
+                to={`/${user.role}/banc-de-test`}
+                className="mb-4 inline-flex items-center gap-2 rounded-lg bg-yellow-400 px-3 py-1.5 text-sm font-semibold text-black hover:bg-yellow-300"
+              >
+                🧪 Banc de test
+              </Link>
+            )}
           <Outlet />
         </main>
       </div>
