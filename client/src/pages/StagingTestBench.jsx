@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { ESTSTAGING, useStaging } from "../lib/staging";
 import toast from "react-hot-toast";
 import { FlaskConical, Play } from "lucide-react";
 import api from "../lib/api";
@@ -45,7 +46,15 @@ const jour = (n) => {
   return d.toISOString().slice(0, 16);
 };
 
+// Hors staging (adresse ou base), la page n'existe pas : retour à l'accueil.
 export default function StagingTestBench() {
+  const ok = useStaging();
+  if (!ESTSTAGING) return <Navigate to="/dashboard" replace />;
+  if (!ok) return null;
+  return <Banc />;
+}
+
+function Banc() {
   const { user } = useAuth();
   const estAdmin = user?.role === "admin";
 

@@ -190,6 +190,17 @@ router.post(
         ? req.body.convoyeurId || null
         : null;
       const purchaseOrderNumber = req.body.purchaseOrderNumber || null;
+
+      // Missions du banc de test : interdites hors staging, quoi qu'il
+      // arrive (verrou serveur, indépendant de l'interface).
+      if (
+        /^TEST-BOT/i.test(String(purchaseOrderNumber || "")) &&
+        !require("../utils/staging").estStaging()
+      ) {
+        return res
+          .status(403)
+          .json({ error: "Banc de test réservé à l'environnement staging." });
+      }
       let clientEmail = estAdmin ? null : req.user.email || null;
       let convoyeurPreassigne = null;
 

@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import CrispChat from "../components/CrispChat";
-import { ESTSTAGING } from "../lib/staging";
+import { useStaging } from "../lib/staging";
 
 const NAV_ITEMS = {
   client: [
@@ -86,6 +86,7 @@ export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const estStaging = useStaging();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [missionsDispoCount, setMissionsDispoCount] = useState(0);
 
@@ -357,7 +358,7 @@ export default function DashboardLayout() {
 
         {/* Content */}
         <main className="flex-1 min-w-0 overflow-x-hidden p-3 sm:p-6 lg:p-8">
-          {ESTSTAGING &&
+          {estStaging &&
             (user?.role === "admin" || user?.role === "client") &&
             !location.pathname.endsWith("/banc-de-test") && (
               <Link

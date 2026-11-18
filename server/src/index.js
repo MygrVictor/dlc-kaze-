@@ -242,11 +242,9 @@ if (process.env.STAGING_MODE === "true") {
     res.type("text/plain").send("User-agent: *\nDisallow: /\n");
   });
   app.post("/api/auth/demande", (_req, res) => {
-    res
-      .status(403)
-      .json({
-        error: "Les candidatures sont désactivées sur cet environnement.",
-      });
+    res.status(403).json({
+      error: "Les candidatures sont désactivées sur cet environnement.",
+    });
   });
 }
 
@@ -412,6 +410,12 @@ app.get(/^\/uploads\/(.+)$/, async (req, res) => {
 // ── Health check ─────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Le banc de test client ne s'affiche que si le serveur confirme être
+// sur une base de staging. En prod, la réponse est toujours false.
+app.get("/api/env/staging", (_req, res) => {
+  res.json({ staging: require("./utils/staging").estStaging() });
 });
 
 // ── Servir le client React en production ─────────────────────
