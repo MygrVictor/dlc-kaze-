@@ -2515,23 +2515,52 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
             "Plusieurs restitutions : un convoyeur par paire. Assignez-les après acceptation du devis.",
         });
       }
-      const moitie = (p) => Math.round((Number(p) / 2) * 100) / 100;
+      // `price` / `price_convoyeur` = aller. Le retour est saisi à part
+      // (souvent −30 %) ; à défaut, on applique la remise par défaut.
+      const arrondi = (p) => Math.round(Number(p) * 100) / 100;
+      const REMISE_RETOUR = 0.3;
+      const lireRetour = (valeur, aller) =>
+        valeur !== undefined && valeur !== null && valeur !== ""
+          ? Number(valeur)
+          : arrondi(Number(aller) * (1 - REMISE_RETOUR));
+      const prixRetour = lireRetour(req.body.price_retour, price);
+      const prixConvRetour = lireRetour(
+        req.body.price_convoyeur_retour,
+        price_convoyeur,
+      );
+      if (!(prixRetour > 0) || !(prixConvRetour > 0)) {
+        return res
+          .status(400)
+          .json({ error: "Prix du retour invalide. Indiquez un montant > 0." });
+      }
+      if (prixConvRetour > prixRetour) {
+        return res.status(400).json({
+          error:
+            "Retour : le prix convoyeur ne peut pas dépasser le prix client.",
+        });
+      }
       const { rows: maj } = await db.query(
-        `UPDATE missions SET price = $1, price_convoyeur = $2, convoyeur_id = $3,
+        `UPDATE missions
+            SET price = CASE WHEN ordre_trajet = 2 THEN $7 ELSE $1 END,
+                price_convoyeur = CASE WHEN ordre_trajet = 2 THEN $8 ELSE $2 END,
+                convoyeur_id = $3,
                 convoyeur_comments = $4, devis_note_client = $5,
                 status = 'DEVIS_PROPOSE', updated_at = NOW()
           WHERE id = ANY($6) RETURNING *`,
         [
-          moitie(price),
-          moitie(price_convoyeur),
+          arrondi(price),
+          arrondi(price_convoyeur),
           convoyeurRetenu,
           commentaireConvoyeur,
           noteClient,
           groupe.map((m) => m.id),
+          arrondi(prixRetour),
+          arrondi(prixConvRetour),
         ],
       );
 
-      const total = Math.round(Number(price) * nbPaires * 100) / 100;
+      const prixPaire = arrondi(Number(price) + prixRetour);
+      const total = arrondi(prixPaire * nbPaires);
       try {
         const { rows: clientRows } = await db.query(
           "SELECT email, full_name FROM users WHERE id = $1",
@@ -2552,8 +2581,14 @@ router.post("/missions/:id/proposer-prix", async (req, res, next) => {
 
       return res.json({
         mission: maj.find((m) => m.id === mission.id) || maj[0],
-        restitution: { paires: nbPaires, prixParPaire: Number(price), total },
-        message: `Devis proposé : ${nbPaires} restitution(s) × ${price} € = ${total} € HT.`,
+        restitution: {
+          paires: nbPaires,
+          prixAller: arrondi(price),
+          prixRetour: arrondi(prixRetour),
+          prixParPaire: prixPaire,
+          total,
+        },
+        message: `Devis proposé : ${nbPaires} restitution(s) × ${prixPaire} € (aller ${arrondi(price)} € + retour ${arrondi(prixRetour)} €) = ${total} € HT.`,
       });
     }
 

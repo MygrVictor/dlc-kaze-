@@ -213,6 +213,16 @@ export default function AdminMissions({ integre = false } = {}) {
   const [lectureSeule, setLectureSeule] = useState(false);
   const [priceValue, setPriceValue] = useState("");
   const [priceConvoyeurValue, setPriceConvoyeurValue] = useState("");
+  // Restitution : le retour est coté à part, pré-rempli à −30 % de l'aller
+  // tant que l'admin ne l'a pas modifié lui-même.
+  const [prixRetourValue, setPrixRetourValue] = useState("");
+  const [prixConvRetourValue, setPrixConvRetourValue] = useState("");
+  const [retourClientModifie, setRetourClientModifie] = useState(false);
+  const [retourConvModifie, setRetourConvModifie] = useState(false);
+  const retourSuggere = (aller) => {
+    const n = Number(aller);
+    return n > 0 ? (Math.round(n * 0.7 * 100) / 100).toFixed(2) : "";
+  };
   const [adminCommentValue, setAdminCommentValue] = useState("");
   // Note jointe au devis, adressée au client (jamais au convoyeur).
   const [noteClientValue, setNoteClientValue] = useState("");
@@ -511,6 +521,10 @@ export default function AdminMissions({ integre = false } = {}) {
     setLectureSeule(false);
     setPriceValue("");
     setPriceConvoyeurValue("");
+    setPrixRetourValue("");
+    setPrixConvRetourValue("");
+    setRetourClientModifie(false);
+    setRetourConvModifie(false);
     setAdminCommentValue(mission.convoyeur_comments || "");
     setNoteClientValue(mission.devis_note_client || "");
     setPrendreLaMission(false);
@@ -534,11 +548,29 @@ export default function AdminMissions({ integre = false } = {}) {
         "Le prix convoyeur ne peut pas dépasser le prix client.",
       );
     }
+    const estRestitution = Boolean(priceModal.restitution_id);
+    if (estRestitution) {
+      if (
+        !(Number(prixRetourValue) > 0) ||
+        !(Number(prixConvRetourValue) > 0)
+      ) {
+        return toast.error("Veuillez saisir les prix du retour.");
+      }
+      if (Number(prixConvRetourValue) > Number(prixRetourValue)) {
+        return toast.error(
+          "Retour : le prix convoyeur ne peut pas dépasser le prix client.",
+        );
+      }
+    }
     setSubmitting(true);
     try {
       await api.post(`/admin/missions/${priceModal.id}/proposer-prix`, {
         price: Number(priceValue),
         price_convoyeur: Number(priceConvoyeurValue),
+        ...(estRestitution && {
+          price_retour: Number(prixRetourValue),
+          price_convoyeur_retour: Number(prixConvRetourValue),
+        }),
         convoyeur_comments: adminCommentValue.trim() || null,
         note_client: noteClientValue.trim() || null,
         assignerAdmin: prendreLaMission,
@@ -1727,20 +1759,9 @@ export default function AdminMissions({ integre = false } = {}) {
                   <div className="mb-3">
                     <label className="block text-sm font-medium text-dark-300 mb-1.5">
                       {priceModal.restitution_id
-                        ? "Prix client par paire (aller + retour) (€)"
+                        ? "Prix client — aller (€)"
                         : "Prix client (€)"}
                     </label>
-                    {priceModal.restitution_id && (
-                      <p className="text-xs text-purple-300 mb-2">
-                        {nbPaires(priceModal.restitution_id)} paire(s) → total
-                        devis :{" "}
-                        {(
-                          (Number(priceValue) || 0) *
-                          nbPaires(priceModal.restitution_id)
-                        ).toFixed(2)}{" "}
-                        €. Montant réparti 50/50 aller/retour.
-                      </p>
-                    )}
                     <div className="relative">
                       <Euro
                         size={18}
@@ -1751,7 +1772,11 @@ export default function AdminMissions({ integre = false } = {}) {
                         step="0.01"
                         min="0"
                         value={priceValue}
-                        onChange={(e) => setPriceValue(e.target.value)}
+                        onChange={(e) => {
+                          setPriceValue(e.target.value);
+                          if (!retourClientModifie)
+                            setPrixRetourValue(retourSuggere(e.target.value));
+                        }}
                         className="input-field pl-10"
                         placeholder="350.00"
                         autoFocus
@@ -1764,7 +1789,9 @@ export default function AdminMissions({ integre = false } = {}) {
 
                   <div className="mb-3">
                     <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                      Prix convoyeur (€)
+                      {priceModal.restitution_id
+                        ? "Prix convoyeur — aller (€)"
+                        : "Prix convoyeur (€)"}
                     </label>
                     <div className="relative">
                       <Truck
@@ -1776,7 +1803,13 @@ export default function AdminMissions({ integre = false } = {}) {
                         step="0.01"
                         min="0"
                         value={priceConvoyeurValue}
-                        onChange={(e) => setPriceConvoyeurValue(e.target.value)}
+                        onChange={(e) => {
+                          setPriceConvoyeurValue(e.target.value);
+                          if (!retourConvModifie)
+                            setPrixConvRetourValue(
+                              retourSuggere(e.target.value),
+                            );
+                        }}
                         className="input-field pl-10"
                         placeholder="200.00"
                       />
@@ -1785,6 +1818,70 @@ export default function AdminMissions({ integre = false } = {}) {
                       Rémunération du convoyeur
                     </p>
                   </div>
+
+                  {priceModal.restitution_id && (
+                    <div className="mb-3 p-3 rounded-lg border border-purple-500/30 bg-purple-500/5 space-y-3">
+                      <p className="text-sm font-semibold text-purple-300">
+                        Retour (véhicule repris) — −30 % proposé par défaut
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-dark-400 mb-1">
+                            Prix client — retour (€)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={prixRetourValue}
+                            onChange={(e) => {
+                              setPrixRetourValue(e.target.value);
+                              setRetourClientModifie(e.target.value !== "");
+                            }}
+                            className="input-field"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-dark-400 mb-1">
+                            Prix convoyeur — retour (€)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={prixConvRetourValue}
+                            onChange={(e) => {
+                              setPrixConvRetourValue(e.target.value);
+                              setRetourConvModifie(e.target.value !== "");
+                            }}
+                            className="input-field"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-purple-300">
+                        Paire :{" "}
+                        {(
+                          (Number(priceValue) || 0) +
+                          (Number(prixRetourValue) || 0)
+                        ).toFixed(2)}{" "}
+                        € × {nbPaires(priceModal.restitution_id)} paire(s) ={" "}
+                        <strong>
+                          {(
+                            ((Number(priceValue) || 0) +
+                              (Number(prixRetourValue) || 0)) *
+                            nbPaires(priceModal.restitution_id)
+                          ).toFixed(2)}{" "}
+                          €
+                        </strong>{" "}
+                        — convoyeur par paire :{" "}
+                        {(
+                          (Number(priceConvoyeurValue) || 0) +
+                          (Number(prixConvRetourValue) || 0)
+                        ).toFixed(2)}{" "}
+                        €
+                      </p>
+                    </div>
+                  )}
 
                   {priceValue &&
                     priceConvoyeurValue &&
