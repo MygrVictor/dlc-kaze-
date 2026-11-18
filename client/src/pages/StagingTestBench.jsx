@@ -60,6 +60,9 @@ function Banc() {
 
   const [o, setO] = useState({
     type: "simple",
+    statut: "PUBLIEE",
+    devisPrix: "300",
+    devisPrixConv: "180",
     nombre: 1,
     depart: "paris",
     arrivee: "lyon",
@@ -137,8 +140,13 @@ function Banc() {
     }
     if (estAdmin) {
       if (o.clientId) p.clientId = o.clientId;
-      p.priceClient = o.priceClient;
-      p.priceConvoyeur = o.priceConvoyeur;
+      if (o.statut === "PUBLIEE") {
+        p.priceClient = o.priceClient;
+        p.priceConvoyeur = o.priceConvoyeur;
+      } else {
+        // En attente de cotation ou devis proposé : créée comme un client.
+        p.testStatut = "EN_ATTENTE_DE_COTATION";
+      }
     }
     return p;
   };
@@ -149,10 +157,30 @@ function Banc() {
     for (let i = 0; i < reps; i++) {
       try {
         const { data } = await api.post("/missions", construire(i));
+        const circuit =
+          o.type === "restitution"
+            ? o.retourMode === "depart"
+              ? "A→B→A"
+              : "A→B→C"
+            : "A→B";
+        let etat = data.missions?.[0]?.status || "";
+        if (estAdmin && o.statut === "DEVIS_PROPOSE") {
+          // Une restitution se cote en une fois : un seul appel suffit
+          // pour tout le groupe. Les missions simples se cotent une à une.
+          const cibles =
+            o.type === "restitution" ? [data.missions[0]] : data.missions || [];
+          for (const m of cibles) {
+            await api.post(`/admin/missions/${m.id}/proposer-prix`, {
+              price: o.devisPrix,
+              price_convoyeur: o.devisPrixConv,
+            });
+          }
+          etat = "DEVIS_PROPOSE";
+        }
         setJournal((j) => [
           {
             ok: true,
-            txt: `✅ ${data.count ?? 1} mission(s) créée(s) (${o.type})`,
+            txt: `✅ ${data.count ?? 1} mission(s) ${o.type} ${circuit} → ${etat}`,
           },
           ...j,
         ]);
@@ -217,6 +245,39 @@ function Banc() {
             ["restitution", "Restitution (paires)"],
           ]}
         />
+        {estAdmin && (
+          <Choix
+            k="statut"
+            label="Statut obtenu"
+            options={[
+              ["EN_ATTENTE", "En attente de cotation"],
+              ["DEVIS_PROPOSE", "Devis proposé (à accepter côté client)"],
+              ["PUBLIEE", "Publiée aux convoyeurs (Kaze + Telegram)"],
+            ]}
+          />
+        )}
+        {estAdmin && o.statut === "DEVIS_PROPOSE" && (
+          <>
+            <label className="flex flex-col text-sm gap-1">
+              Devis : prix client aller (€)
+              <input
+                className="input"
+                type="number"
+                value={o.devisPrix}
+                onChange={(e) => maj("devisPrix", e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col text-sm gap-1">
+              Devis : prix convoyeur aller (€)
+              <input
+                className="input"
+                type="number"
+                value={o.devisPrixConv}
+                onChange={(e) => maj("devisPrixConv", e.target.value)}
+              />
+            </label>
+          </>
+        )}
         <label className="flex flex-col text-sm gap-1">
           {o.type === "restitution"
             ? "Nombre de paires"
@@ -236,14 +297,18 @@ function Banc() {
           <>
             <Choix
               k="retourMode"
-              label="Retour"
+              label="Circuit"
               options={[
-                ["depart", "Au point de départ"],
-                ["autre", "Autre adresse"],
+                ["depart", "A → B → A (retour au départ)"],
+                ["autre", "A → B → C (retour ailleurs)"],
               ]}
             />
             {o.retourMode === "autre" && (
-              <Choix k="retourVille" label="Ville de retour" options={villes} />
+              <Choix
+                k="retourVille"
+                label="Ville C (retour)"
+                options={villes}
+              />
             )}
           </>
         )}
