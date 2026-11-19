@@ -22,6 +22,8 @@ import {
   TrendingUp,
   Sun,
   Moon,
+  ExternalLink,
+  Copy,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import CrispChat from "../components/CrispChat";
@@ -89,6 +91,8 @@ export default function DashboardLayout() {
   const estStaging = useStaging();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [missionsDispoCount, setMissionsDispoCount] = useState(0);
+  const [dansTelegram, setDansTelegram] = useState(false);
+  const [copieOk, setCopieOk] = useState(false);
 
   // Thème du tableau de bord. Le choix est propre à l'appareil (un même
   // convoyeur peut préférer le clair en plein soleil et le sombre le soir),
@@ -100,6 +104,11 @@ export default function DashboardLayout() {
   useEffect(() => {
     localStorage.setItem("dlc-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const ua = navigator?.userAgent || "";
+    setDansTelegram(/telegram/i.test(ua));
+  }, []);
 
   const items = NAV_ITEMS[user?.role] || [];
 
@@ -126,6 +135,16 @@ export default function DashboardLayout() {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const copierLienCourant = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopieOk(true);
+      setTimeout(() => setCopieOk(false), 2000);
+    } catch {
+      setCopieOk(false);
+    }
   };
 
   const roleLabel = {
@@ -358,6 +377,42 @@ export default function DashboardLayout() {
 
         {/* Content */}
         <main className="flex-1 min-w-0 overflow-x-hidden p-3 sm:p-6 lg:p-8">
+          {user?.role === "convoyeur" && dansTelegram && (
+            <div className="mb-4 rounded-lg border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-100">
+              <p className="font-semibold">
+                Ouvert dans le navigateur interne Telegram
+              </p>
+              <p className="mt-1 text-amber-100/90">
+                Pour une meilleure expérience, ouvrez cette page dans votre
+                navigateur habituel (Safari/Chrome) puis utilisez l'app
+                installée.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.open(
+                      window.location.href,
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
+                  }
+                  className="inline-flex items-center gap-1 rounded bg-amber-300 px-2.5 py-1.5 text-xs font-semibold text-black hover:bg-amber-200"
+                >
+                  <ExternalLink size={14} />
+                  Ouvrir un nouvel onglet
+                </button>
+                <button
+                  type="button"
+                  onClick={copierLienCourant}
+                  className="inline-flex items-center gap-1 rounded border border-amber-300/60 px-2.5 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-400/10"
+                >
+                  <Copy size={14} />
+                  {copieOk ? "Lien copié" : "Copier le lien"}
+                </button>
+              </div>
+            </div>
+          )}
           {estStaging &&
             (user?.role === "admin" || user?.role === "client") &&
             !location.pathname.endsWith("/banc-de-test") && (
