@@ -92,6 +92,8 @@ export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [missionsDispoCount, setMissionsDispoCount] = useState(0);
   const [dansTelegram, setDansTelegram] = useState(false);
+  const [estAndroid, setEstAndroid] = useState(false);
+  const [estIos, setEstIos] = useState(false);
   const [copieOk, setCopieOk] = useState(false);
 
   // Thème du tableau de bord. Le choix est propre à l'appareil (un même
@@ -108,6 +110,8 @@ export default function DashboardLayout() {
   useEffect(() => {
     const ua = navigator?.userAgent || "";
     setDansTelegram(/telegram/i.test(ua));
+    setEstAndroid(/android/i.test(ua));
+    setEstIos(/iphone|ipad|ipod/i.test(ua));
   }, []);
 
   const items = NAV_ITEMS[user?.role] || [];
@@ -146,6 +150,16 @@ export default function DashboardLayout() {
       setCopieOk(false);
     }
   };
+
+  const lienIntentChrome = (() => {
+    try {
+      const url = new URL(window.location.href);
+      const chemin = `${url.pathname}${url.search}${url.hash}`;
+      return `intent://${url.host}${chemin}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(window.location.href)};end`;
+    } catch {
+      return null;
+    }
+  })();
 
   const roleLabel = {
     client: "Espace Client",
@@ -383,25 +397,35 @@ export default function DashboardLayout() {
                 Ouvert dans le navigateur interne Telegram
               </p>
               <p className="mt-1 text-amber-100/90">
-                Pour une meilleure expérience, ouvrez cette page dans votre
-                navigateur habituel (Safari/Chrome) puis utilisez l'app
-                installée.
+                Telegram garde les liens dans son navigateur interne. Pour
+                basculer vers votre app web installée, ouvrez d'abord ce lien
+                dans le navigateur système.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.open(
-                      window.location.href,
-                      "_blank",
-                      "noopener,noreferrer",
-                    )
-                  }
-                  className="inline-flex items-center gap-1 rounded bg-amber-300 px-2.5 py-1.5 text-xs font-semibold text-black hover:bg-amber-200"
-                >
-                  <ExternalLink size={14} />
-                  Ouvrir un nouvel onglet
-                </button>
+                {estAndroid && lienIntentChrome ? (
+                  <a
+                    href={lienIntentChrome}
+                    className="inline-flex items-center gap-1 rounded bg-amber-300 px-2.5 py-1.5 text-xs font-semibold text-black hover:bg-amber-200"
+                  >
+                    <ExternalLink size={14} />
+                    Ouvrir dans Chrome
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.open(
+                        window.location.href,
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
+                    className="inline-flex items-center gap-1 rounded bg-amber-300 px-2.5 py-1.5 text-xs font-semibold text-black hover:bg-amber-200"
+                  >
+                    <ExternalLink size={14} />
+                    Ouvrir un nouvel onglet
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={copierLienCourant}
@@ -411,6 +435,13 @@ export default function DashboardLayout() {
                   {copieOk ? "Lien copié" : "Copier le lien"}
                 </button>
               </div>
+              <p className="mt-2 text-xs text-amber-200/90">
+                {estIos
+                  ? "iPhone/iPad : dans Telegram, utilisez Partager → Ouvrir dans Safari, puis lancez l'app installée."
+                  : estAndroid
+                    ? "Android : si besoin, après copie du lien, collez-le dans Chrome puis ouvrez l'app installée."
+                    : "Ouvrez ce lien dans votre navigateur habituel pour retrouver l'app installée."}
+              </p>
             </div>
           )}
           {estStaging &&
