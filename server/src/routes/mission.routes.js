@@ -980,6 +980,88 @@ router.get("/:id", authorize("client", "admin"), async (req, res, next) => {
 });
 
 // ═════════════════════════════════════════════════════════════
+// Modèle pour « Recommander » : reprend adresses, contacts et
+// options d'une mission passée. Véhicules, dates, documents, prix
+// et n° de commande ne sont jamais recopiés.
+// ═════════════════════════════════════════════════════════════
+router.get(
+  "/:id/modele",
+  authorize("client", "admin"),
+  async (req, res, next) => {
+    try {
+      const { rows } = await db.query("SELECT * FROM missions WHERE id = $1", [
+        req.params.id,
+      ]);
+      if (rows.length === 0)
+        return res.status(404).json({ error: "Mission introuvable." });
+      let m = rows[0];
+      if (
+        req.user.role === "client" &&
+        !(await peutConsulter(req.user, m.client_id))
+      ) {
+        return res.status(403).json({ error: "Accès interdit." });
+      }
+
+      const lieu = (prefixe, src) => ({
+        address: src[`${prefixe}_address`] || "",
+        structure: src[`${prefixe}_structure`] || "",
+        structureName: src[`${prefixe}_structure_name`] || "",
+        contactName: src[`${prefixe}_contact_name`] || "",
+        contactPhone: src[`${prefixe}_contact_phone`] || "",
+        contactEmail: src[`${prefixe}_contact_email`] || "",
+        instructions: src[`${prefixe}_instructions`] || "",
+      });
+
+      let restitution = null;
+      if (m.restitution_id) {
+        const { rows: groupe } = await db.query(
+          "SELECT * FROM missions WHERE restitution_id = $1 ORDER BY ordre_trajet, created_at",
+          [m.restitution_id],
+        );
+        const aller = groupe.find((g) => g.ordre_trajet === 1) || m;
+        const retour = groupe.find((g) => g.ordre_trajet === 2);
+        m = aller;
+        const nbPaires =
+          new Set(groupe.map((g) => g.paire_id).filter(Boolean)).size || 1;
+        const versDepart =
+          !retour ||
+          (retour.arrival_address || "").trim().toLowerCase() ===
+            (aller.departure_address || "").trim().toLowerCase();
+        restitution = {
+          nbPaires,
+          retourMode: versDepart ? "depart" : "autre",
+          retour: versDepart ? null : lieu("arrival", retour),
+        };
+      }
+
+      res.json({
+        modele: {
+          clientId: m.client_id,
+          departure: lieu("departure", m),
+          arrival: lieu("arrival", m),
+          emergency: {
+            contactName: m.emergency_contact_name || "",
+            phone: m.emergency_phone || "",
+            contactEmail: m.emergency_contact_email || "",
+          },
+          recapEmail: m.recap_email || "",
+          recapDisabled: !!m.recap_disabled,
+          services: {
+            documentManagement: m.service_document_management || "",
+            handover: !!m.service_handover,
+            retributionDetails: m.retribution_details || "",
+          },
+          observations: m.comments || "",
+          restitution,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ═════════════════════════════════════════════════════════════
 // Client : Télécharger le devis PDF
 // ═════════════════════════════════════════════════════════════
 router.get(

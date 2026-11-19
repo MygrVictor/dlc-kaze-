@@ -20,6 +20,7 @@ import {
   XCircle,
   Plus,
   Paperclip,
+  RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import MissionDocuments from "../../components/MissionDocuments";
@@ -236,11 +237,23 @@ export default function MissionDetail() {
               : "—"}
           </p>
         </div>
-        <span
-          className={`badge text-sm px-3 py-1 mt-3 sm:mt-0 ${STATUS_COLORS[mission.status]}`}
-        >
-          {STATUS_LABELS[mission.status]}
-        </span>
+        <div className="flex items-center gap-2 mt-3 sm:mt-0">
+          <button
+            onClick={() =>
+              navigate(`/client/nouvelle-mission?from=${mission.id}`)
+            }
+            className="btn-secondary flex items-center gap-1 text-sm px-3 py-1"
+            title="Créer une nouvelle mission avec les mêmes adresses et contacts"
+          >
+            <RotateCcw size={14} />
+            Recommander
+          </button>
+          <span
+            className={`badge text-sm px-3 py-1 ${STATUS_COLORS[mission.status]}`}
+          >
+            {STATUS_LABELS[mission.status]}
+          </span>
+        </div>
       </div>
 
       {/* Accept bar */}

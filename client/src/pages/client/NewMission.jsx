@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -529,6 +529,45 @@ export default function NewMission() {
     }
   };
 
+  // ── Recommander : pré-remplissage depuis une mission passée ──
+  // Seuls les lieux, contacts et options sont repris ; véhicules,
+  // dates, documents et n° de commande restent à saisir.
+  const [searchParams] = useSearchParams();
+  const fromId = searchParams.get("from");
+  const [copieDe, setCopieDe] = useState(null);
+  useEffect(() => {
+    if (!fromId) return;
+    api
+      .get(`/missions/${fromId}/modele`)
+      .then(({ data }) => {
+        const m = data.modele;
+        setDeparture((d) => ({ ...d, ...m.departure, date: "" }));
+        setArrival((a) => ({ ...a, ...m.arrival, date: "" }));
+        if (m.emergency?.phone) setEmergency(m.emergency);
+        setRecapDisabled(m.recapDisabled);
+        if (m.recapEmail) setRecapEmail(m.recapEmail);
+        setServices((s) => ({ ...s, ...m.services }));
+        setObservations(m.observations || "");
+        if (m.clientId && (estAdmin || estParent)) {
+          setSelectedClientId(m.clientId);
+          if (estAdmin) setClientId(m.clientId);
+        }
+        if (m.restitution) {
+          setModeRestitution(true);
+          setPaires(
+            Array.from({ length: m.restitution.nbPaires || 1 }, emptyPaire),
+          );
+          setRetourMode(m.restitution.retourMode);
+          if (m.restitution.retour)
+            setRetour((r) => ({ ...r, ...m.restitution.retour }));
+        }
+        setCopieDe(fromId);
+        toast.success("Mission reprise : complétez véhicules et dates.");
+      })
+      .catch(() => toast.error("Impossible de reprendre cette mission."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromId]);
+
   useEffect(() => {
     if (!user) return;
     if (estParent && user.child_accounts?.length) {
@@ -554,6 +593,13 @@ export default function NewMission() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Nouvelle mission</h1>
+        {copieDe && (
+          <p className="mt-2 text-sm rounded-lg border border-primary-500/30 bg-primary-900/30 px-3 py-2 text-primary-200">
+            Copie de la mission #{copieDe.substring(0, 8).toUpperCase()} :
+            adresses et contacts repris. Renseignez les véhicules, les dates et
+            les documents.
+          </p>
+        )}
         {!estAdmin && (
           <p className="text-dark-400 text-sm mt-1">
             Remplissez les informations pour recevoir un devis personnalisé.
