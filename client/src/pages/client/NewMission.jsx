@@ -1268,6 +1268,30 @@ export default function NewMission() {
           </div>
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                Adresse d'enlèvement *
+              </label>
+              <ChampAdresse
+                value={departure.address}
+                onChange={(adresse) =>
+                  setDeparture((d) => ({ ...d, address: adresse }))
+                }
+                placeholder="Numéro, voie, code postal, ville"
+                ariaLabel="Adresse d'enlèvement"
+                carnet={carnet}
+                onChoixCarnet={(e) =>
+                  setDeparture((d) => ({ ...d, ...depuisCarnet(e) }))
+                }
+                required
+              />
+              {carnet.length > 0 && (
+                <p className="text-xs text-dark-500 mt-1">
+                  Choisissez une de vos adresses : structure et contact se
+                  remplissent automatiquement.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-1.5">
@@ -1378,25 +1402,6 @@ export default function NewMission() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Adresse d'enlèvement *
-              </label>
-              <ChampAdresse
-                value={departure.address}
-                onChange={(adresse) =>
-                  setDeparture({ ...departure, address: adresse })
-                }
-                placeholder="Numéro, voie, code postal, ville"
-                ariaLabel="Adresse d'enlèvement"
-                carnet={carnet}
-                onChoixCarnet={(e) =>
-                  setDeparture((d) => ({ ...d, ...depuisCarnet(e) }))
-                }
-                required
-              />
-            </div>
-
             <div className={modeRestitution ? "hidden" : ""}>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Enlèvement possible à partir du
@@ -1425,6 +1430,24 @@ export default function NewMission() {
           </div>
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-1.5">
+                Adresse de livraison *
+              </label>
+              <ChampAdresse
+                value={arrival.address}
+                onChange={(adresse) =>
+                  setArrival((a) => ({ ...a, address: adresse }))
+                }
+                placeholder="Numéro, voie, code postal, ville"
+                ariaLabel="Adresse de livraison"
+                carnet={carnet}
+                onChoixCarnet={(e) =>
+                  setArrival((a) => ({ ...a, ...depuisCarnet(e) }))
+                }
+                required
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-1.5">
@@ -1535,25 +1558,6 @@ export default function NewMission() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-1.5">
-                Adresse de livraison *
-              </label>
-              <ChampAdresse
-                value={arrival.address}
-                onChange={(adresse) =>
-                  setArrival({ ...arrival, address: adresse })
-                }
-                placeholder="Numéro, voie, code postal, ville"
-                ariaLabel="Adresse de livraison"
-                carnet={carnet}
-                onChoixCarnet={(e) =>
-                  setArrival((a) => ({ ...a, ...depuisCarnet(e) }))
-                }
-                required
-              />
-            </div>
-
             <div className={modeRestitution ? "hidden" : ""}>
               <label className="block text-sm font-medium text-dark-300 mb-1.5">
                 Date de livraison souhaitée
@@ -1636,6 +1640,20 @@ export default function NewMission() {
                 </div>
                 {retourMode === "autre" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="md:col-span-2">
+                      <ChampAdresse
+                        value={retour.address}
+                        onChange={(adresse) =>
+                          setRetour((r) => ({ ...r, address: adresse }))
+                        }
+                        placeholder="Adresse de livraison des véhicules repris *"
+                        ariaLabel="Adresse de livraison des véhicules repris"
+                        carnet={carnet}
+                        onChoixCarnet={(e) =>
+                          setRetour((r) => ({ ...r, ...depuisCarnet(e) }))
+                        }
+                      />
+                    </div>
                     <input
                       value={retour.structureName}
                       onChange={(e) =>
@@ -1681,20 +1699,6 @@ export default function NewMission() {
                           {erreurEmail(retour.contactEmail)}
                         </p>
                       )}
-                    </div>
-                    <div className="md:col-span-2">
-                      <ChampAdresse
-                        value={retour.address}
-                        onChange={(adresse) =>
-                          setRetour((r) => ({ ...r, address: adresse }))
-                        }
-                        placeholder="Adresse de livraison des véhicules repris *"
-                        ariaLabel="Adresse de livraison des véhicules repris"
-                        carnet={carnet}
-                        onChoixCarnet={(e) =>
-                          setRetour((r) => ({ ...r, ...depuisCarnet(e) }))
-                        }
-                      />
                     </div>
                     <textarea
                       value={retour.instructions}
