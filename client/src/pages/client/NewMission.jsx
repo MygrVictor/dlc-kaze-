@@ -34,6 +34,7 @@ import {
   Fuel,
   Paperclip,
   Upload,
+  Save,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ChampAdresse from "../../components/ChampAdresse";
@@ -468,6 +469,9 @@ export default function NewMission() {
 
       const { data } = await api.post("/missions", payload);
       const count = data.count || 1;
+      if (brouillonId) {
+        api.delete(`/missions/brouillons/${brouillonId}`).catch(() => {});
+      }
 
       // Pièces jointes : rattachées à chaque mission créée (un véhicule =
       // une mission). Un échec n'annule pas la mission déjà enregistrée.
@@ -591,6 +595,85 @@ export default function NewMission() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromId]);
 
+  // ── Brouillon : enregistré sur le serveur, sans créer de mission ──
+  // Les pièces jointes ne sont pas conservées (fichiers locaux).
+  const brouillonParam = searchParams.get("brouillon");
+  const [brouillonId, setBrouillonId] = useState(brouillonParam);
+  const [enregistrement, setEnregistrement] = useState(false);
+  const etatFormulaire = () => ({
+    step,
+    selectedClientId,
+    clientId,
+    recapEmail,
+    recapDisabled,
+    vehicles,
+    modeRestitution,
+    paires,
+    retourMode,
+    retour,
+    departure,
+    arrival,
+    services,
+    emergency,
+    observations,
+    purchaseOrderNumber,
+  });
+  const enregistrerBrouillon = async () => {
+    setEnregistrement(true);
+    const titre =
+      [departure.address, arrival.address].filter(Boolean).join(" → ") ||
+      "Mission sans adresse";
+    try {
+      const corps = { titre, donnees: etatFormulaire() };
+      if (brouillonId) {
+        await api.put(`/missions/brouillons/${brouillonId}`, corps);
+      } else {
+        const { data } = await api.post("/missions/brouillons", corps);
+        setBrouillonId(data.brouillon.id);
+      }
+      toast.success(
+        pieces.length
+          ? "Brouillon enregistré (les pièces jointes devront être rajoutées)."
+          : "Brouillon enregistré.",
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Brouillon non enregistré.");
+    } finally {
+      setEnregistrement(false);
+    }
+  };
+  useEffect(() => {
+    if (!brouillonParam) return;
+    api
+      .get(`/missions/brouillons/${brouillonParam}`)
+      .then(({ data }) => {
+        const d = data.brouillon.donnees || {};
+        if (d.selectedClientId) setSelectedClientId(d.selectedClientId);
+        if (d.clientId) setClientId(d.clientId);
+        if (d.recapEmail !== undefined) setRecapEmail(d.recapEmail);
+        if (d.recapDisabled !== undefined) setRecapDisabled(d.recapDisabled);
+        if (d.vehicles?.length) setVehicles(d.vehicles);
+        setModeRestitution(!!d.modeRestitution);
+        if (d.paires?.length) setPaires(d.paires);
+        if (d.retourMode) setRetourMode(d.retourMode);
+        if (d.retour) setRetour((r) => ({ ...r, ...d.retour }));
+        if (d.departure) setDeparture((x) => ({ ...x, ...d.departure }));
+        if (d.arrival) setArrival((x) => ({ ...x, ...d.arrival }));
+        if (d.services) setServices((x) => ({ ...x, ...d.services }));
+        if (d.emergency) setEmergency((x) => ({ ...x, ...d.emergency }));
+        if (d.observations !== undefined) setObservations(d.observations);
+        if (d.purchaseOrderNumber !== undefined)
+          setPurchaseOrderNumber(d.purchaseOrderNumber);
+        if (Number.isInteger(d.step)) setStep(d.step);
+        toast.success("Brouillon repris.");
+      })
+      .catch(() => {
+        toast.error("Brouillon introuvable.");
+        setBrouillonId(null);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brouillonParam]);
+
   useEffect(() => {
     if (!user) return;
     if (estParent && user.child_accounts?.length) {
@@ -616,6 +699,12 @@ export default function NewMission() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Nouvelle mission</h1>
+        {brouillonId && (
+          <p className="mt-2 text-sm rounded-lg border border-yellow-500/30 bg-yellow-900/20 px-3 py-2 text-yellow-200">
+            Brouillon : rien n'est envoyé tant que vous ne cliquez pas sur «
+            Envoyer la demande ».
+          </p>
+        )}
         {copieDe && (
           <p className="mt-2 text-sm rounded-lg border border-primary-500/30 bg-primary-900/30 px-3 py-2 text-primary-200">
             Copie de la mission #{copieDe.substring(0, 8).toUpperCase()} :
@@ -2035,7 +2124,17 @@ export default function NewMission() {
           )}
         </div>
 
-        <div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={enregistrerBrouillon}
+            disabled={enregistrement || loading}
+            className="btn-secondary flex items-center gap-2"
+            title="Enregistrer sans envoyer : vous pourrez reprendre plus tard"
+          >
+            <Save size={16} />
+            {enregistrement ? "Enregistrement…" : "Brouillon"}
+          </button>
           {step < STEPS.length - 1 ? (
             <button
               type="button"

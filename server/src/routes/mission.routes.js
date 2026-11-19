@@ -956,6 +956,126 @@ router.get("/mes-documents", authorize("client"), async (req, res, next) => {
 // Client : Détail d'une mission
 // ═════════════════════════════════════════════════════════════
 // ═════════════════════════════════════════════════════════════
+// Brouillons : formulaires enregistrés sans créer de mission.
+// Chaque brouillon n'est visible que par son auteur. Aucun envoi
+// (Kaze, Telegram, e-mail) : la mission n'existe qu'à l'envoi final.
+// ═════════════════════════════════════════════════════════════
+const TAILLE_MAX_BROUILLON = 200 * 1024;
+const UUID_BROUILLON =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function lireBrouillon(body) {
+  const donnees = body?.donnees;
+  if (!donnees || typeof donnees !== "object" || Array.isArray(donnees))
+    return { erreur: "Brouillon invalide." };
+  if (JSON.stringify(donnees).length > TAILLE_MAX_BROUILLON)
+    return { erreur: "Brouillon trop volumineux." };
+  const titre =
+    typeof body.titre === "string" ? body.titre.trim().slice(0, 255) : null;
+  return { donnees, titre: titre || null };
+}
+
+router.get(
+  "/brouillons",
+  authorize("client", "admin"),
+  async (req, res, next) => {
+    try {
+      const { rows } = await db.query(
+        `SELECT id, titre, created_at, updated_at
+           FROM mission_brouillons WHERE user_id = $1
+          ORDER BY updated_at DESC LIMIT 50`,
+        [req.user.id],
+      );
+      res.json({ brouillons: rows });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  "/brouillons/:brouillonId",
+  authorize("client", "admin"),
+  async (req, res, next) => {
+    try {
+      if (!UUID_BROUILLON.test(req.params.brouillonId))
+        return res.status(400).json({ error: "Identifiant invalide." });
+      const { rows } = await db.query(
+        "SELECT * FROM mission_brouillons WHERE id = $1 AND user_id = $2",
+        [req.params.brouillonId, req.user.id],
+      );
+      if (!rows.length)
+        return res.status(404).json({ error: "Brouillon introuvable." });
+      res.json({ brouillon: rows[0] });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.post(
+  "/brouillons",
+  authorize("client", "admin"),
+  async (req, res, next) => {
+    try {
+      const b = lireBrouillon(req.body);
+      if (b.erreur) return res.status(400).json({ error: b.erreur });
+      const { rows } = await db.query(
+        `INSERT INTO mission_brouillons (user_id, titre, donnees)
+         VALUES ($1, $2, $3) RETURNING id, titre, created_at, updated_at`,
+        [req.user.id, b.titre, b.donnees],
+      );
+      res.status(201).json({ brouillon: rows[0] });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  "/brouillons/:brouillonId",
+  authorize("client", "admin"),
+  async (req, res, next) => {
+    try {
+      if (!UUID_BROUILLON.test(req.params.brouillonId))
+        return res.status(400).json({ error: "Identifiant invalide." });
+      const b = lireBrouillon(req.body);
+      if (b.erreur) return res.status(400).json({ error: b.erreur });
+      const { rows } = await db.query(
+        `UPDATE mission_brouillons
+            SET titre = $1, donnees = $2, updated_at = NOW()
+          WHERE id = $3 AND user_id = $4
+          RETURNING id, titre, created_at, updated_at`,
+        [b.titre, b.donnees, req.params.brouillonId, req.user.id],
+      );
+      if (!rows.length)
+        return res.status(404).json({ error: "Brouillon introuvable." });
+      res.json({ brouillon: rows[0] });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.delete(
+  "/brouillons/:brouillonId",
+  authorize("client", "admin"),
+  async (req, res, next) => {
+    try {
+      if (!UUID_BROUILLON.test(req.params.brouillonId))
+        return res.status(400).json({ error: "Identifiant invalide." });
+      await db.query(
+        "DELETE FROM mission_brouillons WHERE id = $1 AND user_id = $2",
+        [req.params.brouillonId, req.user.id],
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ═════════════════════════════════════════════════════════════
 // Carnet d'adresses : lieux déjà utilisés par CE client seulement
 // (départs et arrivées), les plus fréquents d'abord, 20 au plus.
 // Chaque lieu revient avec la structure et le contact les plus récents.
@@ -1125,7 +1245,7 @@ router.get(
             handover: !!m.service_handover,
             retributionDetails: m.retribution_details || "",
           },
-          observations: m.comments || "",
+          observations: req.user.role === "admin" ? m.comments || "" : "",
           restitution,
         },
       });

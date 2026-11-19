@@ -351,6 +351,22 @@ const migrate = async () => {
     DROP SEQUENCE IF EXISTS devis_number_seq;
   `);
 
+  // Brouillons de mission : le formulaire est stocké tel quel (JSON).
+  // Rien n'est envoyé à Kaze ni aux convoyeurs tant que le client n'a
+  // pas transformé le brouillon en vraie mission.
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS mission_brouillons (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      titre       VARCHAR(255),
+      donnees     JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_mission_brouillons_user
+      ON mission_brouillons (user_id, updated_at DESC);
+  `);
+
   await db.query(`
     CREATE TABLE IF NOT EXISTS user_documents (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

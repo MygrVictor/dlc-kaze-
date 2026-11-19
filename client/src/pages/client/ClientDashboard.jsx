@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   Truck,
   Building2,
+  FilePen,
+  Trash2,
 } from "lucide-react";
 
 /**
@@ -96,6 +98,24 @@ export default function ClientDashboard() {
       .finally(() => setLoading(false));
   }, [user?.id, selectedClientId]);
 
+  const [brouillons, setBrouillons] = useState([]);
+  useEffect(() => {
+    if (!user?.id) return;
+    api
+      .get("/missions/brouillons")
+      .then((res) => setBrouillons(res.data.brouillons || []))
+      .catch(() => setBrouillons([]));
+  }, [user?.id]);
+  const supprimerBrouillon = async (id) => {
+    if (!window.confirm("Supprimer ce brouillon ?")) return;
+    try {
+      await api.delete(`/missions/brouillons/${id}`);
+      setBrouillons((bs) => bs.filter((b) => b.id !== id));
+    } catch {
+      setError("Impossible de supprimer le brouillon.");
+    }
+  };
+
   // Le filtrage se fait en mémoire : le client a rarement plus de quelques
   // dizaines de missions, un aller-retour serveur par onglet serait un coût
   // sans contrepartie.
@@ -167,6 +187,50 @@ export default function ClientDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Brouillons : missions commencées, pas encore envoyées */}
+      {brouillons.length > 0 && (
+        <div className="card mb-6 border-yellow-500/30">
+          <h2 className="font-semibold mb-3 flex items-center gap-2">
+            <FilePen size={18} className="text-yellow-400" />
+            Brouillons ({brouillons.length})
+          </h2>
+          <ul className="divide-y divide-white/5">
+            {brouillons.map((b) => (
+              <li
+                key={b.id}
+                className="flex items-center justify-between gap-3 py-2"
+              >
+                <Link
+                  to={`/client/nouvelle-mission?brouillon=${b.id}`}
+                  className="min-w-0 flex-1 hover:text-primary-300"
+                >
+                  <span className="block text-sm truncate">
+                    {b.titre || "Mission sans adresse"}
+                  </span>
+                  <span className="block text-xs text-dark-400">
+                    Modifié le {formatDate(b.updated_at)}
+                  </span>
+                </Link>
+                <Link
+                  to={`/client/nouvelle-mission?brouillon=${b.id}`}
+                  className="btn-secondary text-sm px-3 py-1"
+                >
+                  Reprendre
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => supprimerBrouillon(b.id)}
+                  className="text-dark-400 hover:text-red-400 p-1"
+                  title="Supprimer le brouillon"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
