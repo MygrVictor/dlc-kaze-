@@ -961,6 +961,15 @@ router.get("/mes-documents", authorize("client"), async (req, res, next) => {
 // (Kaze, Telegram, e-mail) : la mission n'existe qu'à l'envoi final.
 // ═════════════════════════════════════════════════════════════
 const TAILLE_MAX_BROUILLON = 200 * 1024;
+// Un brouillon non modifié depuis ce délai est supprimé. La purge se
+// fait à chaque consultation de la liste : pas besoin de tâche planifiée.
+const JOURS_CONSERVATION_BROUILLON = 15;
+const purgerBrouillons = () =>
+  db.query(
+    `DELETE FROM mission_brouillons
+      WHERE updated_at < NOW() - ($1 || ' days')::interval`,
+    [String(JOURS_CONSERVATION_BROUILLON)],
+  );
 const UUID_BROUILLON =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -980,13 +989,18 @@ router.get(
   authorize("client", "admin"),
   async (req, res, next) => {
     try {
+      await purgerBrouillons();
       const { rows } = await db.query(
-        `SELECT id, titre, created_at, updated_at
+        `SELECT id, titre, created_at, updated_at,
+                updated_at + ($2 || ' days')::interval AS expire_le
            FROM mission_brouillons WHERE user_id = $1
           ORDER BY updated_at DESC LIMIT 50`,
-        [req.user.id],
+        [req.user.id, String(JOURS_CONSERVATION_BROUILLON)],
       );
-      res.json({ brouillons: rows });
+      res.json({
+        brouillons: rows,
+        joursConservation: JOURS_CONSERVATION_BROUILLON,
+      });
     } catch (err) {
       next(err);
     }

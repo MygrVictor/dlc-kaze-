@@ -210,6 +210,8 @@ export default function ClientDashboard() {
                   </span>
                   <span className="block text-xs text-dark-400">
                     Modifié le {formatDate(b.updated_at)}
+                    {b.expire_le &&
+                      ` • supprimé le ${formatDate(b.expire_le)} sans modification`}
                   </span>
                 </Link>
                 <Link
