@@ -182,7 +182,7 @@ async function relancerAnnonceTelegram(mission) {
     }
 
     const lienMission = process.env.CLIENT_URL
-      ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+      ? `${process.env.CLIENT_URL}/convoyeur/disponibles`
       : undefined;
 
     const annonce = await telegramService.annoncerMissionDisponible(

@@ -39,7 +39,7 @@ const MISSION_TEST = {
   const { publie } = await telegram.annoncerMissionDisponible(
     MISSION_TEST,
     process.env.CLIENT_URL
-      ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+      ? `${process.env.CLIENT_URL}/convoyeur/disponibles`
       : undefined,
   );
 

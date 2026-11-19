@@ -699,7 +699,7 @@ router.post(
           }
 
           const lienMission = process.env.CLIENT_URL
-            ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+            ? `${process.env.CLIENT_URL}/convoyeur/disponibles`
             : undefined;
 
           telegramService
@@ -1515,7 +1515,7 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
 
         if (fullMission[0]) {
           const lienMission = process.env.CLIENT_URL
-            ? `${process.env.CLIENT_URL}/convoyeur/missions-disponibles`
+            ? `${process.env.CLIENT_URL}/convoyeur/disponibles`
             : undefined;
 
           telegramService
