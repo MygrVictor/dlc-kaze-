@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useId } from "react";
-import { MapPin, Check, Loader2, AlertTriangle } from "lucide-react";
+import { MapPin, Check, Loader2, AlertTriangle, Clock } from "lucide-react";
 
 /**
  * Champ d'adresse avec autocomplétion et validation.
@@ -60,7 +60,22 @@ export default function ChampAdresse({
   required = false,
   id,
   ariaLabel,
+  // Adresses déjà utilisées par le client (carnet d'adresses).
+  carnet = [],
+  // Appelé avec l'entrée complète du carnet (structure, contact…).
+  onChoixCarnet,
 }) {
+  const [carnetOuvert, setCarnetOuvert] = useState(false);
+  const saisieCarnet = (value || "").trim().toUpperCase();
+  const carnetFiltre = carnet
+    .filter(
+      (a) =>
+        !saisieCarnet ||
+        a.address.toUpperCase().includes(saisieCarnet) ||
+        (a.structureName || "").toUpperCase().includes(saisieCarnet),
+    )
+    .filter((a) => a.address.toUpperCase() !== saisieCarnet)
+    .slice(0, 5);
   const idAuto = useId();
   const idChamp = id || idAuto;
 
@@ -137,6 +152,7 @@ export default function ChampAdresse({
     const surClic = (e) => {
       if (conteneur.current && !conteneur.current.contains(e.target)) {
         setOuvert(false);
+        setCarnetOuvert(false);
       }
     };
     document.addEventListener("mousedown", surClic);
@@ -147,6 +163,16 @@ export default function ChampAdresse({
     choixEnCours.current = true;
     onChange(formater(suggestion.properties));
     setOuvert(false);
+    setSuggestions([]);
+    setEtat("validee");
+  };
+
+  const choisirCarnet = (entree) => {
+    choixEnCours.current = true;
+    if (onChoixCarnet) onChoixCarnet(entree);
+    else onChange(entree.address);
+    setOuvert(false);
+    setCarnetOuvert(false);
     setSuggestions([]);
     setEtat("validee");
   };
@@ -181,9 +207,13 @@ export default function ChampAdresse({
           onChange={(e) => {
             onChange(e.target.value);
             setEtat(null);
+            setCarnetOuvert(true);
           }}
           onKeyDown={surTouche}
-          onFocus={() => suggestions.length > 0 && setOuvert(true)}
+          onFocus={() => {
+            setCarnetOuvert(true);
+            if (suggestions.length > 0) setOuvert(true);
+          }}
           className="input-field pr-10"
           placeholder={placeholder}
           required={required}
@@ -207,39 +237,77 @@ export default function ChampAdresse({
         </div>
       </div>
 
-      {/* Liste des propositions */}
-      {ouvert && suggestions.length > 0 && (
-        <ul
-          id={`${idChamp}-suggestions`}
-          role="listbox"
-          className="absolute z-20 w-full mt-1 bg-dark-800 border border-dark-600 rounded-lg shadow-xl overflow-hidden"
-        >
-          {suggestions.map((s, i) => (
-            <li key={s.properties.id || i} role="presentation">
+      {/* Carnet d'adresses du client, au-dessus des propositions BAN */}
+      {carnetOuvert && carnetFiltre.length > 0 && (
+        <ul className="absolute z-30 w-full mt-1 bg-dark-800 border border-primary-500/40 rounded-lg shadow-xl overflow-hidden">
+          <li className="px-3 py-1.5 text-[11px] uppercase tracking-wide text-primary-300 bg-dark-900/60">
+            Vos adresses
+          </li>
+          {carnetFiltre.map((a) => (
+            <li key={a.address}>
               <button
                 type="button"
-                role="option"
-                aria-selected={i === surligne}
-                onClick={() => choisir(s)}
-                onMouseEnter={() => setSurligne(i)}
-                className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors ${
-                  i === surligne ? "bg-dark-700" : "hover:bg-dark-700/50"
-                }`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => choisirCarnet(a)}
+                className="w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-dark-700/60"
               >
-                <MapPin size={15} className="text-accent-400 shrink-0 mt-0.5" />
+                <Clock size={15} className="text-primary-400 shrink-0 mt-0.5" />
                 <span className="min-w-0">
                   <span className="block text-sm text-dark-100 truncate">
-                    {s.properties.name}
+                    {a.address}
                   </span>
-                  <span className="block text-xs text-dark-400 truncate">
-                    {s.properties.postcode} {s.properties.city}
-                  </span>
+                  {(a.structureName || a.contactName) && (
+                    <span className="block text-xs text-dark-400 truncate">
+                      {[a.structureName, a.contactName]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </span>
+                  )}
                 </span>
               </button>
             </li>
           ))}
         </ul>
       )}
+
+      {/* Liste des propositions */}
+      {ouvert &&
+        suggestions.length > 0 &&
+        !(carnetOuvert && carnetFiltre.length > 0) && (
+          <ul
+            id={`${idChamp}-suggestions`}
+            role="listbox"
+            className="absolute z-20 w-full mt-1 bg-dark-800 border border-dark-600 rounded-lg shadow-xl overflow-hidden"
+          >
+            {suggestions.map((s, i) => (
+              <li key={s.properties.id || i} role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={i === surligne}
+                  onClick={() => choisir(s)}
+                  onMouseEnter={() => setSurligne(i)}
+                  className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors ${
+                    i === surligne ? "bg-dark-700" : "hover:bg-dark-700/50"
+                  }`}
+                >
+                  <MapPin
+                    size={15}
+                    className="text-accent-400 shrink-0 mt-0.5"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm text-dark-100 truncate">
+                      {s.properties.name}
+                    </span>
+                    <span className="block text-xs text-dark-400 truncate">
+                      {s.properties.postcode} {s.properties.city}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
       {/* Adresse non reconnue : on informe, on ne bloque pas. */}
       {etat === "inconnue" && !ouvert && (

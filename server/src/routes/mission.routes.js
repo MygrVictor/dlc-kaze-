@@ -955,6 +955,80 @@ router.get("/mes-documents", authorize("client"), async (req, res, next) => {
 // ═════════════════════════════════════════════════════════════
 // Client : Détail d'une mission
 // ═════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════
+// Carnet d'adresses : lieux déjà utilisés par CE client seulement
+// (départs et arrivées), les plus fréquents d'abord, 20 au plus.
+// Chaque lieu revient avec la structure et le contact les plus récents.
+// ═════════════════════════════════════════════════════════════
+router.get(
+  "/carnet-adresses",
+  authorize("client", "admin"),
+  async (req, res, next) => {
+    try {
+      let clientId = req.user.id;
+      const demande = req.query.clientId;
+      if (demande && demande !== req.user.id) {
+        if (
+          req.user.role !== "admin" &&
+          !(await peutConsulter(req.user, demande))
+        ) {
+          return res.status(403).json({ error: "Accès interdit." });
+        }
+        clientId = demande;
+      }
+
+      const { rows } = await db.query(
+        `WITH lieux AS (
+           SELECT departure_address AS address, departure_structure AS structure,
+                  departure_structure_name AS structure_name,
+                  departure_contact_name AS contact_name,
+                  departure_contact_phone AS contact_phone,
+                  departure_contact_email AS contact_email,
+                  departure_instructions AS instructions, created_at
+             FROM missions WHERE client_id = $1
+           UNION ALL
+           SELECT arrival_address, arrival_structure, arrival_structure_name,
+                  arrival_contact_name, arrival_contact_phone,
+                  arrival_contact_email, arrival_instructions, created_at
+             FROM missions WHERE client_id = $1
+         ),
+         nettoyes AS (
+           SELECT *, UPPER(TRIM(address)) AS cle FROM lieux
+            WHERE address IS NOT NULL AND TRIM(address) <> ''
+         ),
+         derniers AS (
+           SELECT DISTINCT ON (cle) * FROM nettoyes ORDER BY cle, created_at DESC
+         ),
+         comptes AS (
+           SELECT cle, COUNT(*) AS n, MAX(created_at) AS dernier
+             FROM nettoyes GROUP BY cle
+         )
+         SELECT d.address, d.structure, d.structure_name, d.contact_name,
+                d.contact_phone, d.contact_email, d.instructions, c.n
+           FROM derniers d JOIN comptes c USING (cle)
+          ORDER BY c.n DESC, c.dernier DESC
+          LIMIT 20`,
+        [clientId],
+      );
+
+      res.json({
+        adresses: rows.map((r) => ({
+          address: r.address,
+          structure: r.structure || "",
+          structureName: r.structure_name || "",
+          contactName: r.contact_name || "",
+          contactPhone: r.contact_phone || "",
+          contactEmail: r.contact_email || "",
+          instructions: r.instructions || "",
+          utilisations: Number(r.n),
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.get("/:id", authorize("client", "admin"), async (req, res, next) => {
   try {
     const { rows } = await db.query("SELECT * FROM missions WHERE id = $1", [

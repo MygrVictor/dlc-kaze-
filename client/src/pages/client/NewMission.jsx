@@ -529,6 +529,29 @@ export default function NewMission() {
     }
   };
 
+  // ── Carnet d'adresses : lieux déjà saisis par ce client ──
+  const [carnet, setCarnet] = useState([]);
+  useEffect(() => {
+    const cible = estAdmin ? clientId : selectedClientId || user?.id;
+    if (!cible) {
+      setCarnet([]);
+      return;
+    }
+    api
+      .get("/missions/carnet-adresses", { params: { clientId: cible } })
+      .then(({ data }) => setCarnet(data.adresses || []))
+      .catch(() => setCarnet([]));
+  }, [estAdmin, clientId, selectedClientId, user?.id]);
+  const depuisCarnet = (entree) => ({
+    address: entree.address,
+    structure: entree.structure,
+    structureName: entree.structureName,
+    contactName: entree.contactName,
+    contactPhone: entree.contactPhone,
+    contactEmail: entree.contactEmail,
+    instructions: entree.instructions,
+  });
+
   // ── Recommander : pré-remplissage depuis une mission passée ──
   // Seuls les lieux, contacts et options sont repris ; véhicules,
   // dates, documents et n° de commande restent à saisir.
@@ -1366,6 +1389,10 @@ export default function NewMission() {
                 }
                 placeholder="Numéro, voie, code postal, ville"
                 ariaLabel="Adresse d'enlèvement"
+                carnet={carnet}
+                onChoixCarnet={(e) =>
+                  setDeparture((d) => ({ ...d, ...depuisCarnet(e) }))
+                }
                 required
               />
             </div>
@@ -1519,6 +1546,10 @@ export default function NewMission() {
                 }
                 placeholder="Numéro, voie, code postal, ville"
                 ariaLabel="Adresse de livraison"
+                carnet={carnet}
+                onChoixCarnet={(e) =>
+                  setArrival((a) => ({ ...a, ...depuisCarnet(e) }))
+                }
                 required
               />
             </div>
@@ -1651,14 +1682,20 @@ export default function NewMission() {
                         </p>
                       )}
                     </div>
-                    <input
-                      value={retour.address}
-                      onChange={(e) =>
-                        setRetour({ ...retour, address: e.target.value })
-                      }
-                      className="input-field md:col-span-2"
-                      placeholder="Adresse de livraison des véhicules repris *"
-                    />
+                    <div className="md:col-span-2">
+                      <ChampAdresse
+                        value={retour.address}
+                        onChange={(adresse) =>
+                          setRetour((r) => ({ ...r, address: adresse }))
+                        }
+                        placeholder="Adresse de livraison des véhicules repris *"
+                        ariaLabel="Adresse de livraison des véhicules repris"
+                        carnet={carnet}
+                        onChoixCarnet={(e) =>
+                          setRetour((r) => ({ ...r, ...depuisCarnet(e) }))
+                        }
+                      />
+                    </div>
                     <textarea
                       value={retour.instructions}
                       onChange={(e) =>
