@@ -2,7 +2,7 @@
  * Tests — Tableau de bord Admin (AdminDashboard.jsx)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
@@ -93,5 +93,45 @@ describe("AdminDashboard", () => {
     );
     // Les appels API ont été effectués
     expect(api.get).toHaveBeenCalledWith("/admin/stats");
+  });
+
+  it("affiche une mission Kaze dans « Dernières missions » sans erreur", async () => {
+    // Régression : KAZE_STATUS_COLORS / KAZE_STATUS_LABELS étaient définis
+    // dans un autre composant. Toute ligne Kaze de la liste « Dernières
+    // missions » levait une ReferenceError au dépliage — invisible tant
+    // qu'aucun job Kaze n'était affiché, fatale dès le premier.
+    api.get.mockImplementation((url) => {
+      if (url === "/admin/stats") return Promise.resolve(statsFixture);
+      if (url === "/admin/missions")
+        return Promise.resolve({ data: { missions: [] } });
+      if (url === "/admin/kaze/jobs")
+        return Promise.resolve({
+          data: {
+            data: [
+              {
+                kaze_job_id: "kaze-1",
+                kaze_reference: "KZ-4242",
+                kaze_status: "waiting",
+                status: "waiting",
+                departure_address: "1 rue de la Gare, 69001 Lyon",
+                performer_name: "Paul Convoyeur",
+                created_at: "2026-11-01T10:00:00Z",
+              },
+            ],
+          },
+        });
+      return Promise.resolve({ data: { data: [] } });
+    });
+
+    renderAdmin();
+
+    // L'accordéon est replié par défaut : la liste n'est construite qu'au
+    // dépliage, c'est là que la ReferenceError se produisait.
+    fireEvent.click(
+      await screen.findByRole("button", { name: /dernières missions/i }),
+    );
+
+    const lignes = await screen.findAllByText(/KZ-4242/);
+    expect(lignes.length).toBeGreaterThan(0);
   });
 });

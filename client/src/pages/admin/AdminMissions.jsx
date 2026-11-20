@@ -7,6 +7,7 @@ import {
   STATUS_COLORS,
   formatDate,
   formatPrice,
+  villeDe,
 } from "../../lib/utils";
 import {
   Euro,
@@ -185,22 +186,16 @@ function MenuActions({ actions, enCours }) {
   );
 }
 
-/**
- * Ville d'une adresse postale française (« 12 rue X, 69007 Lyon » → « Lyon »).
- * À défaut de code postal, le dernier segment de l'adresse.
- */
-function villeDe(adresse) {
-  const texte = String(adresse || "").trim();
-  if (!texte) return "—";
-  const apresCodePostal = texte.match(/\b\d{5}\s+([^,]+)/);
-  if (apresCodePostal) return apresCodePostal[1].trim();
-  const segments = texte.split(",").map((x) => x.trim()).filter(Boolean);
-  return segments[segments.length - 1] || texte;
-}
-
 export default function AdminMissions({ integre = false } = {}) {
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get("status") || "";
+  // Lien direct vers une mission (depuis la carte, par exemple) :
+  // /admin/missions?mission=<id>&action=coter|assigner. La recherche est
+  // pré-remplie avec l'identifiant pour que la mission soit dans la page
+  // chargée, puis sa fenêtre s'ouvre (voir l'effet plus bas).
+  const missionCible = searchParams.get("mission");
+  const actionCible = searchParams.get("action");
+  const cibleTraitee = useRef(false);
 
   const [missions, setMissions] = useState([]);
   // Compteurs par statut sur la recherche courante (hors filtre de
@@ -215,7 +210,7 @@ export default function AdminMissions({ integre = false } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState(initialStatus);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(missionCible || "");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -794,6 +789,23 @@ export default function AdminMissions({ integre = false } = {}) {
 
   const canAssign = (m) =>
     ["ACCEPTEE", "ASSIGNEE", "EN_COURS"].includes(m.status);
+
+  // Ouverture de la mission visée par le lien direct, une seule fois,
+  // dès qu'elle figure dans la liste chargée.
+  useEffect(() => {
+    if (!missionCible || cibleTraitee.current) return;
+    const cible = missions.find((x) => String(x.id) === missionCible);
+    if (!cible) return;
+    cibleTraitee.current = true;
+    if (actionCible === "assigner" && canAssign(cible)) {
+      openAssignModal(cible);
+    } else {
+      // « coter » et « voir » passent par le détail, qui porte le bouton
+      // Coter quand la mission s'y prête.
+      ouvrirMissionLecture(cible);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missions, missionCible, actionCible]);
 
   const statuses = [
     "",

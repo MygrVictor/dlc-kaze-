@@ -167,14 +167,13 @@ export default function ConvoyeurDashboard() {
         <div className="space-y-4">
           {/* Badge missions disponibles */}
           {missionsDispoCount > 0 && (
-            <div className="card bg-gradient-to-r from-accent-900/50 to-dark-800/50 border-accent-500/30 p-4">
+            <div className="card border-l-4 border-l-[#2f6b55] p-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex h-12 w-12 items-center justify-center">
-                    <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75"></span>
-                    <div className="relative inline-flex rounded-full h-12 w-12 bg-accent-600 items-center justify-center text-white font-bold">
-                      {missionsDispoCount}
-                    </div>
+                  {/* Pastille pleine : l'ancien halo pulsant attirait l'œil
+                      en permanence sans rien dire de plus que le chiffre. */}
+                  <div className="inline-flex rounded-full h-12 w-12 bg-[#2f6b55] items-center justify-center text-white font-bold">
+                    {missionsDispoCount}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-accent-300">

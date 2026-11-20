@@ -2,6 +2,27 @@
  * Utilitaires de statut pour l'affichage.
  */
 
+/**
+ * Palette des statuts — source unique pour les badges (index.css) et la
+ * carte (AdminMap). Teintes de la charte et tons mats, en aplats : pas de
+ * fonds translucides lumineux ni de halos.
+ *
+ *  ambre    : à traiter (le devis à signer en aplat, la cotation en contour)
+ *  bleu     : acceptée / assignée — calée, pas encore partie
+ *  sarcelle : en cours — le véhicule roule (teal de la charte)
+ *  vert     : livrée
+ *  rouge    : refusée / annulée
+ *  gris     : historique sur la carte
+ */
+export const TEINTES = {
+  ambre: "#e6b800",
+  bleu: "#2f5b94",
+  sarcelle: "#0e7490",
+  vert: "#2f6b55",
+  rouge: "#a33a3a",
+  gris: "#64748b",
+};
+
 export const STATUS_LABELS = {
   EN_ATTENTE_DE_COTATION: "En attente de cotation",
   DEVIS_PROPOSE: "Devis proposé",
@@ -78,3 +99,16 @@ export const formatPrice = (price) => {
     currency: "EUR",
   }).format(price);
 };
+
+/**
+ * Ville d'une adresse postale française (« 12 rue X, 69007 Lyon » → « Lyon »).
+ * À défaut de code postal, le dernier segment de l'adresse.
+ */
+export function villeDe(adresse) {
+  const texte = String(adresse || "").trim();
+  if (!texte) return "—";
+  const apresCodePostal = texte.match(/\b\d{5}\s+([^,]+)/);
+  if (apresCodePostal) return apresCodePostal[1].trim();
+  const segments = texte.split(",").map((x) => x.trim()).filter(Boolean);
+  return segments[segments.length - 1] || texte;
+}

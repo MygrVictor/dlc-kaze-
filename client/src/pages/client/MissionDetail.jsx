@@ -260,7 +260,7 @@ export default function MissionDetail() {
 
       {/* Accept bar */}
       {mission.status === "DEVIS_PROPOSE" && (
-        <div className="card bg-gradient-to-r from-primary-900/50 to-dark-800/50 border-primary-500/30 mb-6">
+        <div className="card border-l-4 border-l-amber mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Euro size={24} className="text-primary-400 shrink-0" />
@@ -311,9 +311,9 @@ export default function MissionDetail() {
 
       {/* Devis refusé : rappel du motif transmis à l'équipe */}
       {mission.status === "DEVIS_REFUSE" && (
-        <div className="card bg-gradient-to-r from-orange-900/30 to-dark-800/50 border-orange-500/30 mb-6">
+        <div className="card border-l-4 border-l-[#a33a3a] mb-6">
           <div className="flex items-start gap-3">
-            <XCircle size={22} className="text-orange-400 shrink-0 mt-0.5" />
+            <XCircle size={22} className="text-red-400 shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold">Devis refusé</p>
               <p className="text-sm text-dark-300 mt-1">
@@ -335,7 +335,7 @@ export default function MissionDetail() {
         ["ACCEPTEE", "ASSIGNEE", "EN_COURS", "LIVREE"].includes(
           mission.status,
         ) && (
-          <div className="card bg-gradient-to-r from-emerald-900/30 to-dark-800/50 border-emerald-500/20 mb-6">
+          <div className="card border-l-4 border-l-[#2f6b55] mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <CheckCircle2 size={22} className="text-emerald-400 shrink-0" />

@@ -2150,6 +2150,13 @@ router.get("/missions/map", async (req, res, next) => {
       : allowedStatuses;
 
     const placeholders = filterStatuses.map((_, i) => `$${i + 1}`).join(", ");
+
+    // Période d'historique, commune aux missions DLC et aux jobs Kaze. Elle
+    // ne s'applique qu'aux missions terminées : une mission active reste
+    // sur la carte quelle que soit sa date de création — c'est justement
+    // celle qu'on ne doit pas perdre de vue. Le plafond évite qu'un
+    // paramètre fantaisiste ne déclenche un balayage sans fin de Kaze.
+    const jours = Math.min(Math.max(Number(req.query.jours) || 60, 1), 3 * 365);
     // Le nombre de missions affichables est borné : la carte devient
     // illisible bien avant, et sans plafond la requête grossit avec tout
     // l'historique — plusieurs milliers de lignes après un an d'activité
@@ -2164,10 +2171,12 @@ router.get("/missions/map", async (req, res, next) => {
        LEFT JOIN users u ON u.id = m.client_id
        LEFT JOIN users c ON c.id = m.convoyeur_id
        WHERE m.status IN (${placeholders})
+         AND (m.status <> 'LIVREE'
+              OR m.updated_at >= NOW() - ($${filterStatuses.length + 1} || ' days')::interval)
          ${MASQUER_MISSIONS_DEMO ? `AND NOT ${conditionMissionDemo("m", "u")}` : ""}
        ORDER BY m.created_at DESC
        LIMIT ${PLAFOND_MISSIONS}`,
-      filterStatuses,
+      [...filterStatuses, String(jours)],
     );
 
     let kazeJobs = [];
@@ -2177,10 +2186,6 @@ router.get("/missions/map", async (req, res, next) => {
       // closes noierait les missions actives et alourdirait la carte.
       // Le plafond évite qu'un paramètre fantaisiste ne déclenche un
       // balayage sans fin de l'API Kaze.
-      const jours = Math.min(
-        Math.max(Number(req.query.jours) || 60, 1),
-        3 * 365,
-      );
       const rawJobs = await kazeService.fetchRecentJobs(jours);
       kazeJobs = (rawJobs || []).map(kazeService.kazeJobToLocal);
 
@@ -2274,6 +2279,21 @@ router.get("/missions/map", async (req, res, next) => {
       })
       .filter(Boolean);
 
+    // Missions sans aucune adresse connue du cache de géocodage. Elles
+    // étaient retirées en silence : la carte paraissait complète alors
+    // qu'il lui manquait des missions. On les renvoie à part, pour que
+    // l'interface les signale et permette de les ouvrir.
+    const localisees = new Set(features.map((f) => f.id));
+    const nonLocalisees = missions
+      .filter((m) => !localisees.has(m.id))
+      .map((m) => ({
+        id: m.id,
+        status: m.status,
+        departure_address: m.departure_address,
+        arrival_address: m.arrival_address,
+        client: m.client_company || m.client_name,
+      }));
+
     const kazeFeatures = kazeJobs
       .map((job) => {
         let lat = job.latitude;
@@ -2307,6 +2327,7 @@ router.get("/missions/map", async (req, res, next) => {
       total: missions.length,
       geocoded: features.length,
       missions: features,
+      nonLocalisees,
       kazeMissions: kazeFeatures,
     });
   } catch (err) {

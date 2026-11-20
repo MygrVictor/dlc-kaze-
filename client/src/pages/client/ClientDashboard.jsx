@@ -269,7 +269,7 @@ export default function ClientDashboard() {
         <button
           type="button"
           onClick={() => setFiltre("DEVIS")}
-          className="w-full mb-5 flex items-center gap-3 rounded-xl px-4 py-3 text-left bg-amber/10 border border-amber/40 hover:bg-amber/15 transition-colors"
+          className="card !p-3 w-full mb-5 flex items-center gap-3 text-left border-l-4 border-l-amber hover:border-dark-500 transition-colors"
         >
           <span className="at-statut at-statut--action text-xs px-2.5 py-1">
             {devisAttendus}

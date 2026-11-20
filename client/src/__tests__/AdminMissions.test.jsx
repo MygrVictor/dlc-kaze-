@@ -69,6 +69,14 @@ function renderAdminMissions() {
   );
 }
 
+function renderAvecLien(url) {
+  return render(
+    <MemoryRouter initialEntries={[url]}>
+      <AdminMissions />
+    </MemoryRouter>,
+  );
+}
+
 describe("AdminMissions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -110,9 +118,13 @@ describe("AdminMissions", () => {
   // L'ordre des lignes dépend de la fusion DLC + Kaze : on ouvre les menus
   // un à un jusqu'à trouver celui de la mission à coter.
   const ouvrirMenuActions = async () => {
-    const menus = await screen.findAllByRole("button", {
-      name: /actions sur la mission/i,
-    });
+    // Délai relevé : les requêtes par rôle sont lentes dans jsdom, et la
+    // suite complète tourne en parallèle sur une machine chargée.
+    const menus = await screen.findAllByRole(
+      "button",
+      { name: /actions sur la mission/i },
+      { timeout: 5000 },
+    );
     for (const menu of menus) {
       fireEvent.click(menu);
       if (screen.queryByRole("menuitem", { name: /coter la mission/i })) return;
@@ -124,7 +136,11 @@ describe("AdminMissions", () => {
     renderAdminMissions();
     await ouvrirMenuActions();
     expect(
-      await screen.findByRole("menuitem", { name: /coter la mission/i }),
+      await screen.findByRole(
+        "menuitem",
+        { name: /coter la mission/i },
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
   });
 
@@ -157,7 +173,11 @@ describe("AdminMissions", () => {
     await ouvrirMenuActions();
     // L'action du menu ouvre d'abord le détail en lecture seule…
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: /coter la mission/i }),
+      await screen.findByRole(
+        "menuitem",
+        { name: /coter la mission/i },
+        { timeout: 5000 },
+      ),
     );
     await waitFor(() =>
       expect(screen.getByText("Détail de la mission")).toBeInTheDocument(),
@@ -184,5 +204,55 @@ describe("AdminMissions", () => {
     await waitFor(() =>
       expect(screen.getByText(/aucune mission trouvée/i)).toBeInTheDocument(),
     );
+  });
+
+  // ── Lien direct depuis la carte : ?mission=<id>&action=… ──────────
+  describe("lien direct vers une mission", () => {
+    it("pré-remplit la recherche avec l'identifiant de la mission", async () => {
+      renderAvecLien("/admin/missions?mission=m2");
+
+      await waitFor(() =>
+        expect(api.get).toHaveBeenCalledWith(
+          expect.stringContaining("search=m2"),
+        ),
+      );
+      expect(screen.getByPlaceholderText(/rechercher/i)).toHaveValue("m2");
+    });
+
+    it("ouvre la fenêtre d'assignation avec action=assigner", async () => {
+      renderAvecLien("/admin/missions?mission=m2&action=assigner");
+
+      expect(
+        await screen.findByRole("heading", { name: /assigner un convoyeur/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("ouvre le détail avec action=coter, là où se trouve le bouton Coter", async () => {
+      renderAvecLien("/admin/missions?mission=m1&action=coter");
+
+      expect(await screen.findByText("Détail de la mission")).toBeInTheDocument();
+    });
+
+    it("se rabat sur le détail quand la mission ne peut pas être assignée", async () => {
+      // m1 est en attente de cotation : aucun convoyeur à lui attribuer.
+      renderAvecLien("/admin/missions?mission=m1&action=assigner");
+
+      expect(await screen.findByText("Détail de la mission")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: /assigner un convoyeur/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("n'ouvre rien quand l'identifiant ne correspond à aucune mission", async () => {
+      renderAvecLien("/admin/missions?mission=inconnue&action=assigner");
+
+      await waitFor(() =>
+        expect(screen.getByText("Jean Dupont")).toBeInTheDocument(),
+      );
+      expect(screen.queryByText("Détail de la mission")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: /assigner un convoyeur/i }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

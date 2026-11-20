@@ -239,7 +239,7 @@ export default function DashboardLayout() {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative
                 ${
                   isActive
-                    ? "bg-amber text-navy font-semibold shadow-lg shadow-amber/10"
+                    ? "bg-amber text-navy font-semibold"
                     : theme === "light"
                       ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                       : "text-slate-400 hover:text-white hover:bg-slate-800"

@@ -2111,7 +2111,8 @@ describe("GET /api/admin/missions/map", () => {
 
     await carte("?statuses=ACCEPTEE,PIRATE,LIVREE");
 
-    expect(params).toEqual(["ACCEPTEE", "LIVREE"]);
+    // Le dernier paramètre est la période d'historique (jours).
+    expect(params).toEqual(["ACCEPTEE", "LIVREE", "60"]);
   });
 
   it("retient les six statuts par défaut", async () => {
@@ -2123,17 +2124,41 @@ describe("GET /api/admin/missions/map", () => {
 
     await carte();
 
-    expect(params).toHaveLength(6);
+    expect(params.slice(0, -1)).toHaveLength(6);
   });
 
-  it("écarte les missions sans coordonnées exploitables", async () => {
-    mockDb(ADMIN, () => ({ rows: [mission] }));
+  it("borne l'historique des livrées à la période demandée, pas les actives", async () => {
+    let requete;
+    let params;
+    mockDb(ADMIN, (sql, p) => {
+      if (/FROM missions m/i.test(sql)) {
+        requete = sql;
+        params = p;
+      }
+      return { rows: [] };
+    });
+
+    await carte("?jours=30");
+
+    expect(requete).toMatch(/m\.status <> 'LIVREE'\s+OR m\.updated_at >= NOW\(\)/);
+    expect(params[params.length - 1]).toBe("30");
+  });
+
+  it("signale les missions sans coordonnées au lieu de les taire", async () => {
+    mockDb(ADMIN, () => ({ rows: [{ ...mission, client_company: "Garage Martin" }] }));
 
     const res = await carte();
 
     expect(res.body.total).toBe(1);
     expect(res.body.geocoded).toBe(0);
     expect(res.body.missions).toHaveLength(0);
+    expect(res.body.nonLocalisees).toEqual([
+      expect.objectContaining({
+        id: MISSION_ID,
+        departure_address: "Paris",
+        client: "Garage Martin",
+      }),
+    ]);
   });
 
   it("expose les missions géocodées avec leur véhicule agrégé", async () => {

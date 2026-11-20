@@ -3258,15 +3258,16 @@ body:has(.theme-light) {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   Statuts de mission — un ton par ce que le statut réclame
+   Statuts de mission — palette TEINTES (lib/utils.js)
    ═════════════════════════════════════════════════════════════
-   Cinq tons plutôt que huit couleurs : seul le devis à signer
-   (« action ») est plein et contrasté, le reste se lit d'un coup
-   d'œil sans crier. La pastille ::before double la couleur d'un
-   repère de forme, pour qui distingue mal les teintes.
+   Aplats mats et texte blanc pour ce qui avance (devis à signer, calée,
+   en cours, livrée) ; simple contour pour ce qui attend ou s'est arrêté
+   (à coter, refusée, annulée). Mêmes teintes dans les deux thèmes et sur
+   la carte : un statut a une seule couleur partout. Pas de fond
+   translucide ni d'ombre.
 
-   Placées en fin de fichier : à spécificité égale, elles l'emportent
-   sur `.dash .badge` et `.theme-light .badge`, qui grisaient tout. */
+   Placées après `.dash .badge` et `.theme-light .badge` (dans les deux
+   feuilles), avec une spécificité supérieure, pour l'emporter. */
 .at-statut {
   display: inline-flex;
   align-items: center;
@@ -3275,6 +3276,7 @@ body:has(.theme-light) {
   border-radius: 9999px;
   font-weight: 600;
   line-height: 1.2;
+  box-shadow: none;
 }
 .at-statut::before {
   content: "";
@@ -3284,12 +3286,6 @@ body:has(.theme-light) {
   background: currentColor;
   flex-shrink: 0;
 }
-.dash .at-statut.at-statut--attente,
-.at-statut--attente {
-  background: rgb(148 163 184 / 0.12);
-  color: #cbd5e1;
-  border: 1px dashed rgb(148 163 184 / 0.45);
-}
 .dash .at-statut.at-statut--action,
 .at-statut--action {
   background: #ffd11a;
@@ -3298,57 +3294,42 @@ body:has(.theme-light) {
 }
 .dash .at-statut.at-statut--planifie,
 .at-statut--planifie {
-  background: rgb(59 130 246 / 0.14);
-  color: #93c5fd;
-  border: 1px solid rgb(59 130 246 / 0.35);
+  background: #2f5b94;
+  color: #ffffff;
+  border: 1px solid #2f5b94;
 }
 .dash .at-statut.at-statut--encours,
 .at-statut--encours {
-  background: rgb(139 92 246 / 0.16);
-  color: #c4b5fd;
-  border: 1px solid rgb(139 92 246 / 0.4);
+  background: #0e7490;
+  color: #ffffff;
+  border: 1px solid #0e7490;
 }
 .dash .at-statut.at-statut--fini,
 .at-statut--fini {
-  background: rgb(16 185 129 / 0.12);
-  color: #6ee7b7;
-  border: 1px solid rgb(16 185 129 / 0.3);
+  background: #2f6b55;
+  color: #ffffff;
+  border: 1px solid #2f6b55;
+}
+/* Contours : le texte suit le fond, clair ou sombre. */
+.dash .at-statut.at-statut--attente,
+.at-statut--attente {
+  background: transparent;
+  color: #e6c65a;
+  border: 1px solid #e6b800;
 }
 .dash .at-statut.at-statut--echec,
 .at-statut--echec {
-  background: rgb(239 68 68 / 0.1);
-  color: #fca5a5;
-  border: 1px solid rgb(239 68 68 / 0.3);
+  background: transparent;
+  color: #e3a3a3;
+  border: 1px solid #a33a3a;
 }
-.dash.theme-light .at-statut.at-statut--attente {
-  background: #f1f5f9;
-  color: #475569;
-  border-color: #94a3b8;
+.dash.theme-light .at-statut.at-statut--attente,
+.leaflet-popup .at-statut.at-statut--attente {
+  color: #7a5c00;
 }
-.dash.theme-light .at-statut.at-statut--action {
-  background: #ffd11a;
-  color: #0b1d3a;
-  border-color: #e6b800;
-}
-.dash.theme-light .at-statut.at-statut--planifie {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
-}
-.dash.theme-light .at-statut.at-statut--encours {
-  background: #f5f3ff;
-  color: #6d28d9;
-  border-color: #ddd6fe;
-}
-.dash.theme-light .at-statut.at-statut--fini {
-  background: #ecfdf5;
-  color: #047857;
-  border-color: #a7f3d0;
-}
-.dash.theme-light .at-statut.at-statut--echec {
-  background: #fef2f2;
-  color: #b91c1c;
-  border-color: #fecaca;
+.dash.theme-light .at-statut.at-statut--echec,
+.leaflet-popup .at-statut.at-statut--echec {
+  color: #8e3131;
 }
 
 /* ═════════════════════════════════════════════════════════════

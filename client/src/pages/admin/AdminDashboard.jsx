@@ -109,6 +109,20 @@ import {
 import toast from "react-hot-toast";
 import AdminMissions from "./AdminMissions";
 
+// Statuts Kaze affichés dans les listes du tableau de bord. Au niveau du
+// module : ils étaient définis dans UpcomingMissionsTab mais lus aussi par
+// AdminDashboard, où ils n'existaient pas — toute ligne Kaze de l'onglet
+// « Missions » levait une ReferenceError. Mêmes tons que les statuts DLC.
+const KAZE_STATUS_COLORS = {
+  waiting: "at-statut at-statut--attente",
+  assigned: "at-statut at-statut--planifie",
+};
+
+const KAZE_STATUS_LABELS = {
+  waiting: "En attente",
+  assigned: "Assignée (cible)",
+};
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2135,7 +2149,7 @@ function ConvoyeursTab({ kazeUsers, kazeLoading, kazeError, onRefresh }) {
               className="card hover:border-orange-500/20 transition-all"
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500/20 to-primary-500/20 flex items-center justify-center text-sm font-bold text-orange-300 shrink-0">
+                <div className="w-10 h-10 rounded-full bg-dark-700 flex items-center justify-center text-sm font-bold text-dark-100 shrink-0">
                   {user.name?.charAt(0) || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -2271,16 +2285,6 @@ function UpcomingMissionsTab({
   const KAZE_STATUS_MAP = {
     waiting: "EN_ATTENTE_DE_COTATION",
     assigned: "ASSIGNEE",
-  };
-
-  const KAZE_STATUS_COLORS = {
-    waiting: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-    assigned: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-  };
-
-  const KAZE_STATUS_LABELS = {
-    waiting: "En attente",
-    assigned: "Assignée (cible)",
   };
 
   const linkedKazeIds = new Set(
