@@ -193,16 +193,6 @@ router.post(
         : null;
       const purchaseOrderNumber = req.body.purchaseOrderNumber || null;
 
-      // Missions du banc de test : interdites hors staging, quoi qu'il
-      // arrive (verrou serveur, indépendant de l'interface).
-      if (
-        /^TEST-BOT/i.test(String(purchaseOrderNumber || "")) &&
-        !require("../utils/staging").estStaging()
-      ) {
-        return res
-          .status(403)
-          .json({ error: "Banc de test réservé à l'environnement staging." });
-      }
       let clientEmail = estAdmin ? null : req.user.email || null;
       let convoyeurPreassigne = null;
 
@@ -233,19 +223,7 @@ router.post(
 
       // Une mission diffusée sans rémunération ne trouvera pas preneur :
       // le convoyeur ne voit que ce montant pour décider.
-      // Banc de test (staging uniquement) : l'admin peut créer une
-      // mission « comme un client », en attente de cotation, pour tester
-      // le parcours devis. Ignoré partout ailleurs.
-      const attenteCotationTest =
-        estAdmin &&
-        req.body.testStatut === "EN_ATTENTE_DE_COTATION" &&
-        require("../utils/staging").estStaging();
-
-      if (
-        estAdmin &&
-        !attenteCotationTest &&
-        (!priceConvoyeur || Number(priceConvoyeur) <= 0)
-      ) {
+      if (estAdmin && (!priceConvoyeur || Number(priceConvoyeur) <= 0)) {
         return res.status(400).json({
           error:
             "Rémunération convoyeur obligatoire : la mission est publiée immédiatement.",
@@ -254,13 +232,11 @@ router.post(
 
       // Une mission administrative est déjà négociée, elle rejoint
       // directement les missions disponibles.
-      const statutInitial = attenteCotationTest
-        ? "EN_ATTENTE_DE_COTATION"
-        : estAdmin
-          ? convoyeurPreassigneId
-            ? "ASSIGNEE"
-            : "ACCEPTEE"
-          : "EN_ATTENTE_DE_COTATION";
+      const statutInitial = estAdmin
+        ? convoyeurPreassigneId
+          ? "ASSIGNEE"
+          : "ACCEPTEE"
+        : "EN_ATTENTE_DE_COTATION";
 
       if (!departureAddress || !arrivalAddress) {
         return res
@@ -643,10 +619,7 @@ router.post(
       // Une mission saisie par l'administration est déjà publiée : ce
       // sont les convoyeurs qu'il faut prévenir, pas l'admin lui-même.
       // Le client, lui, attend une cotation.
-      if (attenteCotationTest) {
-        // Mission de test en attente de cotation : ni Kaze, ni Telegram,
-        // ni e-mail.
-      } else if (estAdmin) {
+      if (estAdmin) {
         // Elle naît « ACCEPTEE », donc sans passer par la route
         // d'acceptation client — seul endroit qui envoyait jusqu'ici la
         // mission à Kaze. Sans cet appel, une mission administrative

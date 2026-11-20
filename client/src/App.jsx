@@ -1,6 +1,5 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { ESTSTAGING } from "./lib/staging";
 import { useAuth } from "./context/AuthContext";
 
 // La page d'accueil et son gabarit sont les seuls modules chargés
@@ -41,7 +40,6 @@ const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminDemandes = lazy(() => import("./pages/admin/AdminDemandes"));
 const AdminMap = lazy(() => import("./pages/admin/AdminMap"));
 const AdminKaze = lazy(() => import("./pages/admin/AdminKaze"));
-const StagingTestBench = lazy(() => import("./pages/StagingTestBench"));
 
 // Pages Convoyeur
 const ConvoyeurDashboard = lazy(
@@ -152,9 +150,6 @@ export default function App() {
           <Route path="recaps" element={<ClientRecaps />} />
           <Route path="documents" element={<ClientDocuments />} />
           <Route path="analyse" element={<ClientAnalyse />} />
-          {ESTSTAGING && (
-            <Route path="banc-de-test" element={<StagingTestBench />} />
-          )}
         </Route>
 
         {/* ── Dashboard Admin ──────────────────── */}
@@ -176,9 +171,6 @@ export default function App() {
           <Route path="utilisateurs" element={<AdminUsers />} />
           <Route path="demandes" element={<AdminDemandes />} />
           <Route path="kaze" element={<AdminKaze />} />
-          {ESTSTAGING && (
-            <Route path="banc-de-test" element={<StagingTestBench />} />
-          )}
         </Route>
 
         {/* ── Portail Convoyeur ────────────────── */}
