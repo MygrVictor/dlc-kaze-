@@ -26,7 +26,7 @@ vi.mock("react-hot-toast", () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
 
-import LoginPage from "../pages/LoginPage";
+import LoginPage, { destinationApresConnexion } from "../pages/LoginPage";
 
 function renderLoginPage() {
   return render(
@@ -89,7 +89,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/client");
+      expect(mockNavigate).toHaveBeenCalledWith("/client", { replace: true });
     });
   });
 
@@ -105,7 +105,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/admin");
+      expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
     });
   });
 
@@ -124,7 +124,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/convoyeur");
+      expect(mockNavigate).toHaveBeenCalledWith("/convoyeur", { replace: true });
     });
   });
 
@@ -160,5 +160,46 @@ describe("LoginPage", () => {
 
     fireEvent.click(toggleBtn);
     expect(input).toHaveAttribute("type", "password");
+  });
+
+  describe("retour vers la page demandée (?suite=)", () => {
+    it("renvoie le convoyeur sur la page du lien Telegram", () => {
+      expect(
+        destinationApresConnexion("convoyeur", "/convoyeur/disponibles"),
+      ).toBe("/convoyeur/disponibles");
+    });
+
+    it("ignore une page d'un autre espace que celui du rôle", () => {
+      expect(destinationApresConnexion("convoyeur", "/admin/missions")).toBe(
+        "/convoyeur",
+      );
+    });
+
+    it("refuse une redirection vers un autre site", () => {
+      expect(destinationApresConnexion("client", "//evil.com/client")).toBe(
+        "/client",
+      );
+      expect(destinationApresConnexion("client", "https://evil.com")).toBe(
+        "/client",
+      );
+      expect(destinationApresConnexion("client", "/clientx")).toBe("/client");
+    });
+
+    it("redirige après connexion vers la suite fournie dans l'URL", async () => {
+      mockLogin.mockResolvedValue({ full_name: "Bob", role: "convoyeur" });
+      render(
+        <MemoryRouter initialEntries={["/login?suite=%2Fconvoyeur%2Fdisponibles"]}>
+          <LoginPage />
+        </MemoryRouter>,
+      );
+      await userEvent.type(screen.getByPlaceholderText("votre@email.fr"), "b@test.com");
+      await userEvent.type(screen.getByPlaceholderText("••••••••"), "Pass#1234");
+      fireEvent.click(screen.getByRole("button", { name: /se connecter/i }));
+      await waitFor(() =>
+        expect(mockNavigate).toHaveBeenCalledWith("/convoyeur/disponibles", {
+          replace: true,
+        }),
+      );
+    });
   });
 });

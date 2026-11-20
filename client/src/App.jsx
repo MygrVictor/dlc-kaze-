@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
 // La page d'accueil et son gabarit sont les seuls modules chargés
@@ -71,6 +71,7 @@ function Chargement() {
 // ── Route protégée ──────────────────────────────────────────
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -80,7 +81,14 @@ function ProtectedRoute({ children, roles }) {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  // On garde la page demandée : un convoyeur arrivé par le lien Telegram
+  // (navigateur intégré, donc déconnecté) y revient après connexion.
+  if (!user) {
+    const suite = location.pathname + location.search;
+    return (
+      <Navigate to={`/login?suite=${encodeURIComponent(suite)}`} replace />
+    );
+  }
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
 
   return children;

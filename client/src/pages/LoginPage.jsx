@@ -1,12 +1,32 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 
+const ESPACES = { admin: "/admin", convoyeur: "/convoyeur" };
+
+/**
+ * Page où renvoyer après connexion : celle demandée (`?suite=`), si elle
+ * est un chemin interne de l'espace du rôle, sinon l'accueil de l'espace.
+ * Le contrôle du préfixe évite une redirection ouverte (`//site.com`).
+ */
+export function destinationApresConnexion(role, suite) {
+  const espace = ESPACES[role] || "/client";
+  if (
+    typeof suite === "string" &&
+    !suite.startsWith("//") &&
+    (suite === espace || suite.startsWith(`${espace}/`) || suite.startsWith(`${espace}?`))
+  ) {
+    return suite;
+  }
+  return espace;
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,16 +39,9 @@ export default function LoginPage() {
     try {
       const user = await login(email, password);
       toast.success(`Bienvenue, ${user.full_name} !`);
-      switch (user.role) {
-        case "admin":
-          navigate("/admin");
-          break;
-        case "convoyeur":
-          navigate("/convoyeur");
-          break;
-        default:
-          navigate("/client");
-      }
+      navigate(destinationApresConnexion(user.role, params.get("suite")), {
+        replace: true,
+      });
     } catch (err) {
       toast.error(err.response?.data?.error || "Erreur de connexion.");
     } finally {
