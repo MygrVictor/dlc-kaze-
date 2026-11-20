@@ -22,9 +22,9 @@ export const STATUS_COLORS = {
   EN_ATTENTE_DE_COTATION: "at-statut at-statut--attente",
   DEVIS_PROPOSE: "at-statut at-statut--action",
   DEVIS_REFUSE: "at-statut at-statut--echec",
-  ACCEPTEE: "at-statut at-statut--marche",
-  ASSIGNEE: "at-statut at-statut--marche",
-  EN_COURS: "at-statut at-statut--marche",
+  ACCEPTEE: "at-statut at-statut--planifie",
+  ASSIGNEE: "at-statut at-statut--planifie",
+  EN_COURS: "at-statut at-statut--encours",
   LIVREE: "at-statut at-statut--fini",
   ANNULEE: "at-statut at-statut--echec",
 };
@@ -48,9 +48,12 @@ export const STATUS_TON = {
   EN_ATTENTE_DE_COTATION: "attente",
   DEVIS_PROPOSE: "action",
   DEVIS_REFUSE: "echec",
-  ACCEPTEE: "marche",
-  ASSIGNEE: "marche",
-  EN_COURS: "marche",
+  // Acceptée et assignée : la mission est calée mais n'a pas démarré.
+  // En cours : le véhicule roule. Deux situations que l'exploitation
+  // doit distinguer d'un coup d'œil — mêmes couleurs que sur la carte.
+  ACCEPTEE: "planifie",
+  ASSIGNEE: "planifie",
+  EN_COURS: "encours",
   LIVREE: "fini",
   ANNULEE: "echec",
 };

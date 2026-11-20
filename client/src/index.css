@@ -3296,11 +3296,17 @@ body:has(.theme-light) {
   color: #0b1d3a;
   border: 1px solid #ffd11a;
 }
-.dash .at-statut.at-statut--marche,
-.at-statut--marche {
+.dash .at-statut.at-statut--planifie,
+.at-statut--planifie {
   background: rgb(59 130 246 / 0.14);
   color: #93c5fd;
   border: 1px solid rgb(59 130 246 / 0.35);
+}
+.dash .at-statut.at-statut--encours,
+.at-statut--encours {
+  background: rgb(139 92 246 / 0.16);
+  color: #c4b5fd;
+  border: 1px solid rgb(139 92 246 / 0.4);
 }
 .dash .at-statut.at-statut--fini,
 .at-statut--fini {
@@ -3324,10 +3330,15 @@ body:has(.theme-light) {
   color: #0b1d3a;
   border-color: #e6b800;
 }
-.dash.theme-light .at-statut.at-statut--marche {
+.dash.theme-light .at-statut.at-statut--planifie {
   background: #eff6ff;
   color: #1d4ed8;
   border-color: #bfdbfe;
+}
+.dash.theme-light .at-statut.at-statut--encours {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
 }
 .dash.theme-light .at-statut.at-statut--fini {
   background: #ecfdf5;

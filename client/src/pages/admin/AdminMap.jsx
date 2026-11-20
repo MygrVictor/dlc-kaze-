@@ -37,19 +37,19 @@ const STATUS_CONFIG = {
     bg: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   },
   ACCEPTEE: {
-    color: "#60a5fa",
+    color: "#3b82f6",
     label: "Acceptée",
     bg: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   },
   ASSIGNEE: {
-    color: "#a78bfa",
+    color: "#3b82f6",
     label: "Assignée",
-    bg: "bg-violet-500/20 text-violet-400 border-violet-500/30",
+    bg: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   },
   EN_COURS: {
-    color: "#34d399",
+    color: "#8b5cf6",
     label: "En cours",
-    bg: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+    bg: "bg-violet-500/20 text-violet-400 border-violet-500/30",
   },
   LIVREE: {
     color: "#94a3b8",
@@ -60,22 +60,31 @@ const STATUS_CONFIG = {
 
 // ── Phases d'exploitation ──────────────────────────────────
 // Huit statuts à l'écran ne se lisent pas d'un coup d'œil. Ce qui
-// intéresse l'exploitant sur une carte tient en trois questions : qu'est-ce
-// qui attend une action de ma part, qu'est-ce qui roule, qu'est-ce qui est
-// derrière moi. Les statuts fins restent dans l'infobulle.
+// intéresse l'exploitant sur une carte tient en quatre questions :
+// qu'est-ce qui attend une action de ma part, qu'est-ce qui est calé mais
+// n'a pas démarré, qu'est-ce qui roule, qu'est-ce qui est derrière moi.
+// Les statuts fins restent dans l'infobulle. Mêmes couleurs que les
+// badges de statut du reste de l'application.
 const PHASES = {
   A_TRAITER: {
     label: "À traiter",
-    aide: "Sans convoyeur : à coter, à valider ou à assigner",
+    aide: "À coter ou devis en attente de réponse",
     color: "#f59e0b",
     bg: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     rayon: 9,
   },
+  PLANIFIEE: {
+    label: "Acceptées / assignées",
+    aide: "Devis accepté, convoyeur assigné ou à assigner — pas encore partie",
+    color: "#3b82f6",
+    bg: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    rayon: 9,
+  },
   EN_COURS: {
     label: "En cours",
-    aide: "Assignée à un convoyeur ou déjà en route",
-    color: "#22c55e",
-    bg: "bg-green-500/20 text-green-400 border-green-500/30",
+    aide: "Le convoyeur est en route",
+    color: "#8b5cf6",
+    bg: "bg-violet-500/20 text-violet-400 border-violet-500/30",
     rayon: 9,
   },
   TERMINEE: {
@@ -90,7 +99,8 @@ const PHASES = {
 /** Phase d'une mission DLC, déduite de son statut. */
 function phaseDeStatut(status) {
   if (status === "LIVREE") return "TERMINEE";
-  if (status === "ASSIGNEE" || status === "EN_COURS") return "EN_COURS";
+  if (status === "EN_COURS") return "EN_COURS";
+  if (status === "ACCEPTEE" || status === "ASSIGNEE") return "PLANIFIEE";
   return "A_TRAITER";
 }
 
@@ -98,7 +108,8 @@ function phaseDeStatut(status) {
 function phaseDeKaze(job) {
   if (job.kaze_status === "completed" || job.kaze_status === "cancelled")
     return "TERMINEE";
-  if (job.kaze_status === "started" || job.performer_name) return "EN_COURS";
+  if (job.kaze_status === "started") return "EN_COURS";
+  if (job.performer_name) return "PLANIFIEE";
   return "A_TRAITER";
 }
 
@@ -189,7 +200,9 @@ function MarqueursGroupes({ points }) {
         // Groupe : pastille chiffrée. La couleur retenue est celle de la
         // phase la plus urgente présente, pour qu'un point « à traiter »
         // ne se cache pas derrière une pile de missions livrées.
-        const priorite = ["A_TRAITER", "EN_COURS", "TERMINEE"];
+        // Une acceptée peut encore attendre son convoyeur : elle passe
+        // avant ce qui roule déjà.
+        const priorite = ["A_TRAITER", "PLANIFIEE", "EN_COURS", "TERMINEE"];
         const dominant = groupe.points.reduce((a, b) =>
           priorite.indexOf(a.phase) <= priorite.indexOf(b.phase) ? a : b,
         );
@@ -356,7 +369,7 @@ export default function AdminMap() {
   // Par défaut, l'historique est masqué : la carte sert d'abord à piloter
   // ce qui reste à faire.
   const [activePhases, setActivePhases] = useState(
-    new Set(["A_TRAITER", "EN_COURS"]),
+    new Set(["A_TRAITER", "PLANIFIEE", "EN_COURS"]),
   );
 
   // Kaze data
@@ -565,7 +578,7 @@ export default function AdminMap() {
   // Compteurs par phase, toutes sources confondues : c'est le volume réel
   // à traiter qui compte, pas la provenance technique de la mission.
   const stats = useMemo(() => {
-    const counts = { A_TRAITER: 0, EN_COURS: 0, TERMINEE: 0 };
+    const counts = { A_TRAITER: 0, PLANIFIEE: 0, EN_COURS: 0, TERMINEE: 0 };
     missions.forEach((m) => counts[phaseDeStatut(m.status)]++);
     kazeJobsDedupes.forEach((j) => counts[phaseDeKaze(j)]++);
     return counts;
@@ -645,7 +658,7 @@ export default function AdminMap() {
             Où en sont les missions
           </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
           {Object.entries(PHASES).map(([key, cfg]) => {
             const isActive = activePhases.has(key);
             return (
