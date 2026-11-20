@@ -87,7 +87,7 @@ function ProtectedRoute({ children, roles }) {
 }
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   // Redirige vers le bon dashboard selon le rôle
   const getDashboardPath = () => {
@@ -192,7 +192,16 @@ export default function App() {
         {/* ── Raccourci dashboard ──────────────── */}
         <Route
           path="/dashboard"
-          element={<Navigate to={getDashboardPath()} replace />}
+          element={
+            // C'est la page d'ouverture de l'application installée : on
+            // attend la session avant de choisir, sinon un convoyeur déjà
+            // connecté serait envoyé sur /login.
+            loading ? (
+              <Chargement />
+            ) : (
+              <Navigate to={getDashboardPath()} replace />
+            )
+          }
         />
 
         {/* ── 404 ──────────────────────────────── */}

@@ -9,6 +9,7 @@ const {
 const kazeService = require("../services/kaze.service");
 const emailService = require("../services/email.service");
 const telegramService = require("../services/telegram.service");
+const pushService = require("../services/push.service");
 const geocodingService = require("../services/geocoding.service");
 const {
   generateDevisPDF,
@@ -676,6 +677,8 @@ router.post(
           const lienMission = process.env.CLIENT_URL
             ? `${process.env.CLIENT_URL}/convoyeur/disponibles`
             : undefined;
+
+          pushService.annoncerMission(mission, lienMission).catch(() => {});
 
           telegramService
             .annoncerMissionDisponible(mission, lienMission)
@@ -1492,6 +1495,8 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
           const lienMission = process.env.CLIENT_URL
             ? `${process.env.CLIENT_URL}/convoyeur/disponibles`
             : undefined;
+
+          pushService.annoncerMission(fullMission[0], lienMission).catch(() => {});
 
           telegramService
             .annoncerMissionDisponible(fullMission[0], lienMission)

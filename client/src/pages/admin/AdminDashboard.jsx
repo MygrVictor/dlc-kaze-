@@ -3,37 +3,30 @@ import { Link } from "react-router-dom";
 import api from "../../lib/api";
 
 /**
- * Active / coupe la diffusion des missions dans le salon Telegram des
- * convoyeurs. Le réglage est global et conservé en base.
+ * Active / coupe un canal d'annonce des missions aux convoyeurs : le
+ * salon Telegram ou les notifications de l'application. Chaque réglage
+ * est global et conservé en base ; les deux canaux sont indépendants.
  */
-function InterrupteurTelegram() {
+function InterrupteurAnnonces({ url, libelle, Icone, confirmation }) {
   const [actives, setActives] = useState(null);
   const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
     api
-      .get("/admin/parametres/telegram")
+      .get(url)
       .then(({ data }) => setActives(Boolean(data.annoncesActives)))
       .catch(() => setActives(null));
-  }, []);
+  }, [url]);
 
   const basculer = async () => {
     const cible = !actives;
-    if (
-      !cible &&
-      !window.confirm(
-        "Couper les annonces Telegram ? Les nouvelles missions ne seront plus publiées aux convoyeurs.",
-      )
-    )
-      return;
+    if (!cible && !window.confirm(confirmation)) return;
     setEnCours(true);
     try {
-      const { data } = await api.put("/admin/parametres/telegram", {
-        annoncesActives: cible,
-      });
+      const { data } = await api.put(url, { annoncesActives: cible });
       setActives(Boolean(data.annoncesActives));
     } catch {
-      window.alert("Impossible de modifier le réglage Telegram.");
+      window.alert(`Impossible de modifier le réglage ${libelle}.`);
     } finally {
       setEnCours(false);
     }
@@ -48,8 +41,8 @@ function InterrupteurTelegram() {
       disabled={enCours}
       title={
         actives
-          ? "Les nouvelles missions sont annoncées sur Telegram — cliquer pour couper"
-          : "Annonces Telegram coupées — cliquer pour réactiver"
+          ? `${libelle} : les nouvelles missions sont annoncées — cliquer pour couper`
+          : `${libelle} coupé — cliquer pour réactiver`
       }
       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex-1 sm:flex-none justify-center ${
         actives
@@ -57,8 +50,10 @@ function InterrupteurTelegram() {
           : "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20"
       }`}
     >
-      <Send size={15} />
-      <span>Telegram {actives ? "ON" : "OFF"}</span>
+      <Icone size={15} />
+      <span>
+        {libelle} {actives ? "ON" : "OFF"}
+      </span>
     </button>
   );
 }
@@ -87,6 +82,7 @@ import {
   AlertTriangle,
   Euro,
   Send,
+  Bell,
   X,
   UserCheck,
   Search,
@@ -495,7 +491,18 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 mt-3 sm:mt-0 w-full sm:w-auto">
-          <InterrupteurTelegram />
+          <InterrupteurAnnonces
+            url="/admin/parametres/telegram"
+            libelle="Telegram"
+            Icone={Send}
+            confirmation="Couper les annonces Telegram ? Les nouvelles missions ne seront plus publiées dans le salon."
+          />
+          <InterrupteurAnnonces
+            url="/admin/parametres/notifications"
+            libelle="Notifs appli"
+            Icone={Bell}
+            confirmation="Couper les notifications de l'application ? Les convoyeurs ne seront plus prévenus sur leur téléphone."
+          />
           {/* Le formulaire complet remplace l'ancienne fenêtre : c'est
               celui du client, avec les champs propres à l'administration. */}
           <Link

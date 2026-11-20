@@ -7,6 +7,7 @@ const kazeService = require("../services/kaze.service");
 const syncService = require("../services/sync.service");
 const emailService = require("../services/email.service");
 const telegramService = require("../services/telegram.service");
+const pushService = require("../services/push.service");
 const geocodingService = require("../services/geocoding.service");
 const itineraireService = require("../services/itineraire.service");
 const {
@@ -148,6 +149,35 @@ async function getMissionById(missionId) {
   return rows[0] || null;
 }
 
+// ── Notifications de l'application : interrupteur admin ───────────
+router.get("/parametres/notifications", async (_req, res, next) => {
+  try {
+    res.json({
+      annoncesActives: await pushService.annoncesActivees(),
+      configure: Boolean(pushService.actif),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/parametres/notifications", async (req, res, next) => {
+  try {
+    if (typeof req.body?.annoncesActives !== "boolean") {
+      return res
+        .status(400)
+        .json({ error: "annoncesActives doit être true ou false." });
+    }
+    const valeur = await pushService.definirAnnoncesActivees(
+      req.body.annoncesActives,
+    );
+    auditLog("PUSH_ANNONCES", req.user?.id, { actives: valeur });
+    res.json({ annoncesActives: valeur });
+  } catch (err) {
+    next(err);
+  }
+});
+
 function normaliserPrixConvoyeur(valeur) {
   if (valeur === undefined || valeur === null || valeur === "") return null;
   const nombre = Number(valeur);
@@ -184,6 +214,10 @@ async function relancerAnnonceTelegram(mission) {
     const lienMission = process.env.CLIENT_URL
       ? `${process.env.CLIENT_URL}/convoyeur/disponibles`
       : undefined;
+
+    // Relance : les notifications de l'application partent aussi. Le
+    // `tag` de la notification remplace l'éventuelle précédente.
+    pushService.annoncerMission(mission, lienMission).catch(() => {});
 
     const annonce = await telegramService.annoncerMissionDisponible(
       mission,

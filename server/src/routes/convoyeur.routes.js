@@ -7,6 +7,7 @@ const db = require("../db");
 const { authenticate, authorize } = require("../middleware/auth.middleware");
 const kazeService = require("../services/kaze.service");
 const telegramService = require("../services/telegram.service");
+const pushService = require("../services/push.service");
 const syncService = require("../services/sync.service");
 const {
   auditLog,
@@ -221,6 +222,50 @@ router.param("id", (req, res, next, value) => {
     return res.status(400).json({ error: "Identifiant invalide." });
   }
   next();
+});
+
+// ═════════════════════════════════════════════════════════════
+// Notifications de l'application (Web Push)
+// ═════════════════════════════════════════════════════════════
+// Clé publique transmise au navigateur pour créer l'abonnement. `null`
+// quand les clés VAPID ne sont pas configurées : l'interface masque
+// alors l'option.
+router.get("/notifications/cle", (_req, res) => {
+  res.json({ clePublique: pushService.clePublique() });
+});
+
+router.post("/notifications/abonnement", async (req, res, next) => {
+  try {
+    if (!pushService.actif) {
+      return res
+        .status(503)
+        .json({ error: "Notifications non configurées sur le serveur." });
+    }
+    if (!pushService.abonnementValide(req.body)) {
+      return res.status(400).json({ error: "Abonnement invalide." });
+    }
+    await pushService.enregistrerAbonnement(
+      req.user.id,
+      req.body,
+      req.headers["user-agent"],
+    );
+    res.status(201).json({ abonne: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/notifications/abonnement", async (req, res, next) => {
+  try {
+    const endpoint = req.body?.endpoint;
+    if (typeof endpoint !== "string" || !endpoint) {
+      return res.status(400).json({ error: "endpoint requis." });
+    }
+    await pushService.supprimerAbonnement(req.user.id, endpoint);
+    res.json({ abonne: false });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ═════════════════════════════════════════════════════════════

@@ -17,6 +17,7 @@ import {
 import toast from "react-hot-toast";
 import { formatDate } from "../../lib/utils";
 import DocumentsValidation from "./DocumentsValidation";
+import NotificationsMissions from "../../components/NotificationsMissions";
 
 export default function ConvoyeurProfil() {
   const { user } = useAuth();
@@ -139,6 +140,7 @@ export default function ConvoyeurProfil() {
       {/* Contenu onglet Profil */}
       {activeTab === "profil" && (
         <>
+          <NotificationsMissions />
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">
               Informations personnelles

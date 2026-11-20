@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import BandeauDossier from "../../components/BandeauDossier";
+import NotificationsMissions from "../../components/NotificationsMissions";
 import MissionDocuments from "../../components/MissionDocuments";
 
 const UUID_REGEX =
@@ -107,6 +108,7 @@ export default function ConvoyeurDashboard() {
       <div className="mb-6 empty:hidden">
         <BandeauDossier />
       </div>
+      <NotificationsMissions variante="bandeau" />
       {/* ── Header ──────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6">
         <div>

@@ -19,6 +19,7 @@
     "migrate:missions-internes": "node src/db/migrate-missions-internes.js",
     "migrate:kaze-driver-unique": "node src/db/migrate-kaze-driver-unique.js",
     "migrate:securite-sessions": "node src/db/migrate-securite-sessions.js",
+    "migrate:notifications-push": "node src/db/migrate-notifications-push.js",
     "migrate:vitrine": "npm run migrate:demande-poste && npm run migrate:convoyeur-qualif",
     "seed": "node src/db/seed.js",
     "test": "cross-env NODE_ENV=test jest --forceExit",
@@ -43,6 +44,7 @@
     "pg": "^8.12.0",
     "qs": "^6.16.0",
     "resend": "^6.19.0",
+    "web-push": "^3.6.7",
     "xss": "^1.0.15"
   },
   "devDependencies": {
