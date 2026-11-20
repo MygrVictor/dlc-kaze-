@@ -2,37 +2,63 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
 
+// Les deux canaux d'annonce des missions aux convoyeurs. Ils se
+// pilotent ensemble : un seul bouton les active ou les coupe tous les deux.
+const CANAUX_ANNONCES = [
+  "/admin/parametres/telegram",
+  "/admin/parametres/notifications",
+];
+
 /**
- * Active / coupe un canal d'annonce des missions aux convoyeurs : le
- * salon Telegram ou les notifications de l'application. Chaque réglage
- * est global et conservé en base ; les deux canaux sont indépendants.
+ * Active / coupe l'annonce des missions aux convoyeurs : salon Telegram et
+ * notifications de l'application, ensemble. Le réglage est conservé en
+ * base. Si les deux canaux divergent (réglés séparément avant), le bouton
+ * l'indique et un clic les réaligne sur « actif ».
  */
-function InterrupteurAnnonces({ url, libelle, Icone, confirmation }) {
-  const [actives, setActives] = useState(null);
+function InterrupteurAnnonces() {
+  const [etats, setEtats] = useState(null);
   const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
-    api
-      .get(url)
-      .then(({ data }) => setActives(Boolean(data.annoncesActives)))
-      .catch(() => setActives(null));
-  }, [url]);
+    Promise.all(CANAUX_ANNONCES.map((url) => api.get(url)))
+      .then((reponses) =>
+        setEtats(reponses.map(({ data }) => Boolean(data.annoncesActives))),
+      )
+      .catch(() => setEtats(null));
+  }, []);
+
+  if (etats === null) return null;
+
+  const toutesActives = etats.every(Boolean);
+  const toutesCoupees = etats.every((e) => !e);
 
   const basculer = async () => {
-    const cible = !actives;
-    if (!cible && !window.confirm(confirmation)) return;
+    const cible = !toutesActives;
+    if (
+      !cible &&
+      !window.confirm(
+        "Couper les annonces ? Les nouvelles missions ne seront plus publiées sur Telegram ni envoyées en notification aux convoyeurs.",
+      )
+    )
+      return;
     setEnCours(true);
     try {
-      const { data } = await api.put(url, { annoncesActives: cible });
-      setActives(Boolean(data.annoncesActives));
+      const reponses = await Promise.all(
+        CANAUX_ANNONCES.map((url) => api.put(url, { annoncesActives: cible })),
+      );
+      setEtats(reponses.map(({ data }) => Boolean(data.annoncesActives)));
     } catch {
-      window.alert(`Impossible de modifier le réglage ${libelle}.`);
+      window.alert("Impossible de modifier le réglage des annonces.");
+      // Relecture : un canal a pu changer et pas l'autre.
+      Promise.all(CANAUX_ANNONCES.map((url) => api.get(url)))
+        .then((r) => setEtats(r.map(({ data }) => Boolean(data.annoncesActives))))
+        .catch(() => {});
     } finally {
       setEnCours(false);
     }
   };
 
-  if (actives === null) return null;
+  const libelle = toutesActives ? "ON" : toutesCoupees ? "OFF" : "PARTIEL";
 
   return (
     <button
@@ -40,20 +66,20 @@ function InterrupteurAnnonces({ url, libelle, Icone, confirmation }) {
       onClick={basculer}
       disabled={enCours}
       title={
-        actives
-          ? `${libelle} : les nouvelles missions sont annoncées — cliquer pour couper`
-          : `${libelle} coupé — cliquer pour réactiver`
+        toutesActives
+          ? "Missions annoncées sur Telegram et dans l'application — cliquer pour couper"
+          : toutesCoupees
+            ? "Annonces coupées (Telegram et application) — cliquer pour réactiver"
+            : "Un seul canal est actif — cliquer pour réactiver les deux"
       }
       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors flex-1 sm:flex-none justify-center ${
-        actives
+        toutesActives
           ? "bg-green-500/10 text-green-400 border-green-500/30 hover:bg-green-500/20"
           : "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20"
       }`}
     >
-      <Icone size={15} />
-      <span>
-        {libelle} {actives ? "ON" : "OFF"}
-      </span>
+      <Send size={15} />
+      <span>Annonces {libelle}</span>
     </button>
   );
 }
@@ -82,7 +108,6 @@ import {
   AlertTriangle,
   Euro,
   Send,
-  Bell,
   X,
   UserCheck,
   Search,
@@ -491,18 +516,7 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2 mt-3 sm:mt-0 w-full sm:w-auto">
-          <InterrupteurAnnonces
-            url="/admin/parametres/telegram"
-            libelle="Telegram"
-            Icone={Send}
-            confirmation="Couper les annonces Telegram ? Les nouvelles missions ne seront plus publiées dans le salon."
-          />
-          <InterrupteurAnnonces
-            url="/admin/parametres/notifications"
-            libelle="Notifs appli"
-            Icone={Bell}
-            confirmation="Couper les notifications de l'application ? Les convoyeurs ne seront plus prévenus sur leur téléphone."
-          />
+          <InterrupteurAnnonces />
           {/* Le formulaire complet remplace l'ancienne fenêtre : c'est
               celui du client, avec les champs propres à l'administration. */}
           <Link

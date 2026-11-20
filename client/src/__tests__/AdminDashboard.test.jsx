@@ -11,7 +11,7 @@ vi.mock("react-hot-toast", () => ({
 }));
 
 vi.mock("../lib/api", () => ({
-  default: { get: vi.fn(), post: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }));
 
 vi.mock("../context/AuthContext", () => ({
@@ -133,5 +133,61 @@ describe("AdminDashboard", () => {
 
     const lignes = await screen.findAllByText(/KZ-4242/);
     expect(lignes.length).toBeGreaterThan(0);
+  });
+
+  it("un seul bouton active ou coupe Telegram et les notifications ensemble", async () => {
+    const reglages = {
+      "/admin/parametres/telegram": true,
+      "/admin/parametres/notifications": true,
+    };
+    const getParDefaut = api.get.getMockImplementation();
+    api.get.mockImplementation((url) =>
+      url in reglages
+        ? Promise.resolve({ data: { annoncesActives: reglages[url] } })
+        : getParDefaut(url),
+    );
+    api.put.mockImplementation((url, corps) =>
+      Promise.resolve({ data: { annoncesActives: corps.annoncesActives } }),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    renderAdmin();
+    const bouton = await screen.findByRole("button", { name: /annonces on/i });
+    expect(screen.queryByRole("button", { name: /telegram on/i })).toBeNull();
+
+    fireEvent.click(bouton);
+
+    await screen.findByRole("button", { name: /annonces off/i });
+    expect(api.put).toHaveBeenCalledWith("/admin/parametres/telegram", {
+      annoncesActives: false,
+    });
+    expect(api.put).toHaveBeenCalledWith("/admin/parametres/notifications", {
+      annoncesActives: false,
+    });
+  });
+
+  it("signale des canaux désalignés et les réactive tous les deux", async () => {
+    const getParDefaut = api.get.getMockImplementation();
+    api.get.mockImplementation((url) => {
+      if (url === "/admin/parametres/telegram")
+        return Promise.resolve({ data: { annoncesActives: true } });
+      if (url === "/admin/parametres/notifications")
+        return Promise.resolve({ data: { annoncesActives: false } });
+      return getParDefaut(url);
+    });
+    api.put.mockImplementation((url, corps) =>
+      Promise.resolve({ data: { annoncesActives: corps.annoncesActives } }),
+    );
+
+    renderAdmin();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /annonces partiel/i }),
+    );
+
+    await screen.findByRole("button", { name: /annonces on/i });
+    expect(api.put).toHaveBeenCalledTimes(2);
+    expect(api.put).toHaveBeenCalledWith("/admin/parametres/notifications", {
+      annoncesActives: true,
+    });
   });
 });
