@@ -3300,9 +3300,9 @@ body:has(.theme-light) {
 }
 .dash .at-statut.at-statut--encours,
 .at-statut--encours {
-  background: #0e7490;
+  background: #c2410c;
   color: #ffffff;
-  border: 1px solid #0e7490;
+  border: 1px solid #c2410c;
 }
 .dash .at-statut.at-statut--fini,
 .at-statut--fini {

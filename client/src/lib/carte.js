@@ -36,7 +36,7 @@ export const PHASES = {
   EN_COURS: {
     label: "En cours",
     aide: "Le convoyeur est en route",
-    color: TEINTES.sarcelle,
+    color: TEINTES.orange,
   },
   TERMINEE: {
     label: "Terminées",

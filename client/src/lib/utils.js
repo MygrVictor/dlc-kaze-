@@ -9,7 +9,7 @@
  *
  *  ambre    : à traiter (le devis à signer en aplat, la cotation en contour)
  *  bleu     : acceptée / assignée — calée, pas encore partie
- *  sarcelle : en cours — le véhicule roule (teal de la charte)
+ *  orange   : en cours — le véhicule roule
  *  vert     : livrée
  *  rouge    : refusée / annulée
  *  gris     : historique sur la carte
@@ -17,7 +17,7 @@
 export const TEINTES = {
   ambre: "#e6b800",
   bleu: "#2f5b94",
-  sarcelle: "#0e7490",
+  orange: "#c2410c",
   vert: "#2f6b55",
   rouge: "#a33a3a",
   gris: "#64748b",

@@ -78,7 +78,7 @@ describe("STATUS_COLORS", () => {
 
   it("n'utilise plus de violet : la palette tient en six teintes mates", () => {
     expect(Object.keys(TEINTES).sort()).toEqual(
-      ["ambre", "bleu", "gris", "rouge", "sarcelle", "vert"].sort(),
+      ["ambre", "bleu", "gris", "orange", "rouge", "vert"].sort(),
     );
   });
 });
