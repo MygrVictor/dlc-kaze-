@@ -40,6 +40,17 @@ pg_dump "$URL_BDD" | gzip > "$FICHIER_SQL"
 echo "→ $FICHIER_SQL ($(du -h "$FICHIER_SQL" | cut -f1))"
 
 etape "Récupération du code"
+# Le banc de test vit sur la branche staging/banc-test et n'est ajouté
+# qu'au staging (scripts/preparer-staging.sh). S'il arrive dans ce qu'on
+# s'apprête à tirer, c'est une fusion par erreur : on refuse avant
+# d'écrire le moindre fichier.
+git fetch --quiet
+if git cat-file -e "@{u}:client/src/pages/StagingTestBench.jsx" 2>/dev/null ||
+   git cat-file -e "@{u}:server/src/utils/staging.js" 2>/dev/null; then
+  echo "✖ La branche à déployer contient le banc de test du staging."
+  echo "  Il ne doit jamais aller en prod : retirez-le de $(git rev-parse --abbrev-ref @{u})."
+  exit 1
+fi
 AVANT="$(git rev-parse HEAD)"
 git pull --ff-only
 
