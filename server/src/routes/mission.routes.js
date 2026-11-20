@@ -127,16 +127,18 @@ router.post(
           : req.user.id;
 
       if (!estAdmin && estParent && clientIdFromBody) {
-        const { rows } = await db.query(
-          `SELECT 1
-             FROM users
-            WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
-          [clientIdFromBody, req.user.id],
-        );
-        if (rows.length === 0) {
-          return res.status(403).json({
-            error: "Ce compte ne fait pas partie de votre groupe.",
-          });
+        if (clientIdFromBody !== req.user.id) {
+          const { rows } = await db.query(
+            `SELECT 1
+               FROM users
+              WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
+            [clientIdFromBody, req.user.id],
+          );
+          if (rows.length === 0) {
+            return res.status(403).json({
+              error: "Ce compte ne fait pas partie de votre groupe.",
+            });
+          }
         }
       }
 
