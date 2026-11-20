@@ -278,6 +278,37 @@ describe("POST /api/missions — création", () => {
     });
   });
 
+  it("autorise un compte parent à créer une mission pour lui-même", async () => {
+    const PARENT = {
+      ...CLIENT,
+      id: "44444444-4444-4444-4444-444444444444",
+      email: "parent@test.com",
+    };
+    let clientIdInsere;
+    mockDb(PARENT, (sql, p) => {
+      if (/SELECT 1 FROM users WHERE parent_id = \$1/i.test(sql))
+        return { rows: [{ "?column?": 1 }] };
+      if (/INSERT INTO missions/i.test(sql)) {
+        clientIdInsere = p[0];
+        return { rows: [{ id: MISSION_ID }] };
+      }
+    });
+
+    const res = await request(app)
+      .post("/api/missions")
+      .set("Authorization", `Bearer ${tokenFor(PARENT)}`)
+      .send(
+        avecPlaque({
+          departureAddress: "Paris",
+          arrivalAddress: "Lyon",
+          clientId: PARENT.id,
+        }),
+      );
+
+    expect(res.status).toBe(201);
+    expect(clientIdInsere).toBe(PARENT.id);
+  });
+
   it("crée une mission au statut EN_ATTENTE_DE_COTATION", async () => {
     mockDb(CLIENT, (sql) => {
       if (/INSERT INTO missions/i.test(sql))
