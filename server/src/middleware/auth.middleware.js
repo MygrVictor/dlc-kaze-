@@ -1,9 +1,11 @@
-const jwt = require("jsonwebtoken");
-const db = require("../db");
 const { extractAuthToken } = require("../lib/auth-cookie");
+const { utilisateurDuJeton } = require("../lib/session");
 
 /**
  * Vérifie le token JWT et attache req.user.
+ *
+ * Un jeton émis avant le dernier changement de mot de passe est refusé
+ * (voir lib/session.js).
  */
 const authenticate = async (req, res, next) => {
   try {
@@ -11,18 +13,13 @@ const authenticate = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ error: "Token manquant." });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const { rows } = await db.query(
-      "SELECT id, email, full_name, phone, role, is_validated, kaze_driver_id, parent_id FROM users WHERE id = $1",
-      [decoded.userId],
-    );
-
-    if (rows.length === 0) {
-      return res.status(401).json({ error: "Utilisateur introuvable." });
+    const user = await utilisateurDuJeton(token);
+    if (!user) {
+      return res.status(401).json({ error: "Token invalide ou expiré." });
     }
 
-    req.user = rows[0];
+    req.user = user;
     next();
   } catch (err) {
     return res.status(401).json({ error: "Token invalide ou expiré." });

@@ -28,12 +28,37 @@ function sanitizeValue(value) {
   return value;
 }
 
+// Secrets transmis tels quels : ils ne sont jamais réaffichés, seulement
+// hachés ou comparés. Les filtrer n'apportait aucune protection et les
+// altérait en silence — « Pa<ss>w0rd! » devenait « Paw0rd! », un espace
+// final disparaissait — affaiblissant le mot de passe réellement stocké.
+const CHAMPS_SECRETS = new Set([
+  "password",
+  "newPassword",
+  "currentPassword",
+  "confirmPassword",
+  "token",
+]);
+
 function sanitizeObject(obj) {
   const clean = {};
   for (const [key, val] of Object.entries(obj)) {
-    clean[key] = sanitizeValue(val);
+    clean[key] =
+      CHAMPS_SECRETS.has(key) && typeof val === "string"
+        ? val
+        : sanitizeValue(val);
   }
   return clean;
+}
+
+/**
+ * Forme qu'avait un mot de passe avant d'être haché, à l'époque où le
+ * filtre XSS s'appliquait aussi aux secrets. Sert uniquement au login,
+ * pour que les comptes créés avant ce changement puissent encore se
+ * connecter (leur hachage est ensuite recalculé sur le mot de passe brut).
+ */
+function ancienneFormeSecret(valeur) {
+  return typeof valeur === "string" ? sanitizeValue(valeur) : valeur;
 }
 
 const sanitizeInputs = (req, _res, next) => {
@@ -216,6 +241,32 @@ const authLimiter = rateLimit({
   },
 });
 
+/**
+ * Candidatures et demandes de rappel publiques.
+ *
+ * Contrairement au login, chaque requête compte, réussie ou non : une
+ * candidature valide transporte jusqu'à cinq fichiers de 8 Mo, et c'est
+ * justement la réussite répétée qui remplirait le disque de l'hébergement
+ * mutualisé et noierait l'équipe sous les faux dossiers.
+ */
+const creerLimiteurCandidature = ({ max = 5, windowMs = 60 * 60 * 1000 } = {}) =>
+  rateLimit({
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      error:
+        "Trop de demandes envoyées depuis cette connexion. Réessayez dans une heure.",
+    },
+  });
+
+// En test, les suites enchaînent des dizaines de candidatures depuis la
+// même adresse : le plafond y est relevé (le limiteur a son propre test).
+const candidatureLimiter = creerLimiteurCandidature({
+  max: process.env.NODE_ENV === "test" ? 10_000 : 5,
+});
+
 const createMissionLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 heure
   max: 30, // 30 missions par heure max
@@ -385,6 +436,9 @@ const detectSuspiciousActivity = (req, res, next) => {
 
 module.exports = {
   sanitizeInputs,
+  ancienneFormeSecret,
+  candidatureLimiter,
+  creerLimiteurCandidature,
   validateUUIDParams,
   bodyTooLarge,
   validatePassword,

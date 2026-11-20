@@ -125,9 +125,16 @@ router.post("/kaze", async (req, res) => {
       }
 
       // 3. Mettre à jour la mission locale
+      //
+      // Une mission livrée ou annulée ne revient pas en arrière : un
+      // événement rejoué (ou arrivé en retard) ne doit pas la faire
+      // repasser « en cours ». La signature HMAC ne protège pas du rejeu
+      // d'un message authentique.
       const result = await db.query(
         `UPDATE missions SET status = $1, updated_at = NOW()
-         WHERE kaze_mission_id = $2 RETURNING id, status, kaze_mission_id`,
+         WHERE kaze_mission_id = $2
+           AND status NOT IN ('LIVREE', 'ANNULEE')
+         RETURNING id, status, kaze_mission_id`,
         [localStatus, kazeMissionId],
       );
 

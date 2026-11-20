@@ -18,6 +18,7 @@
     "migrate:index-tri": "node src/db/migrate-index-tri.js",
     "migrate:missions-internes": "node src/db/migrate-missions-internes.js",
     "migrate:kaze-driver-unique": "node src/db/migrate-kaze-driver-unique.js",
+    "migrate:securite-sessions": "node src/db/migrate-securite-sessions.js",
     "migrate:vitrine": "npm run migrate:demande-poste && npm run migrate:convoyeur-qualif",
     "seed": "node src/db/seed.js",
     "test": "cross-env NODE_ENV=test jest --forceExit",

@@ -271,34 +271,23 @@ const uploadsDir = require("./lib/uploads").RACINE_UPLOADS;
 if (!require("fs").existsSync(uploadsDir))
   require("fs").mkdirSync(uploadsDir, { recursive: true });
 
-const jwt = require("jsonwebtoken");
+const { utilisateurDuJeton } = require("./lib/session");
 const fs = require("fs");
 const db = require("./db");
 
 app.get(/^\/uploads\/(.+)$/, async (req, res) => {
-  let charge;
-  try {
-    const token = extractAuthToken(req);
-
-    if (!token) {
-      return res.status(401).json({ error: "Token manquant." });
-    }
-
-    charge = jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
-    return res.status(401).json({ error: "Token invalide ou expiré." });
+  const token = extractAuthToken(req);
+  if (!token) {
+    return res.status(401).json({ error: "Token manquant." });
   }
 
   try {
-    // Le jeton porte un rôle figé à l'émission : on relit l'utilisateur
-    // pour qu'un compte supprimé ou rétrogradé perde l'accès immédiatement.
-    const { rows: comptes } = await db.query(
-      "SELECT id, role FROM users WHERE id = $1",
-      [charge.userId],
-    );
-    const demandeur = comptes[0];
+    // Même vérification que l'API (lib/session.js) : le compte est relu en
+    // base pour qu'un compte supprimé, rétrogradé ou dont le mot de passe a
+    // changé perde l'accès immédiatement.
+    const demandeur = await utilisateurDuJeton(token);
     if (!demandeur) {
-      return res.status(401).json({ error: "Compte introuvable." });
+      return res.status(401).json({ error: "Token invalide ou expiré." });
     }
 
     const cheminRelatif = `/uploads/${req.params[0]}`;

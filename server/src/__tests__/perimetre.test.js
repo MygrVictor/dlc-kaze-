@@ -140,10 +140,11 @@ describe("estTitulaire", () => {
     await expect(estTitulaire(FILIALE, FILIALE.id)).resolves.toBe(true);
   });
 
-  it("autorise le siège sur les données de son entité", async () => {
+  it("refuse le siège sur les missions de son entité (consulter n'est pas agir)", async () => {
+    // Même si la base confirmait le rattachement, le siège n'est pas titulaire.
     db.query.mockResolvedValue({ rows: [{ "?column?": 1 }] });
 
-    await expect(estTitulaire(SIEGE, "nord")).resolves.toBe(true);
+    await expect(estTitulaire(SIEGE, "nord")).resolves.toBe(false);
   });
 
   it("refuse une entité sur les données de son siège", async () => {

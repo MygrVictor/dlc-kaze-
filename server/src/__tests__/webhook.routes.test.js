@@ -227,6 +227,18 @@ describe("Mapping des statuts Kaze → DLC", () => {
     expect(sql).toMatch(/WHERE kaze_mission_id = \$2/i);
   });
 
+  it("ne fait jamais régresser une mission livrée ou annulée (rejeu)", async () => {
+    db.query.mockResolvedValue({ rows: [] });
+
+    await postSigned(app, {
+      type: "mission.updated",
+      data: { id: "kaze-99", status: "in_progress" },
+    });
+
+    const [sql] = db.query.mock.calls[0];
+    expect(sql).toMatch(/status NOT IN \('LIVREE', 'ANNULEE'\)/);
+  });
+
   it("ignore un statut Kaze inconnu sans écrire en base", async () => {
     const res = await postSigned(app, {
       type: "mission.updated",

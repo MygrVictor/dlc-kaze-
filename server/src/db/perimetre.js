@@ -71,16 +71,10 @@ async function peutConsulter(user, clientId) {
  * droit de vie et de mort sur l'activité de ses filiales.
  */
 async function estTitulaire(user, clientId) {
-  if (!user || !clientId) return false;
-  if (user.id === clientId) return true;
-  if (user.role !== "client") return false;
-
-  const { rows } = await db.query(
-    `SELECT 1 FROM users
-      WHERE id = $1 AND parent_id = $2 AND role = 'client'`,
-    [clientId, user.id],
-  );
-  return rows.length > 0;
+  // Égalité stricte, sans détour par le rattachement : c'était une copie
+  // de `peutConsulter`, qui laissait un siège annuler les missions de
+  // ses entités — exactement ce que cette fonction doit empêcher.
+  return Boolean(user && clientId && user.id === clientId);
 }
 
 module.exports = { perimetreClient, peutConsulter, estTitulaire };

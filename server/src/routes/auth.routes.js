@@ -1,6 +1,5 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
@@ -12,7 +11,10 @@ const {
   isValidMobile,
   auditLog,
   sanitizeInputs,
+  ancienneFormeSecret,
+  candidatureLimiter,
 } = require("../middleware/security.middleware");
+const { signerJeton } = require("../lib/session");
 const emailService = require("../services/email.service");
 const {
   creerLienReinitialisation,
@@ -35,6 +37,13 @@ function resolveJwtExpiresIn() {
   if (/^\d+$/.test(raw)) return `${raw}d`;
   return "7d";
 }
+
+// Verrouillage par compte : le limiteur par IP ne suffit pas face à une
+// attaque répartie sur plusieurs adresses, et ses compteurs, gardés en
+// mémoire, repartent de zéro à chaque redémarrage de Passenger. Le compteur
+// d'échecs vit donc en base, sur le compte visé.
+const ECHECS_AVANT_VERROU = 10;
+const DUREE_VERROU_MINUTES = 15;
 
 // Hachage bcrypt inerte, comparé lorsqu'aucun compte ne correspond à
 // l'email fourni au login. Il n'ouvre aucun accès : sa seule fonction est
@@ -456,7 +465,7 @@ router.post(
 // ══════════════════════════════════════════════════════════════
 router.post(
   "/demande",
-  authLimiter,
+  candidatureLimiter,
   recevoirCandidature,
   // Le nettoyage global des entrées s'exécute avant Multer : en multipart,
   // `req.body` était encore vide à ce moment-là. On le repasse ici, sans
@@ -765,8 +774,56 @@ router.post("/login", authLimiter, async (req, res, next) => {
     }
 
     const user = rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
+
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      auditLog("LOGIN_LOCKED", user.id, {
+        ip: req.ip,
+        email: normalizedEmail,
+      });
+      return res.status(429).json({
+        error: `Trop de tentatives échouées sur ce compte. Réessayez dans ${DUREE_VERROU_MINUTES} minutes ou réinitialisez votre mot de passe.`,
+      });
+    }
+
+    let valid = await bcrypt.compare(password, user.password_hash);
+
+    // Comptes créés quand le filtre XSS s'appliquait aussi aux mots de
+    // passe : leur hachage porte sur la forme filtrée. On l'accepte une
+    // dernière fois, puis on re-hache le mot de passe tel que saisi.
+    const ancienne = ancienneFormeSecret(password);
+    if (!valid && ancienne !== password) {
+      valid = await bcrypt.compare(ancienne, user.password_hash);
+      if (valid) {
+        try {
+          await db.query("UPDATE users SET password_hash = $1 WHERE id = $2", [
+            await bcrypt.hash(password, 12),
+            user.id,
+          ]);
+        } catch (err) {
+          console.error("Re-hachage du mot de passe impossible :", err.message);
+        }
+      }
+    }
+
     if (!valid) {
+      try {
+        await db.query(
+          `UPDATE users SET
+             failed_login_count = CASE
+               WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN 1
+               ELSE failed_login_count + 1 END,
+             locked_until = CASE
+               WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN NULL
+               WHEN failed_login_count + 1 >= $2
+                 THEN NOW() + ($3 || ' minutes')::interval
+               ELSE locked_until END
+           WHERE id = $1`,
+          [user.id, ECHECS_AVANT_VERROU, String(DUREE_VERROU_MINUTES)],
+        );
+      } catch (err) {
+        // Le compteur est une défense de plus, pas une condition du login.
+        console.error("Compteur d'échecs non mis à jour :", err.message);
+      }
       // Audit : tentative échouée (mauvais mot de passe)
       auditLog("LOGIN_FAILED", user.id, {
         ip: req.ip,
@@ -776,13 +833,18 @@ router.post("/login", authLimiter, async (req, res, next) => {
       return res.status(401).json({ error: "Identifiants incorrects." });
     }
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: resolveJwtExpiresIn(),
-      },
-    );
+    if (user.failed_login_count > 0 || user.locked_until) {
+      try {
+        await db.query(
+          "UPDATE users SET failed_login_count = 0, locked_until = NULL WHERE id = $1",
+          [user.id],
+        );
+      } catch (err) {
+        console.error("Remise à zéro du compteur impossible :", err.message);
+      }
+    }
+
+    const token = signerJeton(user, resolveJwtExpiresIn());
 
     // Audit : connexion réussie
     auditLog("LOGIN_SUCCESS", user.id, {
@@ -912,10 +974,17 @@ router.post("/reset-password", authLimiter, async (req, res, next) => {
     // Marquage et changement dans la même transaction : un jeton consommé
     // sans mot de passe changé enfermerait l'utilisateur dehors.
     await db.transaction(async (client) => {
-      await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [
-        hash,
-        demande.user_id,
-      ]);
+      // Incrémenter `token_version` ferme toutes les sessions ouvertes :
+      // c'est souvent parce qu'un compte est compromis qu'on change son
+      // mot de passe. Le verrou anti-bruteforce est levé du même coup.
+      await client.query(
+        `UPDATE users SET password_hash = $1,
+                token_version = token_version + 1,
+                failed_login_count = 0,
+                locked_until = NULL
+          WHERE id = $2`,
+        [hash, demande.user_id],
+      );
       await client.query(
         "UPDATE password_resets SET used_at = NOW() WHERE id = $1",
         [demande.id],
