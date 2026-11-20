@@ -447,7 +447,7 @@ export default function AdminDemandes() {
                 <UserPlus size={20} className="text-primary-400" />
                 {compteCree ? "Compte créé !" : "Créer le compte"}
               </h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setConversion(null)}
                 className="text-dark-400 hover:text-white"
               >
@@ -468,7 +468,7 @@ export default function AdminDemandes() {
                       {compteCree.generatedPassword}
                     </p>
                   </div>
-                  <button
+                  <button aria-label="Copier le mot de passe"
                     onClick={() => copier(compteCree.generatedPassword)}
                     className="p-2 hover:bg-dark-700 rounded-lg text-dark-400 hover:text-white"
                   >

@@ -258,8 +258,21 @@ describe("GET /api/admin/missions", () => {
     await lister("?status=ACCEPTEE&search=Lyon");
 
     const liste = appels.find((a) => !/COUNT/i.test(a.sql));
-    expect(liste.sql).toMatch(/m\.status = \$1 AND \(/);
-    expect(liste.params.slice(0, 2)).toEqual(["ACCEPTEE", "%Lyon%"]);
+    // Le statut est ajouté après la recherche : les compteurs par statut
+    // réutilisent les conditions de recherche sans lui.
+    expect(liste.sql).toMatch(/\) AND m\.status = \$3 /);
+    expect(liste.params.slice(0, 3)).toEqual(["%Lyon%", "%LYON%", "ACCEPTEE"]);
+  });
+
+  it("renvoie les compteurs par statut, sans le filtre de statut", async () => {
+    const appels = mockListe();
+
+    await lister("?status=ACCEPTEE&search=Lyon");
+
+    const compteurs = appels.find((a) => /GROUP BY m\.status/.test(a.sql));
+    expect(compteurs).toBeDefined();
+    expect(compteurs.sql).not.toMatch(/m\.status = \$/);
+    expect(compteurs.params).not.toContain("ACCEPTEE");
   });
 
   it("plafonne la limite à 200", async () => {

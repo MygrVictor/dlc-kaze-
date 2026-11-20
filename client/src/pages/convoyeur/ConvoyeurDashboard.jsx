@@ -117,7 +117,7 @@ export default function ConvoyeurDashboard() {
           <p className="text-dark-400 text-sm mt-1 flex items-center gap-2">
             Vos missions de convoyage assignées
             {source === "kaze" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
                 <Zap size={10} /> Sync Kaze
               </span>
             )}
@@ -298,7 +298,7 @@ export default function ConvoyeurDashboard() {
                           </span>
                         )}
                         {mission.kaze_job_id && (
-                          <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
+                          <span className="text-[11px] text-orange-400 flex items-center gap-0.5">
                             <Cloud size={10} /> Kaze
                           </span>
                         )}
@@ -318,7 +318,7 @@ export default function ConvoyeurDashboard() {
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 mb-3">
                       <div className="flex items-center gap-2 min-w-0">
                         <MapPin size={16} className="text-green-400 shrink-0" />
-                        <p className="font-semibold text-dark-100 text-sm sm:text-base truncate">
+                        <p className="font-semibold text-dark-100 text-sm sm:text-base break-words sm:truncate">
                           {mission.departure_address ||
                             mission.departure?.address ||
                             mission.address ||
@@ -331,7 +331,7 @@ export default function ConvoyeurDashboard() {
                       />
                       <div className="flex items-center gap-2 min-w-0">
                         <MapPin size={16} className="text-red-400 shrink-0" />
-                        <p className="font-semibold text-dark-100 text-sm sm:text-base truncate">
+                        <p className="font-semibold text-dark-100 text-sm sm:text-base break-words sm:truncate">
                           {mission.arrival_address ||
                             mission.arrival?.address ||
                             "—"}
@@ -347,7 +347,7 @@ export default function ConvoyeurDashboard() {
                         {mission.vehicle_model || mission.vehicle?.model || ""}
                       </span>
                       {(mission.vehicle_plate || mission.vehicle?.plate) && (
-                        <span className="text-xs text-dark-400 font-mono px-1.5 py-0.5 bg-dark-800/60 rounded">
+                        <span className="text-xs text-dark-400 font-mono px-1.5 py-0.5 bg-dark-800/60 rounded whitespace-nowrap shrink-0">
                           {mission.vehicle_plate || mission.vehicle?.plate}
                         </span>
                       )}
@@ -531,7 +531,7 @@ export default function ConvoyeurDashboard() {
                         {mission.vehicle_vin && (
                           <div>
                             <span className="text-dark-500">VIN</span>
-                            <p className="text-dark-200 font-mono text-[10px]">
+                            <p className="text-dark-200 font-mono text-[11px]">
                               {mission.vehicle_vin}
                             </p>
                           </div>

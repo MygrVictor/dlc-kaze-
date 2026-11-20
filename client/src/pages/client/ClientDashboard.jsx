@@ -124,6 +124,8 @@ export default function ClientDashboard() {
       ? missions.length
       : missions.filter((m) => statuts.includes(m.status)).length;
 
+  const devisAttendus = compter(["DEVIS_PROPOSE"]);
+
   const actif = FILTRES.find((f) => f.cle === filtre) || FILTRES[0];
   const missionsVisibles =
     actif.statuts === null
@@ -158,7 +160,7 @@ export default function ClientDashboard() {
             Gérez vos demandes de convoyage automobile.
           </p>
         </div>
-        <div className="flex items-center gap-3 mt-4 sm:mt-0">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 mt-4 sm:mt-0 w-full sm:w-auto">
           {accountOptions.length > 1 && (
             <select
               value={
@@ -169,7 +171,7 @@ export default function ClientDashboard() {
                 setSelectedClientId(e.target.value);
                 setLoading(true);
               }}
-              className="input-field min-w-[220px]"
+              className="input-field flex-1 min-w-0 sm:flex-none sm:w-auto sm:min-w-[220px]"
             >
               {accountOptions.map((option) => (
                 <option key={option.id} value={option.id}>
@@ -180,7 +182,7 @@ export default function ClientDashboard() {
           )}
           <Link
             to="/client/nouvelle-mission"
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <PlusCircle size={18} />
             Nouvelle mission
@@ -261,6 +263,26 @@ export default function ClientDashboard() {
         </div>
       )}
 
+      {/* Devis en attente de réponse : la seule action que la plateforme
+          attend du client. Elle ne doit pas se perdre dans la liste. */}
+      {!loading && devisAttendus > 0 && (
+        <button
+          type="button"
+          onClick={() => setFiltre("DEVIS")}
+          className="w-full mb-5 flex items-center gap-3 rounded-xl px-4 py-3 text-left bg-amber/10 border border-amber/40 hover:bg-amber/15 transition-colors"
+        >
+          <span className="at-statut at-statut--action text-xs px-2.5 py-1">
+            {devisAttendus}
+          </span>
+          <span className="flex-1 text-sm font-medium">
+            {devisAttendus === 1
+              ? "Un devis attend votre réponse"
+              : `${devisAttendus} devis attendent votre réponse`}
+          </span>
+          <ArrowRight size={16} className="shrink-0" />
+        </button>
+      )}
+
       {/* Filtres par étape — masqués tant qu'il n'y a rien à trier */}
       {!loading && missions.length > 0 && (
         <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 mb-5 -mx-1 px-1">
@@ -337,16 +359,21 @@ export default function ClientDashboard() {
                       {mission.entite_company || mission.entite_name}
                     </p>
                   )}
-                  <p className="text-dark-500 text-xs mt-1">
-                    Enlèvement souhaité :{" "}
-                    {mission.desired_pickup_date
-                      ? formatDate(mission.desired_pickup_date)
-                      : "—"}
-                    {" • Livraison souhaitée : "}
-                    {mission.desired_delivery_date
-                      ? formatDate(mission.desired_delivery_date)
-                      : "—"}
-                  </p>
+                  {/* Rien plutôt qu'une ligne de tirets : sans date
+                      souhaitée, il n'y a rien à lire. */}
+                  {(mission.desired_pickup_date ||
+                    mission.desired_delivery_date) && (
+                    <p className="text-dark-400 text-xs mt-1">
+                      {[
+                        mission.desired_pickup_date &&
+                          `Enlèvement souhaité : ${formatDate(mission.desired_pickup_date)}`,
+                        mission.desired_delivery_date &&
+                          `Livraison souhaitée : ${formatDate(mission.desired_delivery_date)}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-4">

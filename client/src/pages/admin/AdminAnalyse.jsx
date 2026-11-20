@@ -803,7 +803,7 @@ export default function AdminAnalyse() {
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-dark-500">
+                <span className="text-[11px] text-dark-500">
                   {m.mois.slice(5)}
                 </span>
                 <div className="absolute bottom-full mb-1 hidden group-hover:block bg-dark-900 border border-dark-600 rounded px-2 py-1 text-xs whitespace-nowrap z-10">
@@ -882,7 +882,7 @@ export default function AdminAnalyse() {
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-dark-500">
+                <span className="text-[11px] text-dark-500">
                   {formatterPeriodeLivraison(p.periode, granulariteLivraisons)}
                 </span>
                 <div className="absolute bottom-full mb-1 hidden group-hover:block bg-dark-900 border border-dark-600 rounded px-2 py-1 text-xs whitespace-nowrap z-10">

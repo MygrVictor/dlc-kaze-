@@ -348,7 +348,9 @@ const MODES_PAGE = [
 ];
 
 export default function ClientAnalyse() {
-  const [mode, setMode] = useState("mois");
+  // L'année par défaut : sur un mois, un client qui commande quelques
+  // convoyages par trimestre ouvrait la page sur des zéros partout.
+  const [mode, setMode] = useState("annee");
   const [ref, setRef] = useState(() => new Date());
   const [libre, setLibre] = useState(() => {
     const auj = new Date();

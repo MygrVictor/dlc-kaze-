@@ -23,6 +23,9 @@ export default function MissionsDisponibles() {
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [taking, setTaking] = useState(null);
+  // Distinct de la liste vide : « aucune mission » et « impossible de
+  // savoir » n'appellent pas la même réaction du convoyeur.
+  const [erreur, setErreur] = useState(false);
   // Le serveur refuse la prise tant que les pièces obligatoires ne sont pas
   // déposées ; on récupère son verdict plutôt que de recalculer la règle.
   const [dossier, setDossier] = useState(null);
@@ -39,8 +42,14 @@ export default function MissionsDisponibles() {
     try {
       const { data } = await api.get("/convoyeur/missions-disponibles");
       setMissions(data.missions || data);
+      setErreur(false);
     } catch {
-      toast.error("Erreur lors du chargement des missions");
+      setErreur(true);
+      // Identifiant fixe : le sondage relance la requête chaque minute, un
+      // seul message reste affiché au lieu d'en empiler un par tentative.
+      toast.error("Erreur lors du chargement des missions", {
+        id: "missions-disponibles",
+      });
     } finally {
       setLoading(false);
     }
@@ -122,11 +131,31 @@ export default function MissionsDisponibles() {
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
         </span>
-        Mise à jour automatique toutes les 15 secondes
+        Mise à jour automatique chaque minute
       </div>
 
       {/* Liste des missions */}
-      {missions.length === 0 ? (
+      {erreur && missions.length === 0 ? (
+        <div className="bg-gray-800 rounded-xl p-12 text-center border border-red-500/30">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-200">
+            Impossible de charger les missions
+          </h3>
+          <p className="text-gray-400 mt-2">
+            Vérifiez votre connexion. Nous réessayons automatiquement.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              fetchMissions();
+            }}
+            className="btn-secondary mt-5 inline-flex items-center gap-2"
+          >
+            Réessayer maintenant
+          </button>
+        </div>
+      ) : missions.length === 0 ? (
         <div className="bg-gray-800 rounded-xl p-12 text-center">
           <AlertCircle className="w-12 h-12 text-gray-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-400">
@@ -154,7 +183,7 @@ export default function MissionsDisponibles() {
                 </span>
                 <div className="flex items-center gap-2">
                   {mission.source === "kaze" && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-500/20 text-orange-400">
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/20 text-orange-400">
                       Kaze
                     </span>
                   )}

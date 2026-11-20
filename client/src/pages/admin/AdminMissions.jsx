@@ -185,11 +185,27 @@ function MenuActions({ actions, enCours }) {
   );
 }
 
+/**
+ * Ville d'une adresse postale française (« 12 rue X, 69007 Lyon » → « Lyon »).
+ * À défaut de code postal, le dernier segment de l'adresse.
+ */
+function villeDe(adresse) {
+  const texte = String(adresse || "").trim();
+  if (!texte) return "—";
+  const apresCodePostal = texte.match(/\b\d{5}\s+([^,]+)/);
+  if (apresCodePostal) return apresCodePostal[1].trim();
+  const segments = texte.split(",").map((x) => x.trim()).filter(Boolean);
+  return segments[segments.length - 1] || texte;
+}
+
 export default function AdminMissions({ integre = false } = {}) {
   const [searchParams] = useSearchParams();
   const initialStatus = searchParams.get("status") || "";
 
   const [missions, setMissions] = useState([]);
+  // Compteurs par statut sur la recherche courante (hors filtre de
+  // statut), fournis par l'API : les onglets annoncent ce qu'ils contiennent.
+  const [parStatut, setParStatut] = useState({});
   // Nombre de paires (trajets aller) d'une commande de restitution.
   const nbPaires = (restitutionId) =>
     missions.filter(
@@ -282,6 +298,7 @@ export default function AdminMissions({ integre = false } = {}) {
       .get(`/admin/missions${qs}`)
       .then((res) => {
         setMissions(res.data.missions || []);
+        setParStatut(res.data.parStatut || {});
         const nextPagination = res.data.pagination || {};
         setPagination({
           page: Number(nextPagination.page || page || 1),
@@ -454,6 +471,11 @@ export default function AdminMissions({ integre = false } = {}) {
   );
 
   const dlcCount = dlcMissions.length;
+  // Total sur l'ensemble des statuts (la page chargée n'en montre que 50).
+  const totalDlc =
+    Object.values(parStatut).reduce((a, b) => a + b, 0) ||
+    pagination.total ||
+    dlcCount;
   const kazeOnlyCount = kazeOnlyJobs.length;
 
   // ── Filter merged list ──
@@ -867,8 +889,10 @@ export default function AdminMissions({ integre = false } = {}) {
             <h1 className="text-2xl font-bold">Gestion des missions</h1>
           )}
           <p className="text-dark-400 text-sm mt-1">
-            {dlcCount} DLC + {kazeOnlyCount} Kaze — Visualisez, cotez et
-            assignez les missions de convoyage.
+            {totalDlc} mission
+            {(totalDlc) > 1 ? "s" : ""} DLC
+            {kazeOnlyCount > 0 ? ` + ${kazeOnlyCount} Kaze` : ""} — Visualisez,
+            cotez et assignez les missions de convoyage.
           </p>
         </div>
         <div className="flex items-center gap-2 mt-3 sm:mt-0">
@@ -880,7 +904,7 @@ export default function AdminMissions({ integre = false } = {}) {
               }
               className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/20"
             >
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[11px] text-white">
                 {unreadDocCount > 9 ? "9+" : unreadDocCount}
               </span>
               Nouveau document{unreadDocCount > 1 ? "s" : ""}
@@ -977,8 +1001,13 @@ export default function AdminMissions({ integre = false } = {}) {
       <div className="flex items-center gap-2 mb-4 overflow-x-auto scrollbar-none -mx-1 px-1 pb-1">
         <span className="text-xs text-dark-500 shrink-0">Source :</span>
         {[
-          { value: "all", label: "Toutes", count: allMissions.length },
-          { value: "dlc", label: "DLC", count: dlcCount, color: "primary" },
+          { value: "all", label: "Toutes", count: totalDlc + kazeOnlyCount },
+          {
+            value: "dlc",
+            label: "DLC",
+            count: totalDlc,
+            color: "primary",
+          },
           {
             value: "kaze",
             label: "Kaze",
@@ -1000,7 +1029,7 @@ export default function AdminMissions({ integre = false } = {}) {
             {s.value === "kaze" && <Zap size={10} />}
             {s.label}
             <span
-              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+              className={`text-[11px] px-1.5 py-0.5 rounded-full ${
                 sourceFilter === s.value
                   ? "bg-white/20"
                   : "bg-dark-600 text-dark-300"
@@ -1025,6 +1054,20 @@ export default function AdminMissions({ integre = false } = {}) {
             }`}
           >
             {s ? STATUS_LABELS[s] : "Toutes"}
+            {(() => {
+              const n = s
+                ? parStatut[s] || 0
+                : Object.values(parStatut).reduce((a, b) => a + b, 0);
+              return (
+                <span
+                  className={`ml-1.5 text-[11px] font-bold ${
+                    statusFilter === s ? "text-white/80" : "text-dark-500"
+                  }`}
+                >
+                  {n}
+                </span>
+              );
+            })()}
           </button>
         ))}
       </div>
@@ -1062,55 +1105,49 @@ export default function AdminMissions({ integre = false } = {}) {
               <thead>
                 <tr className="missions-table-head">
                   <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
-                    style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
-                  >
-                    Source
-                  </th>
-                  <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-left py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Trajet
                   </th>
                   <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-left py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Client
                   </th>
                   <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-left py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Véhicule
                   </th>
                   <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-left py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Date
                   </th>
                   <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-left py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Prix
                   </th>
                   <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-left py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Statut
                   </th>
                   <th
-                    className="text-left py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-left py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Convoyeur
                   </th>
                   <th
-                    className="text-right py-3 px-4 !text-white font-medium !bg-[#0e1a3a]"
+                    className="text-right py-3 px-3 !text-white font-medium !bg-[#0e1a3a]"
                     style={{ color: "#ffffff", backgroundColor: "#0e1a3a" }}
                   >
                     Actions
@@ -1125,41 +1162,55 @@ export default function AdminMissions({ integre = false } = {}) {
                     title="Voir le détail de la mission"
                     className="border-b border-dark-800 hover:bg-dark-800/50 transition-colors cursor-pointer"
                   >
-                    <td className="py-3 px-4" data-label="Source">
-                      {m.source === "kaze" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+                    {/* Plus de colonne « Source » : elle répétait « DLC »
+                        sur presque toutes les lignes et poussait Convoyeur
+                        et Actions hors de l'écran. Seule l'exception —
+                        une mission venue de Kaze — est signalée. */}
+                    <td className="py-3 px-3" data-label="Trajet">
+                      {m.source === "kaze" && (
+                        <span className="mb-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20">
                           <Zap size={10} /> Kaze
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20">
-                          DLC
-                        </span>
                       )}
-                    </td>
-                    <td className="py-3 px-4" data-label="Trajet">
-                      <span className="font-medium text-dark-100">
+                      {/* Les villes d'abord : c'est ce qu'on lit en
+                          balayant la liste. Les adresses complètes restent
+                          dessous, sur une ligne, et en entier au survol. */}
+                      <div className="max-w-[12rem]">
+                      <span
+                        className="font-semibold text-dark-100"
+                        title={[m.departure_address, m.arrival_address]
+                          .filter(Boolean)
+                          .join(" → ")}
+                      >
+                        {villeDe(m.departure_address)}
+                        {m.arrival_address
+                          ? ` → ${villeDe(m.arrival_address)}`
+                          : ""}
+                      </span>
+                      <span className="block text-xs text-dark-500 truncate">
                         {m.departure_address}
                         {m.arrival_address ? ` → ${m.arrival_address}` : ""}
                       </span>
+                      </div>
                       {m.restitution_id && (
-                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 align-middle">
+                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 align-middle">
                           Restitution ·{" "}
                           {Number(m.ordre_trajet) === 2 ? "retour" : "aller"}
                         </span>
                       )}
                       {m.is_urgent && (
-                        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/40 align-middle">
+                        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-500/40 align-middle">
                           <AlertTriangle size={10} />
                           URGENT
                         </span>
                       )}
                       {m.kaze_reference && (
-                        <p className="text-[10px] text-orange-400/70 mt-0.5">
+                        <p className="text-[11px] text-orange-400/70 mt-0.5">
                           Réf. {m.kaze_reference}
                         </p>
                       )}
                     </td>
-                    <td className="py-3 px-4" data-label="Client">
+                    <td className="py-3 px-3" data-label="Client">
                       <div>
                         {/* Une mission prise en direct n'a pas de
                           commanditaire enregistré : le signaler vaut
@@ -1179,7 +1230,7 @@ export default function AdminMissions({ integre = false } = {}) {
                       </div>
                     </td>
                     <td
-                      className="py-3 px-4 text-dark-300"
+                      className="py-3 px-3 text-dark-300"
                       data-label="Véhicule"
                     >
                       {/* La plaque prime sur la marque : c'est par elle
@@ -1187,7 +1238,7 @@ export default function AdminMissions({ integre = false } = {}) {
                           308 blanches ne se distinguent que par là. Elle
                           n'était pas affichée du tout sur cet écran. */}
                       {m.vehicle_plate && (
-                        <p className="font-mono text-[13px] tracking-wide text-dark-100 uppercase">
+                        <p className="font-mono text-[13px] tracking-wide text-dark-100 uppercase whitespace-nowrap">
                           {m.vehicle_plate}
                         </p>
                       )}
@@ -1204,18 +1255,21 @@ export default function AdminMissions({ integre = false } = {}) {
                         m.source === "kaze" && <span>—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-dark-400" data-label="Date">
+                    <td
+                      className="py-3 px-3 text-dark-400 whitespace-nowrap"
+                      data-label="Date"
+                    >
                       {formatDate(m.departure_date || m.created_at)}
                     </td>
                     <td
-                      className="price-cell py-3 px-4 font-semibold"
+                      className="price-cell py-3 px-3 font-semibold"
                       data-label="Prix"
                     >
                       {m.price ? (
                         <div>
                           {formatPrice(m.price)}
                           {m.price_convoyeur && (
-                            <p className="price-tag text-[10px] font-normal text-accent-400">
+                            <p className="price-tag text-[11px] font-normal text-accent-400">
                               Conv. {formatPrice(m.price_convoyeur)}
                             </p>
                           )}
@@ -1224,7 +1278,7 @@ export default function AdminMissions({ integre = false } = {}) {
                         <span className="text-dark-500 text-xs">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4" data-label="Statut">
+                    <td className="py-3 px-3" data-label="Statut">
                       <div className="space-y-1">
                         {m.source === "kaze" && m.kaze_status ? (
                           <span
@@ -1239,7 +1293,7 @@ export default function AdminMissions({ integre = false } = {}) {
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4" data-label="Convoyeur">
+                    <td className="py-3 px-3" data-label="Convoyeur">
                       {m.convoyeur_name ? (
                         <span className="flex items-center gap-1.5 text-accent-400 text-xs font-medium">
                           <Truck size={13} />
@@ -1254,7 +1308,7 @@ export default function AdminMissions({ integre = false } = {}) {
                       )}
                     </td>
                     <td
-                      className="py-3 px-4 text-right"
+                      className="py-3 px-3 text-right"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <MenuActions
@@ -1311,7 +1365,7 @@ export default function AdminMissions({ integre = false } = {}) {
                 ))}
                 {displayMissions.length === 0 && (
                   <tr>
-                    <td colSpan="9" className="py-12 text-center text-dark-400">
+                    <td colSpan="8" className="py-12 text-center text-dark-400">
                       Aucune mission trouvée.
                     </td>
                   </tr>
@@ -1380,7 +1434,7 @@ export default function AdminMissions({ integre = false } = {}) {
                   </p>
                 </div>
               </div>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setPriceModal(null)}
                 className="text-dark-400 hover:text-white transition-colors"
               >
@@ -2028,7 +2082,7 @@ export default function AdminMissions({ integre = false } = {}) {
           <div className="relative card w-full max-w-md mx-4 bg-dark-800 border-dark-600">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold">Assigner un convoyeur</h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setAssignModal(null)}
                 className="text-dark-400 hover:text-white transition-colors"
               >

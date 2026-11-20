@@ -108,8 +108,8 @@ describe("AdminUsers", () => {
       expect(screen.getByText("Alice Martin")).toBeInTheDocument(),
     );
 
-    // Cliquer sur le filtre convoyeur
-    const convoyeurBtn = screen.getByRole("button", { name: /^convoyeur$/i });
+    // Cliquer sur le filtre « Convoyeurs »
+    const convoyeurBtn = screen.getByRole("button", { name: /^convoyeurs$/i });
     fireEvent.click(convoyeurBtn);
     await waitFor(() =>
       expect(api.get).toHaveBeenCalledWith(

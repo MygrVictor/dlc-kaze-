@@ -133,7 +133,7 @@ export default function LandingPage() {
             <span style={{ color: "var(--amber)" }}>Notre priorité.</span>
           </h1>
           <p className="hero-sub reveal">
-            Drive Line Connect transfert vos véhicules partout en France et en
+            Drive Line Connect transfère vos véhicules partout en France et en
             Europe. Un interlocuteur unique, des conducteurs formés à nos
             procédures, une assurance et des délais garantis.
           </p>

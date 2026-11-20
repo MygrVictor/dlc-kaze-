@@ -97,13 +97,31 @@ export default function DashboardLayout() {
   // Thème du tableau de bord. Le choix est propre à l'appareil (un même
   // convoyeur peut préférer le clair en plein soleil et le sombre le soir),
   // donc localStorage plutôt qu'une préférence en base.
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("dlc-theme") || "dark",
-  );
+  // Sans choix enregistré, on suit le réglage de l'appareil plutôt que
+  // d'imposer le sombre : un client au bureau, en plein jour, ouvrait un
+  // tableau de bord nocturne.
+  const [theme, setTheme] = useState(() => {
+    try {
+      const enregistre = localStorage.getItem("dlc-theme");
+      if (enregistre) return enregistre;
+    } catch {
+      /* stockage indisponible : on retombe sur le réglage système */
+    }
+    return window.matchMedia?.("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+  });
 
-  useEffect(() => {
-    localStorage.setItem("dlc-theme", theme);
-  }, [theme]);
+  // N'enregistre que le choix explicite de l'utilisateur : persister le
+  // thème déduit figerait le réglage système du jour de la première visite.
+  const basculerTheme = (suivant) => {
+    setTheme(suivant);
+    try {
+      localStorage.setItem("dlc-theme", suivant);
+    } catch {
+      /* stockage indisponible : le choix vaut pour la session */
+    }
+  };
 
   useEffect(() => {
     const ua = navigator?.userAgent || "";
@@ -221,9 +239,7 @@ export default function DashboardLayout() {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative
                 ${
                   isActive
-                    ? theme === "light"
-                      ? "bg-primary-100 text-primary-700 border border-primary-200"
-                      : "bg-primary-600 text-white shadow-lg shadow-primary-600/20"
+                    ? "bg-amber text-navy font-semibold shadow-lg shadow-amber/10"
                     : theme === "light"
                       ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                       : "text-slate-400 hover:text-white hover:bg-slate-800"
@@ -277,7 +293,7 @@ export default function DashboardLayout() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => basculerTheme(theme === "dark" ? "light" : "dark")}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all ${
               theme === "light"
                 ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -361,7 +377,7 @@ export default function DashboardLayout() {
               : "bg-slate-900 border-slate-800 text-slate-100"
           }`}
         >
-          <button
+          <button aria-label="Ouvrir le menu"
             onClick={() => setSidebarOpen(true)}
             className={
               theme === "light"
@@ -375,7 +391,7 @@ export default function DashboardLayout() {
           {/* Le sélecteur de thème vit dans la barre latérale, invisible sur
               mobile tant qu'on ne l'ouvre pas : on le redouble ici. */}
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => basculerTheme(theme === "dark" ? "light" : "dark")}
             aria-label={theme === "dark" ? "Mode clair" : "Mode sombre"}
             className={
               theme === "light"

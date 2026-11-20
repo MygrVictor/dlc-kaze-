@@ -867,7 +867,7 @@ export default function AdminMap() {
                           )}
                           <div className="flex justify-between">
                             <span className="text-dark-500">GPS</span>
-                            <span className="text-dark-700 font-mono text-[10px]">
+                            <span className="text-dark-700 font-mono text-[11px]">
                               {user.latitude?.toFixed(4)},{" "}
                               {user.longitude?.toFixed(4)}
                             </span>

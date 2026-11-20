@@ -13,16 +13,20 @@ export const STATUS_LABELS = {
   ANNULEE: "Annulée",
 };
 
+// Les teintes d'origine (bg-yellow-500/10…) n'ont jamais été visibles :
+// la règle `.dash .badge` d'index.css, plus spécifique qu'un utilitaire
+// Tailwind, les écrasait toutes en gris. Chaque statut reçoit désormais
+// la classe de son « ton » (voir STATUS_TON plus bas), stylée dans
+// index.css pour les deux thèmes.
 export const STATUS_COLORS = {
-  EN_ATTENTE_DE_COTATION:
-    "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  DEVIS_PROPOSE: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  DEVIS_REFUSE: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  ACCEPTEE: "bg-green-500/10 text-green-400 border border-green-500/20",
-  ASSIGNEE: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
-  EN_COURS: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  LIVREE: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-  ANNULEE: "bg-red-500/10 text-red-400 border border-red-500/20",
+  EN_ATTENTE_DE_COTATION: "at-statut at-statut--attente",
+  DEVIS_PROPOSE: "at-statut at-statut--action",
+  DEVIS_REFUSE: "at-statut at-statut--echec",
+  ACCEPTEE: "at-statut at-statut--marche",
+  ASSIGNEE: "at-statut at-statut--marche",
+  EN_COURS: "at-statut at-statut--marche",
+  LIVREE: "at-statut at-statut--fini",
+  ANNULEE: "at-statut at-statut--echec",
 };
 
 /**

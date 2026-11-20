@@ -285,12 +285,6 @@ router.get("/missions", async (req, res, next) => {
     const params = [];
     let paramIdx = 1;
 
-    if (status) {
-      conditions.push(`m.status = $${paramIdx}`);
-      params.push(status);
-      paramIdx += 1;
-    }
-
     // Recherche « intelligente » : chaque mot doit correspondre à au moins
     // un champ (ET entre les mots). Pour la plaque, tirets et espaces sont
     // ignorés : « ab », « AB-1 », « ab12 » trouvent « AB-123-CD ».
@@ -324,6 +318,22 @@ router.get("/missions", async (req, res, next) => {
       conditions.push(`NOT ${conditionMissionDemo("m", "u")}`);
     }
 
+    // Compteurs par statut, calculés sur la recherche courante mais avant
+    // le filtre de statut : ce sont eux qu'affichent les onglets de filtre.
+    const compteursWhere = conditions.length
+      ? ` WHERE ${conditions.join(" AND ")}`
+      : "";
+    const compteursQuery = `SELECT m.status, COUNT(*)::int AS n
+      FROM missions m LEFT JOIN users u ON u.id = m.client_id${compteursWhere}
+      GROUP BY m.status`;
+    const compteursParams = [...params];
+
+    if (status) {
+      conditions.push(`m.status = $${paramIdx}`);
+      params.push(status);
+      paramIdx += 1;
+    }
+
     if (conditions.length > 0) {
       const where = ` WHERE ${conditions.join(" AND ")}`;
       query += where;
@@ -336,14 +346,21 @@ router.get("/missions", async (req, res, next) => {
       : "";
     query += ` ORDER BY ${tri}m.created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
 
-    const [{ rows }, { rows: countRows }] = await Promise.all([
-      db.query(query, [...params, safeLimit, offset]),
-      db.query(countQuery, params),
-    ]);
+    const [{ rows }, { rows: countRows }, resultatCompteurs] =
+      await Promise.all([
+        db.query(query, [...params, safeLimit, offset]),
+        db.query(countQuery, params),
+        db.query(compteursQuery, compteursParams),
+      ]);
 
     const total = parseInt(countRows[0]?.count || "0", 10);
+    const parStatut = {};
+    for (const ligne of resultatCompteurs?.rows || []) {
+      parStatut[ligne.status] = Number(ligne.n) || 0;
+    }
     res.json({
       missions: rows,
+      parStatut,
       pagination: {
         page: safePage,
         limit: safeLimit,

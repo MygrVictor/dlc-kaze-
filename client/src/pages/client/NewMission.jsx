@@ -132,10 +132,29 @@ export default function NewMission() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const estAdmin = user?.role === "admin";
+
+  // Ordre de présentation des étapes. Chaque étape garde son numéro
+  // d'identité (STEPS[n], `etape === n`) ; seul l'ordre de parcours change.
+  //
+  // Le client commence par ce qu'il vient faire — le véhicule et le
+  // trajet — et finit par l'administratif (destinataire du récapitulatif,
+  // bon de commande), au moment d'envoyer. L'ouvrir sur un email à
+  // confirmer donnait l'impression d'un formulaire de plus avant d'entrer
+  // dans le vif du sujet.
+  //
+  // L'administrateur garde l'étape 0 en tête : elle porte le choix du
+  // commanditaire et la rémunération convoyeur, qui conditionnent tout le
+  // reste de sa saisie.
+  const ORDRE_ETAPES = estAdmin ? [0, 1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 0];
+  const etapesAffichees = ORDRE_ETAPES.map((n) =>
+    n === 0 && !estAdmin ? { ...STEPS[0], label: "Envoi" } : STEPS[n],
+  );
   const estParent =
     user?.role === "client" && (user?.child_accounts || []).length > 0;
   const [selectedClientId, setSelectedClientId] = useState(user?.id || "");
+  // Position dans le parcours (0 = première étape affichée).
   const [step, setStep] = useState(0);
+  const etape = ORDRE_ETAPES[step];
   const [loading, setLoading] = useState(false);
 
   // ── Saisie administrative ──────────────────────────────────
@@ -348,7 +367,7 @@ export default function NewMission() {
   const recapEmailValide = emailValide(recapEmail);
 
   const canNext = () => {
-    switch (step) {
+    switch (etape) {
       case 0:
         // L'admin ne reçoit pas de devis : ce qui l'engage, c'est la
         // rémunération annoncée aux convoyeurs.
@@ -601,7 +620,9 @@ export default function NewMission() {
   const [brouillonId, setBrouillonId] = useState(brouillonParam);
   const [enregistrement, setEnregistrement] = useState(false);
   const etatFormulaire = () => ({
-    step,
+    // Identité de l'étape, pas sa position : un brouillon repris après un
+    // changement d'ordre du parcours retombe sur la bonne étape.
+    step: etape,
     selectedClientId,
     clientId,
     recapEmail,
@@ -664,7 +685,8 @@ export default function NewMission() {
         if (d.observations !== undefined) setObservations(d.observations);
         if (d.purchaseOrderNumber !== undefined)
           setPurchaseOrderNumber(d.purchaseOrderNumber);
-        if (Number.isInteger(d.step)) setStep(d.step);
+        if (Number.isInteger(d.step))
+          setStep(Math.max(0, ORDRE_ETAPES.indexOf(d.step)));
         toast.success("Brouillon repris.");
       })
       .catch(() => {
@@ -721,7 +743,7 @@ export default function NewMission() {
 
       {/* Stepper */}
       <div className="flex items-center gap-1 mb-8">
-        {STEPS.map((s, i) => {
+        {etapesAffichees.map((s, i) => {
           const Icon = s.icon;
           const active = i === step;
           const done = i < step;
@@ -741,7 +763,7 @@ export default function NewMission() {
                 <span className="hidden sm:inline">{s.label}</span>
                 <span className="sm:hidden">{i + 1}</span>
               </button>
-              {i < STEPS.length - 1 && (
+              {i < etapesAffichees.length - 1 && (
                 <ChevronRight
                   size={16}
                   className="text-dark-600 mx-1 flex-shrink-0"
@@ -753,7 +775,7 @@ export default function NewMission() {
       </div>
 
       {/* ═══════════ ÉTAPE 1 : RÉCAPITULATIF ═══════════ */}
-      {step === 0 && (
+      {etape === 0 && (
         <div className="space-y-4">
           {/* Saisie administrative : commanditaire et prix, deux
               informations que le client n'a pas à choisir. Carte
@@ -978,7 +1000,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 2 : VÉHICULE ═══════════ */}
-      {step === 1 && (
+      {etape === 1 && (
         <div className="space-y-4">
           <div className="card">
             <label className="flex items-start gap-3 cursor-pointer">
@@ -1347,7 +1369,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 2 : DÉPART ═══════════ */}
-      {step === 2 && (
+      {etape === 2 && (
         <div className="card">
           <div className="flex items-center gap-2 mb-5">
             <MapPin size={20} className="text-green-400" />
@@ -1509,7 +1531,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 3 : LIVRAISON ═══════════ */}
-      {step === 3 && (
+      {etape === 3 && (
         <div className="card">
           <div className="flex items-center gap-2 mb-5">
             <Truck size={20} className="text-blue-400" />
@@ -1807,7 +1829,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 4 : SERVICES / URGENCE ═══════════ */}
-      {step === 4 && (
+      {etape === 4 && (
         <div className="space-y-4">
           {/* Services */}
           <div className="card">
@@ -1932,7 +1954,7 @@ export default function NewMission() {
       )}
 
       {/* ═══════════ ÉTAPE 5 : OBSERVATIONS ═══════════ */}
-      {step === 5 && (
+      {etape === 5 && (
         <div className="card">
           <div className="flex items-center gap-2 mb-5">
             <FileText size={20} className="text-yellow-400" />

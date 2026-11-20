@@ -65,6 +65,18 @@ const eurosMission = (montant) => {
   }).format(Number(montant) || 0);
 };
 
+const LIBELLES_ROLE = {
+  client: "Client",
+  convoyeur: "Convoyeur",
+  admin: "Admin",
+};
+const LIBELLES_ROLE_PLURIEL = {
+  "": "Tous",
+  client: "Clients",
+  convoyeur: "Convoyeurs",
+  admin: "Admins",
+};
+
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -666,7 +678,7 @@ export default function AdminUsers() {
                   : "bg-dark-800 text-dark-400 hover:text-white hover:bg-dark-700"
               }`}
             >
-              {r || "Tous"}
+              {LIBELLES_ROLE_PLURIEL[r]}
             </button>
           ))}
         </div>
@@ -693,20 +705,7 @@ export default function AdminUsers() {
       )}
 
       {!loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <button
-            onClick={openCreateModal}
-            className="card border border-dashed border-primary-500/40 hover:border-primary-400 transition-colors min-h-[220px] flex flex-col items-center justify-center gap-3 text-center"
-          >
-            <div className="w-12 h-12 rounded-full bg-primary-500/15 text-primary-300 flex items-center justify-center">
-              <UserPlus size={24} />
-            </div>
-            <p className="font-semibold text-base">Ajouter un compte</p>
-            <p className="text-sm text-dark-400 max-w-xs">
-              Créer un client ou un convoyeur puis gérer ses factures et
-              documents depuis sa fiche.
-            </p>
-          </button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
 
           {usersFiltres.map((u) => {
             const RoleIcon = roleIcons[u.role] || Users;
@@ -729,7 +728,7 @@ export default function AdminUsers() {
                   </div>
                   <span className={`badge ${roleColors[u.role]} shrink-0`}>
                     <RoleIcon size={12} className="mr-1" />
-                    {u.role}
+                    {LIBELLES_ROLE[u.role] || u.role}
                   </span>
                 </div>
 
@@ -754,17 +753,10 @@ export default function AdminUsers() {
                       <p className="text-dark-200 truncate">{u.phone || "—"}</p>
                     </div>
                   </div>
-                  <div className="user-card__tile rounded-lg bg-dark-800/60 px-3 py-2 sm:col-span-2 flex items-center gap-2.5">
-                    <span className="user-card__ico">
-                      <CalendarDays size={14} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs text-dark-500">Inscrit le</p>
-                      <p className="text-dark-200">
-                        {formatDate(u.created_at)}
-                      </p>
-                    </div>
-                  </div>
+                  <p className="sm:col-span-2 text-xs text-dark-500 flex items-center gap-1.5">
+                    <CalendarDays size={12} />
+                    Inscrit le {formatDate(u.created_at)}
+                  </p>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -904,6 +896,7 @@ export default function AdminUsers() {
                       onClick={() => openEmailModal(u)}
                       className="p-1.5 rounded-lg text-dark-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
                       title="Modifier l'email"
+                      aria-label="Modifier l'email"
                     >
                       <Mail size={15} />
                     </button>
@@ -913,6 +906,7 @@ export default function AdminUsers() {
                       onClick={() => openPhoneModal(u)}
                       className="p-1.5 rounded-lg text-dark-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
                       title="Modifier le téléphone"
+                      aria-label="Modifier le téléphone"
                     >
                       <Phone size={15} />
                     </button>
@@ -923,6 +917,7 @@ export default function AdminUsers() {
                       disabled={envoiReset[u.id]}
                       className="p-1.5 rounded-lg text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all disabled:opacity-50"
                       title="Envoyer un lien de réinitialisation de mot de passe"
+                      aria-label="Envoyer un lien de réinitialisation de mot de passe"
                     >
                       {envoiReset[u.id] ? (
                         <Loader2 size={15} className="animate-spin" />
@@ -934,8 +929,9 @@ export default function AdminUsers() {
                   {u.role !== "admin" && (
                     <button
                       onClick={() => setDeleteModal(u)}
-                      className="p-1.5 rounded-lg text-dark-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                      title="Supprimer"
+                      className="ml-auto pl-3 border-l border-dark-700 p-1.5 rounded-lg text-dark-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      title="Supprimer le compte"
+                      aria-label="Supprimer le compte"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -973,7 +969,7 @@ export default function AdminUsers() {
               <h3 className="text-lg font-semibold">
                 Modifier l'email — {emailModal.full_name}
               </h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setEmailModal(null)}
                 className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
               >
@@ -1023,7 +1019,7 @@ export default function AdminUsers() {
               <h3 className="text-lg font-semibold">
                 Modifier le téléphone — {phoneModal.full_name}
               </h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setPhoneModal(null)}
                 className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
               >
@@ -1073,7 +1069,7 @@ export default function AdminUsers() {
               <h3 className="text-lg font-semibold">
                 Liaison Kaze — {kazeModal.full_name}
               </h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setKazeModal(null)}
                 className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
               >
@@ -1178,7 +1174,7 @@ export default function AdminUsers() {
               <h3 className="text-lg font-semibold">
                 Groupe — {parentModal.full_name}
               </h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setParentModal(null)}
                 className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
               >
@@ -1290,7 +1286,7 @@ export default function AdminUsers() {
                   <p className="font-medium">{deleteModal.full_name}</p>
                   <p className="text-xs text-dark-400">{deleteModal.email}</p>
                   <span
-                    className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded font-medium ${roleColors[deleteModal.role]}`}
+                    className={`inline-block mt-1 text-[11px] px-2 py-0.5 rounded font-medium ${roleColors[deleteModal.role]}`}
                   >
                     {deleteModal.role}
                   </span>
@@ -1343,7 +1339,7 @@ export default function AdminUsers() {
                 <UserPlus size={20} className="text-primary-400" />
                 {createdResult ? "Compte créé !" : "Créer un utilisateur"}
               </h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setCreateModal(false)}
                 className="p-1 hover:bg-dark-700 rounded-lg transition-colors"
               >
@@ -1592,7 +1588,7 @@ export default function AdminUsers() {
                   {profileModal.email}
                 </p>
               </div>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setProfileModal(null)}
                 className="p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-700"
               >
@@ -2161,7 +2157,7 @@ export default function AdminUsers() {
                   Validez ou refusez les pièces justificatives du convoyeur.
                 </p>
               </div>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setDocsModal(null)}
                 className="p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-700 transition-colors"
               >

@@ -33,14 +33,18 @@
   text-shadow: none;
 }
 
+/* Bouton principal : l'ambre de la vitrine, sur texte bleu nuit. C'est
+   la seule teinte vive de l'espace connecté, réservée à l'action
+   principale de chaque écran — comme sur le site, où elle porte les
+   appels à l'action. Le reste garde la palette mate ci-dessus. */
 .dash .btn-primary {
-  background: var(--mat-blue);
-  border-color: var(--mat-blue);
-  color: #fff;
+  background: #ffd11a;
+  border-color: #ffd11a;
+  color: #0b1d3a;
 }
 .dash .btn-primary:hover:not(:disabled) {
-  background: var(--mat-blue-h);
-  border-color: var(--mat-blue-h);
+  background: #e6b800;
+  border-color: #e6b800;
 }
 .dash .btn-success,
 .dash .btn-accent {
@@ -300,6 +304,17 @@ body:has(.theme-light) {
 .dash .dash-sidebar button:hover {
   color: #ffffff;
   background: rgb(255 255 255 / 0.07);
+}
+/* Page courante : repère ambre, comme l'onglet actif du site. */
+.dash .dash-sidebar nav a[class*="bg-amber"] {
+  color: #0b1d3a;
+  background: #ffd11a;
+  border-color: transparent;
+  box-shadow: none;
+}
+.dash .dash-sidebar nav a[class*="bg-amber"] span,
+.dash .dash-sidebar nav a[class*="bg-amber"] svg {
+  color: #0b1d3a;
 }
 .dash .dash-sidebar nav a[class*="bg-primary"] {
   color: #ffffff;

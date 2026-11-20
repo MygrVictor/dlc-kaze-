@@ -226,16 +226,18 @@ export default function MissionDetail() {
           <h1 className="text-2xl font-bold">
             {mission.departure_address} → {mission.arrival_address}
           </h1>
-          <p className="text-dark-400 text-sm mt-1">
-            Enlèvement souhaité :{" "}
-            {mission.desired_pickup_date
-              ? formatDate(mission.desired_pickup_date)
-              : "—"}
-            {" • Livraison souhaitée : "}
-            {mission.desired_delivery_date
-              ? formatDate(mission.desired_delivery_date)
-              : "—"}
-          </p>
+          {(mission.desired_pickup_date || mission.desired_delivery_date) && (
+            <p className="text-dark-400 text-sm mt-1">
+              {[
+                mission.desired_pickup_date &&
+                  `Enlèvement souhaité : ${formatDate(mission.desired_pickup_date)}`,
+                mission.desired_delivery_date &&
+                  `Livraison souhaitée : ${formatDate(mission.desired_delivery_date)}`,
+              ]
+                .filter(Boolean)
+                .join(" • ")}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 mt-3 sm:mt-0">
           <button
@@ -383,7 +385,12 @@ export default function MissionDetail() {
             {mission.departure_contact_phone && (
               <div className="flex items-center gap-2">
                 <Phone size={14} className="text-dark-400" />
-                <span>{mission.departure_contact_phone}</span>
+                <a
+                  href={`tel:${String(mission.departure_contact_phone).replace(/[^\d+]/g, "")}`}
+                  className="hover:underline"
+                >
+                  {mission.departure_contact_phone}
+                </a>
               </div>
             )}
             {mission.departure_instructions && (
@@ -421,7 +428,12 @@ export default function MissionDetail() {
             {mission.arrival_contact_phone && (
               <div className="flex items-center gap-2">
                 <Phone size={14} className="text-dark-400" />
-                <span>{mission.arrival_contact_phone}</span>
+                <a
+                  href={`tel:${String(mission.arrival_contact_phone).replace(/[^\d+]/g, "")}`}
+                  className="hover:underline"
+                >
+                  {mission.arrival_contact_phone}
+                </a>
               </div>
             )}
           </div>
@@ -485,8 +497,17 @@ export default function MissionDetail() {
           </div>
         </div>
 
-        {/* Tarif */}
-        {mission.price && (
+        {/* Tarif — seulement quand aucun bandeau de devis ne l'affiche
+            déjà en tête de page : le même montant deux fois à l'écran
+            fait se demander lequel est le bon. */}
+        {mission.price &&
+          ![
+            "DEVIS_PROPOSE",
+            "ACCEPTEE",
+            "ASSIGNEE",
+            "EN_COURS",
+            "LIVREE",
+          ].includes(mission.status) && (
           <div className="card">
             <div className="flex items-center gap-2 mb-4">
               <Euro size={18} className="text-primary-400" />
@@ -638,7 +659,7 @@ export default function MissionDetail() {
                   <span className="truncate text-slate-700">
                     {documentFile ? documentFile.name : "Choisir un fichier"}
                   </span>
-                  <span className="ml-2 inline-flex items-center rounded-full border border-primary-200 bg-primary-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary-700">
+                  <span className="ml-2 inline-flex items-center rounded-full border border-primary-200 bg-primary-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-700">
                     PDF / JPG
                   </span>
                   <input

@@ -489,8 +489,10 @@ export default function AdminDashboard() {
             className="btn-primary flex items-center gap-2 flex-1 sm:flex-none justify-center text-sm"
           >
             <Plus size={15} />
-            <span className="hidden xs:inline">Nouvelle mission</span>
-            <span className="xs:hidden">Créer</span>
+            {/* `xs:` n'existe pas dans la config Tailwind : la variante
+                longue n'était jamais affichée. Un seul libellé, le même
+                que sur la page Missions. */}
+            <span>Nouvelle mission</span>
           </Link>
           <button
             onClick={() => {
@@ -499,6 +501,8 @@ export default function AdminDashboard() {
               fetchKazeData();
             }}
             disabled={kazeLoading}
+            aria-label="Actualiser"
+            title="Actualiser"
             className="btn-secondary flex items-center gap-2 flex-1 sm:flex-none justify-center text-sm"
           >
             <RefreshCw
@@ -660,7 +664,7 @@ export default function AdminDashboard() {
                     <p className={`text-[11px] font-medium mt-1 ${card.color}`}>
                       {card.label}
                     </p>
-                    <p className="text-[10px] text-dark-500 mt-0.5 hidden sm:block">
+                    <p className="text-[11px] text-dark-500 mt-0.5 hidden sm:block">
                       {card.sublabel}
                     </p>
                   </Link>
@@ -799,7 +803,7 @@ export default function AdminDashboard() {
                 Rechercher
               </button>
               {plateResults !== null && (
-                <button
+                <button aria-label="Effacer la recherche"
                   type="button"
                   onClick={() => {
                     setPlateResults(null);
@@ -972,7 +976,7 @@ export default function AdminDashboard() {
                     <span className="text-xs font-normal bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full">
                       {completed.length}
                     </span>
-                    <span className="text-[10px] font-normal text-dark-500">
+                    <span className="text-[11px] font-normal text-dark-500">
                       (DLC + Kaze)
                     </span>
                   </h3>
@@ -1039,11 +1043,11 @@ export default function AdminDashboard() {
                               >
                                 <td className="py-2.5 pr-3">
                                   {m.source === "kaze" ? (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded">
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded">
                                       <Zap size={10} /> Kaze
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20 px-1.5 py-0.5 rounded">
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20 px-1.5 py-0.5 rounded">
                                       <FileText size={10} /> DLC
                                     </span>
                                   )}
@@ -1052,7 +1056,7 @@ export default function AdminDashboard() {
                                   {m.source === "kaze" ? (
                                     <>
                                       {m.kaze_reference && (
-                                        <span className="font-mono text-[10px] text-orange-400 mr-1">
+                                        <span className="font-mono text-[11px] text-orange-400 mr-1">
                                           #{m.kaze_reference}
                                         </span>
                                       )}
@@ -1285,11 +1289,11 @@ export default function AdminDashboard() {
                               >
                                 <td className="py-2.5 pr-3">
                                   {m.source === "kaze" ? (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded">
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1.5 py-0.5 rounded">
                                       <Zap size={10} /> Kaze
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20 px-1.5 py-0.5 rounded">
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-primary-500/10 text-primary-400 border border-primary-500/20 px-1.5 py-0.5 rounded">
                                       <FileText size={10} /> DLC
                                     </span>
                                   )}
@@ -1298,7 +1302,7 @@ export default function AdminDashboard() {
                                   {m.source === "kaze" ? (
                                     <>
                                       {m.kaze_reference && (
-                                        <span className="font-mono text-[10px] text-orange-400 mr-1">
+                                        <span className="font-mono text-[11px] text-orange-400 mr-1">
                                           #{m.kaze_reference}
                                         </span>
                                       )}
@@ -1521,7 +1525,7 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               </div>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setDetailModal(null)}
                 className="text-dark-400 hover:text-white transition-colors"
               >
@@ -1544,7 +1548,7 @@ export default function AdminDashboard() {
                       <span className="price-tag text-lg font-bold text-primary-400">
                         {formatPrice(detailModal.price)}
                       </span>
-                      <p className="text-[10px] text-dark-500">Prix client</p>
+                      <p className="text-[11px] text-dark-500">Prix client</p>
                     </div>
                     {detailModal.price_convoyeur && (
                       <>
@@ -1553,7 +1557,7 @@ export default function AdminDashboard() {
                           <span className="price-tag text-lg font-bold text-accent-400">
                             {formatPrice(detailModal.price_convoyeur)}
                           </span>
-                          <p className="text-[10px] text-dark-500">
+                          <p className="text-[11px] text-dark-500">
                             Prix convoyeur
                           </p>
                         </div>
@@ -1564,7 +1568,7 @@ export default function AdminDashboard() {
                                 Number(detailModal.price_convoyeur),
                             )}
                           </span>
-                          <p className="text-[10px] text-dark-500">Marge</p>
+                          <p className="text-[11px] text-dark-500">Marge</p>
                         </div>
                       </>
                     )}
@@ -1909,7 +1913,7 @@ export default function AdminDashboard() {
           <div className="relative card w-full max-w-md mx-4 bg-dark-800 border-dark-600">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold">Proposer un prix</h3>
-              <button
+              <button aria-label="Fermer"
                 onClick={() => setPriceModal(null)}
                 className="text-dark-400 hover:text-white"
               >
@@ -2217,7 +2221,7 @@ function ConvoyeursTab({ kazeUsers, kazeLoading, kazeError, onRefresh }) {
                   {user.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="text-[10px] bg-dark-700 text-dark-400 px-1.5 py-0.5 rounded"
+                      className="text-[11px] bg-dark-700 text-dark-400 px-1.5 py-0.5 rounded"
                     >
                       {tag.name || tag}
                     </span>
@@ -2448,7 +2452,7 @@ function UpcomingMissionsTab({
                     {/* Source */}
                     <td className="py-2.5 px-3">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${
                           m.source === "kaze"
                             ? "bg-orange-500/10 text-orange-400"
                             : "bg-primary-500/10 text-primary-400"
@@ -2461,13 +2465,13 @@ function UpcomingMissionsTab({
                     <td className="py-2.5 px-3">
                       {m.source === "kaze" ? (
                         <span
-                          className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${KAZE_STATUS_COLORS[m.kaze_status] || "bg-dark-700 text-dark-300"}`}
+                          className={`inline-flex px-2 py-0.5 rounded text-[11px] font-medium ${KAZE_STATUS_COLORS[m.kaze_status] || "bg-dark-700 text-dark-300"}`}
                         >
                           {KAZE_STATUS_LABELS[m.kaze_status] || m.kaze_status}
                         </span>
                       ) : (
                         <span
-                          className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${STATUS_COLORS[m.status] || "bg-dark-700 text-dark-300"}`}
+                          className={`inline-flex px-2 py-0.5 rounded text-[11px] font-medium ${STATUS_COLORS[m.status] || "bg-dark-700 text-dark-300"}`}
                         >
                           {STATUS_LABELS[m.status] || m.status}
                         </span>
@@ -2482,7 +2486,7 @@ function UpcomingMissionsTab({
                         )}
                       </p>
                       {m.kaze_reference && (
-                        <p className="text-[10px] text-dark-500 font-mono">
+                        <p className="text-[11px] text-dark-500 font-mono">
                           {m.kaze_reference}
                         </p>
                       )}
@@ -2543,7 +2547,7 @@ function UpcomingMissionsTab({
                         {m.source === "dlc" && !m.price && (
                           <button
                             onClick={() => onCoter(m)}
-                            className="text-[10px] px-2 py-1 bg-accent-500/10 text-accent-400 border border-accent-500/20 rounded hover:bg-accent-500/20 transition-colors"
+                            className="text-[11px] px-2 py-1 bg-accent-500/10 text-accent-400 border border-accent-500/20 rounded hover:bg-accent-500/20 transition-colors"
                           >
                             Coter
                           </button>
@@ -2553,7 +2557,7 @@ function UpcomingMissionsTab({
                           !m.convoyeur_id && (
                             <button
                               onClick={() => onAssign(m)}
-                              className="text-[10px] px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded hover:bg-violet-500/20 transition-colors"
+                              className="text-[11px] px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded hover:bg-violet-500/20 transition-colors"
                             >
                               Assigner
                             </button>

@@ -106,13 +106,26 @@ describe("AdminMissions", () => {
     });
   });
 
-  it("affiche le bouton Coter pour les missions EN_ATTENTE_DE_COTATION", async () => {
+  // « Coter » vit dans le menu d'actions de la ligne (bouton « … »).
+  // L'ordre des lignes dépend de la fusion DLC + Kaze : on ouvre les menus
+  // un à un jusqu'à trouver celui de la mission à coter.
+  const ouvrirMenuActions = async () => {
+    const menus = await screen.findAllByRole("button", {
+      name: /actions sur la mission/i,
+    });
+    for (const menu of menus) {
+      fireEvent.click(menu);
+      if (screen.queryByRole("menuitem", { name: /coter la mission/i })) return;
+      fireEvent.click(menu);
+    }
+  };
+
+  it("propose « Coter » pour les missions EN_ATTENTE_DE_COTATION", async () => {
     renderAdminMissions();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /coter/i }),
-      ).toBeInTheDocument(),
-    );
+    await ouvrirMenuActions();
+    expect(
+      await screen.findByRole("menuitem", { name: /coter la mission/i }),
+    ).toBeInTheDocument();
   });
 
   it("affiche le convoyeur assigné", async () => {
@@ -141,9 +154,11 @@ describe("AdminMissions", () => {
 
   it("ouvre la modale de cotation en cliquant sur Coter", async () => {
     renderAdminMissions();
-    await waitFor(() => screen.getByRole("button", { name: /coter/i }));
-    // Le bouton de la ligne ouvre d'abord le détail en lecture seule…
-    fireEvent.click(screen.getByRole("button", { name: /coter/i }));
+    await ouvrirMenuActions();
+    // L'action du menu ouvre d'abord le détail en lecture seule…
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /coter la mission/i }),
+    );
     await waitFor(() =>
       expect(screen.getByText("Détail de la mission")).toBeInTheDocument(),
     );

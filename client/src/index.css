@@ -593,9 +593,7 @@
   color: #f1f5f9;
 }
 
-/* Boutons principaux : bleu du dashboard, pas l'ambre de la vitrine.
-   Seules les couleurs changent : la géométrie (hauteur, rayon, graisse)
-   reste celle définie plus haut pour toute la famille de boutons. */
+/* Boutons principaux : couleurs fixées dans styles-harmonie.css. */
 .dash .btn-primary {
   background: #1d4ed8;
   border-color: #1d4ed8;
@@ -3257,4 +3255,104 @@ body:has(.theme-light) {
 }
 .theme-light [class*="border-white/"]:not([class*="bg-"]) {
   border-color: rgb(15 23 42 / 0.12);
+}
+
+/* ═════════════════════════════════════════════════════════════
+   Statuts de mission — un ton par ce que le statut réclame
+   ═════════════════════════════════════════════════════════════
+   Cinq tons plutôt que huit couleurs : seul le devis à signer
+   (« action ») est plein et contrasté, le reste se lit d'un coup
+   d'œil sans crier. La pastille ::before double la couleur d'un
+   repère de forme, pour qui distingue mal les teintes.
+
+   Placées en fin de fichier : à spécificité égale, elles l'emportent
+   sur `.dash .badge` et `.theme-light .badge`, qui grisaient tout. */
+.at-statut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  border-radius: 9999px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.at-statut::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.dash .at-statut.at-statut--attente,
+.at-statut--attente {
+  background: rgb(148 163 184 / 0.12);
+  color: #cbd5e1;
+  border: 1px dashed rgb(148 163 184 / 0.45);
+}
+.dash .at-statut.at-statut--action,
+.at-statut--action {
+  background: #ffd11a;
+  color: #0b1d3a;
+  border: 1px solid #ffd11a;
+}
+.dash .at-statut.at-statut--marche,
+.at-statut--marche {
+  background: rgb(59 130 246 / 0.14);
+  color: #93c5fd;
+  border: 1px solid rgb(59 130 246 / 0.35);
+}
+.dash .at-statut.at-statut--fini,
+.at-statut--fini {
+  background: rgb(16 185 129 / 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgb(16 185 129 / 0.3);
+}
+.dash .at-statut.at-statut--echec,
+.at-statut--echec {
+  background: rgb(239 68 68 / 0.1);
+  color: #fca5a5;
+  border: 1px solid rgb(239 68 68 / 0.3);
+}
+.dash.theme-light .at-statut.at-statut--attente {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #94a3b8;
+}
+.dash.theme-light .at-statut.at-statut--action {
+  background: #ffd11a;
+  color: #0b1d3a;
+  border-color: #e6b800;
+}
+.dash.theme-light .at-statut.at-statut--marche {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.dash.theme-light .at-statut.at-statut--fini {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+.dash.theme-light .at-statut.at-statut--echec {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   Accessibilité — focus clavier
+   ═════════════════════════════════════════════════════════════
+   Plusieurs règles retirent le contour natif des champs et boutons
+   (`outline: none`). À la souris, c'est sans conséquence ; au clavier,
+   on ne savait plus où l'on se trouvait. `:focus-visible` ne s'affiche
+   que pour la navigation au clavier. */
+.dash a:focus-visible,
+.dash button:focus-visible,
+.dash select:focus-visible,
+.dash input:focus-visible,
+.dash textarea:focus-visible,
+.dash [tabindex]:focus-visible {
+  outline: 2px solid #ffd11a;
+  outline-offset: 2px;
 }

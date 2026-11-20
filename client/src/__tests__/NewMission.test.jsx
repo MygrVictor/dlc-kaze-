@@ -48,15 +48,33 @@ function renderNewMission() {
 /**
  * Affiche le formulaire posé sur l'étape Véhicule.
  *
- * Le parcours s'ouvre désormais sur le choix du destinataire du
- * récapitulatif, pré-rempli avec l'adresse du compte : il suffit de
- * valider pour atteindre la première étape de saisie.
+ * Pour un client, le parcours s'ouvre directement sur le véhicule ; le
+ * destinataire du récapitulatif est demandé à la dernière étape, « Envoi ».
  */
 async function rendreSurEtapeVehicule() {
   const rendu = renderNewMission();
-  fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
   await waitFor(() => screen.getByPlaceholderText("AA-123-BB"));
   return rendu;
+}
+
+/** Remplit le minimum et avance jusqu'à l'étape « Envoi ». */
+async function allerJusquaEnvoi() {
+  await rendreSurEtapeVehicule();
+  await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
+  fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+  await waitFor(() => screen.getByLabelText("Adresse d'enlèvement"));
+  await userEvent.type(screen.getByLabelText("Adresse d'enlèvement"), "Paris");
+  fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+  await waitFor(() => screen.getByLabelText("Adresse de livraison"));
+  await userEvent.type(screen.getByLabelText("Adresse de livraison"), "Lyon");
+  fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+  await waitFor(() => screen.getByText(/gestion documentaire/i));
+  fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+  await waitFor(() => screen.getByRole("button", { name: /suivant/i }));
+  fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
+  await waitFor(() =>
+    screen.getByRole("button", { name: /envoyer la demande/i }),
+  );
 }
 
 describe("NewMission", () => {
@@ -71,8 +89,13 @@ describe("NewMission", () => {
     expect(screen.getByText("Nouvelle mission")).toBeInTheDocument();
   });
 
-  it("pré-remplit le destinataire du récapitulatif avec l'email du compte", () => {
-    renderNewMission();
+  it("ouvre le parcours client sur le véhicule, pas sur l'administratif", async () => {
+    await rendreSurEtapeVehicule();
+    expect(screen.queryByDisplayValue("jean@client.fr")).not.toBeInTheDocument();
+  });
+
+  it("pré-remplit le destinataire du récapitulatif à l'étape Envoi", async () => {
+    await allerJusquaEnvoi();
     expect(screen.getByDisplayValue("jean@client.fr")).toBeInTheDocument();
   });
 
@@ -123,25 +146,7 @@ describe("NewMission", () => {
   });
 
   it("soumet le formulaire apr\u00e8s avoir rempli les \u00e9tapes", async () => {
-    await rendreSurEtapeVehicule();
-    await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByLabelText("Adresse d'enlèvement"));
-    await userEvent.type(
-      screen.getByLabelText("Adresse d'enlèvement"),
-      "Paris",
-    );
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByLabelText("Adresse de livraison"));
-    await userEvent.type(screen.getByLabelText("Adresse de livraison"), "Lyon");
-    // Étape Services / Urgence
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByText(/gestion documentaire/i));
-    // Étape Observations
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() =>
-      screen.getByRole("button", { name: /envoyer la demande/i }),
-    );
+    await allerJusquaEnvoi();
     fireEvent.click(
       screen.getByRole("button", { name: /envoyer la demande/i }),
     );
@@ -153,23 +158,7 @@ describe("NewMission", () => {
   it("transmet le destinataire du récapitulatif dans la requête", async () => {
     // C'est cette adresse que Kaze utilisera pour envoyer le PV, les
     // photos et les réserves à la livraison.
-    await rendreSurEtapeVehicule();
-    await userEvent.type(screen.getByPlaceholderText("AA-123-BB"), "AA-001-BB");
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByLabelText("Adresse d'enlèvement"));
-    await userEvent.type(
-      screen.getByLabelText("Adresse d'enlèvement"),
-      "Paris",
-    );
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByLabelText("Adresse de livraison"));
-    await userEvent.type(screen.getByLabelText("Adresse de livraison"), "Lyon");
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() => screen.getByText(/gestion documentaire/i));
-    fireEvent.click(screen.getByRole("button", { name: /suivant/i }));
-    await waitFor(() =>
-      screen.getByRole("button", { name: /envoyer la demande/i }),
-    );
+    await allerJusquaEnvoi();
     fireEvent.click(
       screen.getByRole("button", { name: /envoyer la demande/i }),
     );
