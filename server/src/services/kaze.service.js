@@ -25,6 +25,7 @@
  * └──────────────────────────────────────────────────┘
  */
 const axios = require("axios");
+const { referenceMission } = require("./reference-mission.service");
 const geocodingService = require("./geocoding.service");
 const { lundiDeLaSemaine } = require("../lib/dates");
 const { libelle: libelleVehicule, classeDePeage } = require("../lib/vehicules");
@@ -949,6 +950,10 @@ const createMission = async (mission) => {
     console.warn(`⚠️ Kaze: erreur géocodage arrivée :`, geoErr.message);
   }
 
+  // Référence R.xxxx, attribuée hors de withRetry : une nouvelle
+  // tentative ne doit pas consommer un second numéro.
+  const ref = await referenceMission(mission);
+
   return withRetry(
     async () => {
       // 1. Charger le template
@@ -956,7 +961,6 @@ const createMission = async (mission) => {
       const workflow = JSON.parse(JSON.stringify(template.workflow)); // deep clone
 
       const title = `Livraison ${mission.vehicle_plate || "N/A"}`;
-      const ref = `DLC-${mission.id.substring(0, 8).toUpperCase()}`;
 
       // Règle métier : toute mission Kaze est datée du lundi de la semaine en
       // cours, quelle que soit la date stockée en base. La date souhaitée par

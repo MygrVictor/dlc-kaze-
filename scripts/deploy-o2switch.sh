@@ -126,6 +126,7 @@ node server/src/db/migrate-kaze-driver-unique.js
 node server/src/db/migrate-telegram-messages.js
 node server/src/db/migrate-securite-sessions.js
 node server/src/db/migrate-notifications-push.js
+node server/src/db/migrate-reference-missions.js
 
 etape "Vérification du démarrage"
 # On lance l'application quelques secondes : mieux vaut détecter ici un module

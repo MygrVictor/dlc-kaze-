@@ -20,6 +20,7 @@
     "migrate:kaze-driver-unique": "node src/db/migrate-kaze-driver-unique.js",
     "migrate:securite-sessions": "node src/db/migrate-securite-sessions.js",
     "migrate:notifications-push": "node src/db/migrate-notifications-push.js",
+    "migrate:reference-missions": "node src/db/migrate-reference-missions.js",
     "migrate:vitrine": "npm run migrate:demande-poste && npm run migrate:convoyeur-qualif",
     "seed": "node src/db/seed.js",
     "test": "cross-env NODE_ENV=test jest --forceExit",
