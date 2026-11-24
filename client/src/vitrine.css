@@ -1,0 +1,401 @@
+/* ══════════════════════════════════════════════════
+   Vitrine — mouvement
+
+   Même charte (asphalte, marine, crème, ambre ; Bebas Neue, Inter,
+   JetBrains Mono). Une idée porte la page : un trajet. La route qui suit
+   le visiteur (RouteDefilement) relie les repères « KM … » déjà présents ;
+   le reste du mouvement reste discret et sert à lire :
+
+     - à l'ouverture, une seule séquence orchestrée (le titre, puis le reste) ;
+     - le fond du hero respire lentement et se décale à peine au défilement ;
+     - les icônes se tracent, les repères s'annoncent, les barres s'allongent.
+
+   Tout état de départ « caché » est déclaré sous `no-preference` : avec
+   `prefers-reduced-motion`, la page s'affiche telle quelle, sans attente.
+   ══════════════════════════════════════════════════ */
+
+/* ── La route ───────────────────────────────────── */
+.route {
+  position: fixed;
+  z-index: 90;
+  pointer-events: none;
+  --p: 0;
+}
+.route__piste,
+.route__fait {
+  position: absolute;
+}
+.route__repere {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--asphalt);
+  border: 2px solid var(--amber-deep);
+  transform: translate(-50%, -50%);
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
+}
+.route__repere--atteint {
+  background: var(--amber);
+  box-shadow: 0 0 0 4px rgba(255, 209, 26, 0.28);
+}
+.route__voiture {
+  position: absolute;
+  display: flex;
+  align-items: center;
+}
+.route__voiture svg {
+  display: block;
+  flex-shrink: 0;
+}
+.route__km {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+  background: var(--asphalt);
+  border-radius: 4px;
+  padding: 3px 7px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.route__km b {
+  font-weight: 600;
+}
+
+/* Petit écran et tablette : une piste fine sous la barre de navigation. */
+.route {
+  /* 8 px sous l'en-tête : la voiture et les repères, plus hauts que la
+     piste, ne passent pas à moitié derrière lui. */
+  top: calc(var(--nav-h) + 8px);
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+.route__piste {
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(230, 184, 0, 0.55) 0 8px,
+    transparent 8px 16px
+  );
+}
+.route__fait {
+  inset: 0;
+  background: var(--amber-deep);
+  transform-origin: left;
+  transform: scaleX(var(--p));
+}
+.route__repere {
+  top: 50%;
+  left: calc(var(--at) * 100%);
+}
+.route__voiture {
+  top: 50%;
+  /* Marge de 16 px : la voiture ne reste pas à moitié hors de l'écran
+     aux deux extrémités. */
+  left: calc(16px + (100% - 32px) * var(--p));
+  transform: translate(-50%, -50%);
+  flex-direction: row-reverse;
+  gap: 6px;
+}
+.route__voiture svg {
+  transform: rotate(-90deg);
+}
+.route__km {
+  display: none;
+  position: absolute;
+  right: 100%;
+  margin-right: 8px;
+}
+@media (min-width: 768px) {
+  .route__km {
+    display: block;
+  }
+  /* Le compteur reste dans la piste de la voiture : à gauche d'elle, il
+     ne sort jamais de l'écran en fin de page. */
+  .route__voiture {
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Grand écran : la route passe dans la marge gauche, sur toute la hauteur
+   visible. Sous 1440 px la marge est trop étroite pour porter le compteur. */
+@media (min-width: 1440px) {
+  .route {
+    top: calc(var(--nav-h) + 32px);
+    bottom: 32px;
+    left: 30px;
+    right: auto;
+    width: 2px;
+    height: auto;
+  }
+  .route__piste {
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(230, 184, 0, 0.55) 0 8px,
+      transparent 8px 16px
+    );
+  }
+  .route__fait {
+    transform-origin: top;
+    transform: scaleY(var(--p));
+  }
+  .route__repere {
+    left: 50%;
+    top: calc(var(--at) * 100%);
+  }
+  .route__voiture {
+    left: 50%;
+    top: calc(var(--p) * 100%);
+    flex-direction: row;
+  }
+  .route__voiture svg {
+    transform: none;
+  }
+  .route__km {
+    position: absolute;
+    left: 100%;
+    right: auto;
+    margin: 0 0 0 10px;
+  }
+}
+
+/* ── Hero : fond vivant ─────────────────────────── */
+.vitrine .hero-fond {
+  position: absolute;
+  inset: -20% 0 0 0;
+  z-index: 0;
+  transform: translate3d(0, calc(var(--sy, 0) * 0.18px), 0);
+  will-change: transform;
+}
+.vitrine .hero-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: opacity 1.2s ease;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .hero-slide {
+    animation: souffle 16s ease-in-out infinite alternate;
+  }
+}
+@keyframes souffle {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+/* Marquage au sol : les tirets défilent sous le hero. */
+.vitrine .hero-route {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  background: #0c0e14;
+  z-index: 3;
+}
+.vitrine .hero-route::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--amber) 0 26px,
+    transparent 26px 52px
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .hero-route::before {
+    animation: defile-route 1.1s linear infinite;
+  }
+}
+@keyframes defile-route {
+  to {
+    background-position: -52px 0;
+  }
+}
+
+/* ── Hero : séquence d'ouverture ────────────────── */
+.vitrine .hero-ligne {
+  display: block;
+  overflow: hidden;
+  /* Les jambages et l'accent d'une capitale ne doivent pas être rognés
+     par le masque qui sert à faire monter la ligne. */
+  padding: 0.04em 0 0.08em;
+  margin: -0.04em 0 -0.08em;
+}
+.vitrine .hero-ligne > span {
+  display: block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .hero-ligne > span {
+    transform: translateY(108%);
+    animation: monte 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: var(--d, 0s);
+  }
+  .vitrine .entree {
+    opacity: 0;
+    animation: entree 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: var(--d, 0s);
+  }
+  .vitrine .eyebrow.entree {
+    animation-name: repere-entre;
+    animation-duration: 1.1s;
+  }
+}
+@keyframes monte {
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes entree {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Le repère se resserre en apparaissant, comme une borne qui se met au
+   point. */
+@keyframes repere-entre {
+  from {
+    opacity: 0;
+    letter-spacing: 0.55em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.3em;
+  }
+}
+
+/* ── Boutons ────────────────────────────────────── */
+.vitrine .btn-primary > svg,
+.vitrine .btn-outline > svg {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vitrine .btn-primary:hover > svg {
+  transform: translateX(5px);
+}
+.vitrine .btn-outline:hover > svg {
+  transform: rotate(-12deg) scale(1.08);
+}
+
+/* ── Titres de section : la barre s'allonge ─────── */
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .section-head .rule {
+    transform: scaleX(0);
+    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.25s;
+  }
+  .vitrine .section-head.in .rule {
+    transform: scaleX(1);
+  }
+
+  /* Le repère kilométrique s'annonce : un anneau part du cercle. */
+  .vitrine .waypoint-label.in .waypoint::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 2px solid var(--amber);
+    animation: borne 1.5s ease-out 0.3s 1 both;
+  }
+}
+@keyframes borne {
+  from {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+/* ── Les quatre repères : l'icône se trace ──────── */
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .services-repere__icone path {
+    stroke-dasharray: 1 1.02;
+    stroke-dashoffset: 1;
+  }
+  .vitrine .services-reperes.in .services-repere__icone path {
+    animation: trace 1.1s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+  }
+  .vitrine .services-reperes.in .services-repere:nth-child(2) path {
+    animation-delay: 0.12s;
+  }
+  .vitrine .services-reperes.in .services-repere:nth-child(3) path {
+    animation-delay: 0.24s;
+  }
+  .vitrine .services-reperes.in .services-repere:nth-child(4) path {
+    animation-delay: 0.36s;
+  }
+}
+@keyframes trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Cartes de prestation ───────────────────────── */
+.vitrine .service-card {
+  position: relative;
+  overflow: hidden;
+}
+.vitrine .service-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--amber);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vitrine .service-card:hover::before,
+.vitrine .service-card:focus-within::before {
+  transform: scaleY(1);
+}
+.vitrine .service-card .icon-roundel {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vitrine .service-card:hover .icon-roundel {
+  transform: rotate(-6deg) scale(1.07);
+}
+
+/* ── Avis : les étoiles se remplissent ──────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .temoignage-etoiles {
+    clip-path: inset(0 100% 0 0);
+  }
+  .vitrine .temoignages.in .temoignage-etoiles {
+    animation: etoiles 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.35s forwards;
+  }
+  .vitrine .temoignages.in .temoignage:nth-child(2) .temoignage-etoiles {
+    animation-delay: 0.5s;
+  }
+  .vitrine .temoignages.in .temoignage:nth-child(3) .temoignage-etoiles {
+    animation-delay: 0.65s;
+  }
+}
+@keyframes etoiles {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}

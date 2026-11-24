@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import BandeauClients from "../components/BandeauClients";
 import SectionChiffres from "../components/SectionChiffres";
 import Compteur from "../components/Compteur";
+import RouteDefilement from "../components/RouteDefilement";
+import "../vitrine.css";
 
 function useReveal() {
   useEffect(() => {
@@ -49,29 +51,27 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <>
+    <div className="vitrine">
+      <RouteDefilement />
       {/* ── HERO ──────────────────────────────── */}
       <section
         className="hero"
         style={{ position: "relative", overflow: "hidden" }}
       >
-        {/* Carousel slides in background */}
-        {HERO_IMGS.map((src, i) => (
-          <div
-            key={src}
-            style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: `url(${src})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              opacity: i === slide ? 0.52 : 0,
-              transition: "opacity 1.2s ease",
-              zIndex: 0,
-            }}
-            aria-hidden="true"
-          />
-        ))}
+        {/* Fond du hero : les photos défilent, respirent lentement et se
+            décalent à peine quand on défile (voir vitrine.css). */}
+        <div className="hero-fond" aria-hidden="true">
+          {HERO_IMGS.map((src, i) => (
+            <div
+              key={src}
+              className="hero-slide"
+              style={{
+                backgroundImage: `url(${src})`,
+                opacity: i === slide ? 0.52 : 0,
+              }}
+            />
+          ))}
+        </div>
         {/* Gradient overlay so text stays readable */}
         <div
           style={{
@@ -83,6 +83,7 @@ export default function LandingPage() {
           }}
           aria-hidden="true"
         />
+        <div className="hero-route" aria-hidden="true" />
         {/* Dots indicator */}
         <div
           style={{
@@ -116,11 +117,11 @@ export default function LandingPage() {
         </div>
         {/* Content above carousel */}
         <div className="hero-inner" style={{ position: "relative", zIndex: 2 }}>
-          <div className="eyebrow reveal">
+          <div className="eyebrow entree" style={{ "--d": "0.1s" }}>
             CONVOYAGE DE VÉHICULES · FRANCE &amp; EUROPE
           </div>
           <h1
-            className="display reveal"
+            className="display"
             style={{
               fontSize: "clamp(52px,8vw,96px)",
               textTransform: "uppercase",
@@ -128,16 +129,21 @@ export default function LandingPage() {
               marginBottom: 26,
             }}
           >
-            Votre mobilité.
-            <br />
-            <span style={{ color: "var(--amber)" }}>Notre priorité.</span>
+            <span className="hero-ligne">
+              <span style={{ "--d": "0.25s" }}>Votre mobilité.</span>
+            </span>
+            <span className="hero-ligne">
+              <span style={{ color: "var(--amber)", "--d": "0.42s" }}>
+                Notre priorité.
+              </span>
+            </span>
           </h1>
-          <p className="hero-sub reveal">
+          <p className="hero-sub entree" style={{ "--d": "0.85s" }}>
             Drive Line Connect transfère vos véhicules partout en France et en
             Europe. Un interlocuteur unique, des conducteurs formés à nos
             procédures, une assurance et des délais garantis.
           </p>
-          <div className="hero-ctas reveal">
+          <div className="hero-ctas entree" style={{ "--d": "1s" }}>
             <a href="#solutions" className="btn-primary">
               Découvrez nos solutions
               <svg
@@ -167,10 +173,10 @@ export default function LandingPage() {
               Faites-vous rappeler
             </Link>
           </div>
-          <p className="hero-note reveal">
+          <p className="hero-note entree" style={{ "--d": "1.1s" }}>
             Rappel garanti sous 48 heures ouvrées par un expert convoyage.
           </p>
-          <div className="stat-strip reveal">
+          <div className="stat-strip entree" style={{ "--d": "1.2s" }}>
             <div className="stat">
               <Compteur className="num" valeur={50} suffixe="+" />
               <div className="label">chauffeurs partenaires</div>
@@ -198,7 +204,7 @@ export default function LandingPage() {
         style={{ background: "var(--cream)", padding: "60px 32px 96px" }}
       >
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <div className="waypoint-label reveal">
+          <div className="waypoint-label reveal" data-km="0">
             <div className="waypoint">
               <svg
                 viewBox="0 0 24 24"
@@ -268,7 +274,7 @@ export default function LandingPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d={r.path} />
+                    <path d={r.path} pathLength="1" />
                   </svg>
                 </span>
                 <div>
@@ -491,7 +497,7 @@ export default function LandingPage() {
         style={{ background: "var(--cream-2)", padding: "60px 32px 96px" }}
       >
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <div className="waypoint-label reveal">
+          <div className="waypoint-label reveal" data-km="250">
             <div className="waypoint">
               <svg
                 viewBox="0 0 24 24"
@@ -655,7 +661,7 @@ export default function LandingPage() {
         style={{ padding: "60px 32px 96px" }}
       >
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <div className="waypoint-label reveal">
+          <div className="waypoint-label reveal" data-km="340">
             <div
               className="waypoint"
               style={{ background: "var(--amber)", borderColor: "white" }}
@@ -718,6 +724,6 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
-    </>
+    </div>
   );
 }
