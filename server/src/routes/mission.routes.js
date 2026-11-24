@@ -1434,7 +1434,11 @@ router.post("/:id/accepter", authorize("client"), async (req, res, next) => {
         let kazeMissionId = null;
         try {
           if (!(await isDemoMission(db, m))) {
-            const kazeResponse = await kazeService.createMission(m);
+            // `client` : la ligne est verrouillée par cette transaction ;
+            // la référence R.xxxx doit s'écrire par la même connexion.
+            const kazeResponse = await kazeService.createMission(m, {
+              executeur: client,
+            });
             kazeMissionId = kazeResponse.id || kazeResponse.mission_id;
 
             await client.query(

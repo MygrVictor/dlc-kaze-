@@ -1293,6 +1293,11 @@ describe("POST /api/missions/:id/accepter", () => {
       kazeMissionId: "kaze-job-1",
     });
     expect(kazeService.createMission).toHaveBeenCalled();
+    // La mission est verrouillée par la transaction : Kaze (et la
+    // référence R.xxxx) doivent passer par la même connexion, sinon
+    // l'acceptation attend son propre verrou sans fin (24/11/2026).
+    const [, options] = kazeService.createMission.mock.calls[0];
+    expect(typeof options?.executeur?.query).toBe("function");
     const passage = queries.find((q) => /SET status = \$1/i.test(q.sql));
     expect(passage?.params?.[0]).toBe("ACCEPTEE");
     expect(queries.some((q) => /SET kaze_mission_id/i.test(q.sql))).toBe(true);

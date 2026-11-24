@@ -66,3 +66,43 @@ test("revient à l'ancienne référence si la base ne répond pas", async () => 
   db.query.mockRejectedValue(new Error("connexion perdue"));
   await expect(referenceMission(MISSION)).resolves.toBe("DLC-AAAAAAAA");
 });
+
+describe("dans la transaction d'acceptation du devis", () => {
+  // Régression du 24/11/2026 : la ligne de la mission est verrouillée
+  // (FOR UPDATE) par la transaction. Écrire la référence par une autre
+  // connexion attendait ce verrou indéfiniment : le devis ne se validait
+  // plus. Tout doit passer par la connexion de la transaction.
+  test("passe uniquement par la connexion fournie, dans un point de sauvegarde", async () => {
+    const requetes = [];
+    const transaction = {
+      query: jest.fn(async (sql, params) => {
+        requetes.push(sql.trim().split(/\s+/).slice(0, 3).join(" "));
+        if (/nextval/i.test(sql)) return { rows: [{ numero: "2890" }] };
+        if (/^UPDATE/i.test(sql.trim()))
+          return { rows: [{ kaze_reference: params[0] }] };
+        return { rows: [] };
+      }),
+    };
+
+    await expect(referenceMission(MISSION, transaction)).resolves.toBe("R.2890");
+    expect(db.query).not.toHaveBeenCalled();
+    expect(requetes[0]).toBe("SAVEPOINT reference_mission");
+    expect(requetes[requetes.length - 1]).toBe("RELEASE SAVEPOINT reference_mission");
+  });
+
+  test("une erreur n'annule pas la transaction : retour au point de sauvegarde", async () => {
+    const transaction = {
+      query: jest.fn(async (sql) => {
+        if (/nextval/i.test(sql)) throw new Error("la séquence n'existe pas");
+        return { rows: [] };
+      }),
+    };
+
+    await expect(referenceMission(MISSION, transaction)).resolves.toBe(
+      "DLC-AAAAAAAA",
+    );
+    expect(transaction.query).toHaveBeenCalledWith(
+      "ROLLBACK TO SAVEPOINT reference_mission",
+    );
+  });
+});

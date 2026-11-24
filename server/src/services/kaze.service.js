@@ -894,7 +894,13 @@ function formatDateSlot(date) {
  * @param {Object} mission - Ligne de la table `missions` (PostgreSQL)
  * @returns {Object} { id: "uuid-kaze" }
  */
-const createMission = async (mission) => {
+/**
+ * @param {Object} [options]
+ * @param {{query: Function}} [options.executeur] connexion de la
+ *   transaction appelante, si elle a verrouillé la mission (voir
+ *   reference-mission.service).
+ */
+const createMission = async (mission, { executeur } = {}) => {
   // Email du client : utilisé pour le récap de fin de mission envoyé
   // automatiquement par Kaze à la signature de livraison.
   if (!mission.client_email && mission.client_id) {
@@ -952,7 +958,7 @@ const createMission = async (mission) => {
 
   // Référence R.xxxx, attribuée hors de withRetry : une nouvelle
   // tentative ne doit pas consommer un second numéro.
-  const ref = await referenceMission(mission);
+  const ref = await referenceMission(mission, executeur);
 
   return withRetry(
     async () => {
