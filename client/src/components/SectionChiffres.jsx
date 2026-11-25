@@ -1,4 +1,5 @@
 import Odometre from "./Odometre";
+import CarteCouverture, { TRAJETS } from "./CarteCouverture";
 import { TrendingUp, MapPin, Clock, ShieldCheck } from "lucide-react";
 
 /**
@@ -9,32 +10,11 @@ import { TrendingUp, MapPin, Clock, ShieldCheck } from "lucide-react";
  * donc les affirmations qualitatives par des données vérifiables — volume,
  * couverture, délais — présentées de façon à être saisies en un coup d'œil.
  *
- * Les graphiques sont construits en CSS plutôt qu'avec une bibliothèque :
- * quatre barres et un histogramme ne justifient pas d'alourdir le bundle
- * d'une page d'accueil, dont le temps de chargement est lui-même un
- * argument commercial.
+ * Les graphiques sont construits en CSS et en SVG plutôt qu'avec une
+ * bibliothèque : une carte en points et quatre barres ne justifient pas
+ * d'alourdir le bundle d'une page d'accueil, dont le temps de chargement
+ * est lui-même un argument commercial.
  */
-
-/**
- * Empreinte carbone par véhicule déplacé, en kilogrammes de CO₂.
- *
- * Nos donneurs d'ordre publient un reporting extra-financier et arbitrent
- * de plus en plus leurs prestataires sur ce critère. Or un camion
- * porte-véhicules consomme pour huit véhicules ce qu'une conduite
- * consomme pour un seul, et parcourt souvent à vide la moitié de sa
- * tournée : rapportée à l'unité transportée, la conduite l'emporte.
- *
- * Méthode : consommation réelle du véhicule convoyé pour la route ;
- * pour le plateau, consommation du porte-8 divisée par son taux de
- * remplissage moyen, retours à vide inclus. Facteur 2,51 kg CO₂/L
- * (gazole, base ADEME).
- */
-const EMPREINTE_CARBONE = [
-  { trajet: "Paris – Lyon", route: 62, plateau: 91 },
-  { trajet: "Lille – Bordeaux", route: 108, plateau: 154 },
-  { trajet: "Lyon – Marseille", route: 46, plateau: 68 },
-  { trajet: "Paris – Bruxelles", route: 44, plateau: 66 },
-];
 
 /** Catégories de véhicules prises en charge. */
 const REPARTITION = [
@@ -72,18 +52,6 @@ const CHIFFRES = [
 ];
 
 export default function SectionChiffres() {
-  const maxCarbone = Math.max(...EMPREINTE_CARBONE.map((c) => c.plateau));
-  // Économie moyenne, calculée plutôt qu'écrite en dur : le badge reste
-  // juste si l'on corrige une ligne du tableau.
-  const economieMoyenne = Math.round(
-    (EMPREINTE_CARBONE.reduce(
-      (t, c) => t + (c.plateau - c.route) / c.plateau,
-      0,
-    ) /
-      EMPREINTE_CARBONE.length) *
-      100,
-  );
-
   return (
     <section id="chiffres" className="chiffres-section">
       <div className="chiffres__contenu">
@@ -129,7 +97,7 @@ export default function SectionChiffres() {
 
         {/* ── Chiffres clés ── */}
         <div className="chiffres-grid">
-          {CHIFFRES.map(({ Icone, valeur, suffixe, label, detail }) => (
+          {CHIFFRES.map(({ Icone, valeur, suffixe, label }) => (
             <div className="chiffre-carte reveal" key={label}>
               <span className="chiffre-icone">
                 <Icone size={20} />
@@ -141,7 +109,6 @@ export default function SectionChiffres() {
                 tuiles
               />
               <div className="chiffre-label">{label}</div>
-              <div className="chiffre-detail">{detail}</div>
             </div>
           ))}
         </div>
@@ -150,53 +117,21 @@ export default function SectionChiffres() {
         <div className="chiffres-graphes">
           <div className="graphe-carte reveal">
             <div className="graphe-entete">
-              <h3>Empreinte carbone par véhicule</h3>
-              <span className="graphe-badge">−{economieMoyenne} % de CO₂</span>
+              <h3>Où nous intervenons</h3>
+              <span className="graphe-badge">101 départements</span>
             </div>
 
-            <div className="legende-compare">
-              <span>
-                <i className="pastille pastille--route" />
-                Convoyage par la route
-              </span>
-              <span>
-                <i className="pastille pastille--plateau" />
-                Camion porte-véhicules
-              </span>
-            </div>
+            <CarteCouverture />
 
-            <div className="histogramme histogramme--compare">
-              {EMPREINTE_CARBONE.map(({ trajet, route, plateau }) => (
-                <div className="histo-colonne" key={trajet}>
-                  <div className="histo-paire">
-                    <div
-                      className="histo-barre histo-barre--route"
-                      style={{ "--hauteur": `${(route / maxCarbone) * 100}%` }}
-                      role="img"
-                      aria-label={`${trajet}, par la route : ${route} kilogrammes de CO2`}
-                    >
-                      <span className="histo-valeur">{route}</span>
-                    </div>
-                    <div
-                      className="histo-barre histo-barre--plateau"
-                      style={{
-                        "--hauteur": `${(plateau / maxCarbone) * 100}%`,
-                      }}
-                      role="img"
-                      aria-label={`${trajet}, en plateau : ${plateau} kilogrammes de CO2`}
-                    >
-                      <span className="histo-valeur">{plateau}</span>
-                    </div>
-                  </div>
-                  <span className="histo-mois">{trajet}</span>
-                </div>
+            <ul className="carte__trajets" aria-label="Trajets d'exemple">
+              {TRAJETS.map(([a, b]) => (
+                <li key={a + b}>
+                  {a} – {b}
+                </li>
               ))}
-            </div>
-
+            </ul>
             <p className="graphe-note">
-              Kilogrammes de CO₂ par véhicule déplacé. Pour le plateau, la
-              consommation du porte-8 est rapportée à son taux de remplissage
-              réel, retours à vide inclus. Facteur d'émission ADEME.
+              France entière et Europe. Quatre trajets pris pour exemple.
             </p>
           </div>
 

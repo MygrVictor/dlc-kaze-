@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
-import BandeauClients from "../components/BandeauClients";
+import Confiance from "../components/Confiance";
 import BandeauSlogan from "../components/BandeauSlogan";
 import PareBrise from "../components/PareBrise";
 import TableauDeBord from "../components/TableauDeBord";
@@ -191,7 +191,7 @@ export default function LandingPage() {
       </section>
 
       <BandeauSlogan />
-      <BandeauClients />
+      <Confiance />
 
       {/* ── SOLUTIONS ─────────────────────────────── */}
       {/* Le CTA principal du hero pointe ici : « Découvrez nos solutions »

@@ -1,16 +1,19 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Bandeau jaune : la phrase défile avec le défilement de la page.
+ * La phrase qui résume le métier, lue au rythme du défilement.
  *
- * Le mouvement répond au visiteur : la bande glisse quand il descend, elle
- * s'arrête quand il s'arrête, et elle s'incline légèrement sous l'effet de
- * la vitesse, puis se redresse. Rien ne bouge tout seul.
+ * Un bandeau qui défile se lit mal : on le dépasse avant la fin de la
+ * phrase. Ici, c'est l'inverse. La phrase tient en grand sur l'écran,
+ * l'écran reste en place le temps du défilement, et chaque mot s'allume à
+ * son tour pendant qu'une voiture avance sur la route en dessous. Le
+ * visiteur ne peut pas la dépasser sans la lire : elle avance avec lui.
  *
- * Décoratif : la phrase figure déjà dans la section des solutions, la lire
- * deux fois n'apporterait rien aux lecteurs d'écran.
+ * Tous les mots restent lisibles avant leur tour (atténués, pas cachés),
+ * et sans JavaScript ou avec `prefers-reduced-motion`, la phrase est
+ * affichée entière, sans écran fixe.
  */
-const PHRASE = "Du premier kilomètre à la remise des clés";
+const MOTS = ["Du", "premier", "kilomètre", "à", "la", "remise", "des", "clés"];
 
 export default function BandeauSlogan() {
   const ref = useRef(null);
@@ -23,31 +26,26 @@ export default function BandeauSlogan() {
     )?.matches;
     if (reduit) return undefined;
 
-    let derniere = window.scrollY;
-    let vitesse = 0;
+    el.classList.add("slogan--lie");
     let cadre = 0;
 
-    const rendre = () => {
+    const maj = () => {
       cadre = 0;
-      const y = window.scrollY;
-      vitesse += (y - derniere - vitesse) * 0.2; // lissage
-      derniere = y;
-
-      const r = el.getBoundingClientRect();
-      const ecart = r.top + r.height / 2 - window.innerHeight / 2;
-      el.style.setProperty("--x", `${(-ecart * 0.55).toFixed(1)}px`);
-      el.style.setProperty(
-        "--inclinaison",
-        `${Math.max(-7, Math.min(7, vitesse * -0.3)).toFixed(2)}deg`,
+      const nav = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--nav-h"),
       );
-      // Tant que la bande est inclinée, on continue pour la redresser.
-      if (Math.abs(vitesse) > 0.05) cadre = requestAnimationFrame(rendre);
+      const r = el.getBoundingClientRect();
+      // 0 quand la scène se fige sous la barre de navigation, 1 quand elle
+      // se libère.
+      const course = Math.max(1, r.height - (window.innerHeight - (nav || 0)));
+      const p = Math.min(1, Math.max(0, (nav - r.top) / course));
+      el.style.setProperty("--p", p.toFixed(4));
     };
     const surDefilement = () => {
-      if (!cadre) cadre = requestAnimationFrame(rendre);
+      if (!cadre) cadre = requestAnimationFrame(maj);
     };
 
-    rendre();
+    maj();
     window.addEventListener("scroll", surDefilement, { passive: true });
     window.addEventListener("resize", surDefilement);
     return () => {
@@ -58,15 +56,42 @@ export default function BandeauSlogan() {
   }, []);
 
   return (
-    <div className="slogan" ref={ref} aria-hidden="true">
-      <div className="slogan__piste">
-        {Array.from({ length: 6 }, (_, k) => (
-          <span className="slogan__unite" key={k}>
-            {PHRASE}
-            <i className="slogan__tiret" />
+    <section
+      className="slogan"
+      ref={ref}
+      style={{ "--n": MOTS.length }}
+      aria-label="Du premier kilomètre à la remise des clés"
+    >
+      <div className="slogan__scene">
+        <p className="slogan__texte display" aria-hidden="true">
+          {MOTS.map((mot, i) => (
+            <span key={mot + i} className="slogan__mot" style={{ "--i": i }}>
+              {mot}{" "}
+            </span>
+          ))}
+        </p>
+
+        <div className="slogan__route" aria-hidden="true">
+          <span className="slogan__piste" />
+          <span className="slogan__fait" />
+          <span className="slogan__voiture">
+            <svg viewBox="0 0 18 30" width="18" height="30">
+              <rect
+                x="1.5"
+                y="1.5"
+                width="15"
+                height="27"
+                rx="5"
+                fill="var(--asphalt)"
+                stroke="var(--asphalt)"
+                strokeWidth="1.5"
+              />
+              <rect x="4" y="16" width="10" height="6" rx="1.5" fill="var(--amber)" />
+              <rect x="4" y="6" width="10" height="4" rx="1.5" fill="var(--amber)" opacity="0.55" />
+            </svg>
           </span>
-        ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -815,38 +815,99 @@
 }
 
 /* ══════════════════════════════════════════════════
-   Bandeau jaune
+   La phrase, lue au rythme du défilement
    ══════════════════════════════════════════════════ */
 .vitrine .slogan {
-  overflow: hidden;
-  padding: clamp(18px, 3vw, 34px) 0 clamp(14px, 2.6vw, 28px);
+  --p: 1; /* sans script : la phrase est entière */
   background: var(--amber);
   color: var(--asphalt);
 }
-.vitrine .slogan__piste {
-  display: inline-flex;
-  white-space: nowrap;
-  margin-left: -420px;
-  transform: translateX(var(--x, 0px)) skewX(var(--inclinaison, 0deg));
-  will-change: transform;
+.vitrine .slogan__scene {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(28px, 5vh, 56px);
+  max-width: 1280px;
+  min-height: min(70svh, 640px);
+  margin: 0 auto;
+  padding: clamp(56px, 9vw, 110px) clamp(20px, 4vw, 48px);
 }
-.vitrine .slogan__unite {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45em;
-  padding-right: 0.45em;
-  font-family: "Bebas Neue", sans-serif;
-  font-size: clamp(60px, 9.5vw, 150px);
-  line-height: 0.9;
-  letter-spacing: 0.01em;
+.vitrine .slogan__texte {
+  margin: 0;
+  max-width: 12em;
+  font-size: clamp(60px, 11.5vw, 190px);
+  line-height: 0.88;
   text-transform: uppercase;
+  text-wrap: balance;
 }
-.vitrine .slogan__tiret {
-  display: inline-block;
-  width: 0.9em;
-  height: 0.13em;
-  border-radius: 2px;
-  background: currentColor;
+/* Avec le script : la scène se fige sous la barre de navigation pendant
+   que la phrase s'allume, puis se libère. */
+.vitrine .slogan--lie {
+  height: 230vh;
+}
+.vitrine .slogan--lie .slogan__scene {
+  position: sticky;
+  top: var(--nav-h);
+  height: calc(100svh - var(--nav-h));
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+/* Un mot s'allume quand vient son tour ; avant, il reste lisible. */
+.vitrine .slogan--lie .slogan__mot {
+  opacity: clamp(
+    0.22,
+    calc(var(--p) * var(--n) * 1.18 - var(--i)),
+    1
+  );
+}
+
+/* La route sous la phrase : la voiture avance avec la lecture. */
+.vitrine .slogan__route {
+  position: relative;
+  height: 30px;
+}
+.vitrine .slogan__piste,
+.vitrine .slogan__fait {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 13px;
+  height: 4px;
+}
+.vitrine .slogan__piste {
+  background: repeating-linear-gradient(
+    to right,
+    rgba(18, 20, 28, 0.45) 0 14px,
+    transparent 14px 28px
+  );
+}
+.vitrine .slogan__fait {
+  background: var(--asphalt);
+  transform-origin: left;
+  transform: scaleX(var(--p));
+}
+.vitrine .slogan__voiture {
+  position: absolute;
+  top: 0;
+  left: calc(var(--p) * (100% - 30px));
+  display: block;
+  width: 30px;
+  height: 30px;
+}
+.vitrine .slogan__voiture svg {
+  display: block;
+  margin: 0 auto;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+@media (max-width: 700px) {
+  .vitrine .slogan--lie {
+    height: 200vh;
+  }
+  .vitrine .slogan__texte {
+    font-size: 18vw;
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -1088,6 +1149,167 @@
 }
 
 /* ══════════════════════════════════════════════════
+   Ils nous font confiance
+   ══════════════════════════════════════════════════ */
+.vitrine .confiance {
+  background: #fff;
+  padding: clamp(56px, 8vw, 100px) 0 clamp(64px, 9vw, 110px);
+}
+.vitrine .confiance__contenu {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 48px);
+}
+.vitrine .confiance__logos {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid rgba(11, 29, 58, 0.14);
+  border-left: 1px solid rgba(11, 29, 58, 0.14);
+}
+.vitrine .confiance__logos li {
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(11, 29, 58, 0.14);
+  border-bottom: 1px solid rgba(11, 29, 58, 0.14);
+}
+.vitrine .confiance__logos .logo-card {
+  width: 100%;
+  height: clamp(96px, 11vw, 150px);
+  flex: none;
+  padding: 14px 22px;
+}
+.vitrine .confiance__logos .logo-image {
+  filter: grayscale(1);
+  opacity: 0.72;
+  transition:
+    filter 0.35s,
+    opacity 0.35s,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Un trait ambre monte depuis le bas de la case survolée. */
+.vitrine .confiance__logos li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--amber);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vitrine .confiance__logos li:hover::after {
+  transform: scaleX(1);
+}
+.vitrine .confiance__logos li:hover .logo-image {
+  filter: none;
+  opacity: 1;
+  transform: scale(1.06);
+}
+/* Sans survol possible (téléphone), les logos gardent leurs couleurs. */
+@media (hover: none) {
+  .vitrine .confiance__logos .logo-image {
+    filter: none;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .confiance__logos li {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  .vitrine .confiance__logos.in li {
+    animation: entree 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+}
+@media (max-width: 900px) {
+  .vitrine .confiance__logos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Les assureurs : un panneau marine, les logos sur des pastilles blanches
+   (leurs fichiers ont un fond blanc). */
+.vitrine .confiance__assurance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+  margin-top: clamp(24px, 3vw, 36px);
+  padding: clamp(26px, 4vw, 52px);
+  border-radius: clamp(20px, 2.4vw, 32px);
+  background: var(--navy);
+  color: #fff;
+}
+.vitrine .confiance__assurance-texte {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2vw, 26px);
+}
+.vitrine .confiance__assurance-texte svg {
+  flex-shrink: 0;
+  width: clamp(56px, 6vw, 84px);
+  height: auto;
+  color: var(--amber);
+}
+.vitrine .confiance__assurance-texte h3 {
+  margin: 0;
+  font-family: "Bebas Neue", sans-serif;
+  font-weight: 400;
+  font-size: clamp(30px, 3.6vw, 54px);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.vitrine .confiance__assureurs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vitrine .confiance__assureurs li {
+  display: grid;
+  place-items: center;
+  height: clamp(76px, 8vw, 104px);
+  border-radius: 14px;
+  background: #fff;
+}
+.vitrine .confiance__assureurs .logo-card {
+  width: 100%;
+  height: 100%;
+  flex: none;
+  padding: 10px 16px;
+}
+.vitrine .confiance__assureurs .logo-image {
+  max-height: 64px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .confiance__assurance-texte path {
+    stroke-dasharray: 1 1.02;
+    stroke-dashoffset: 1;
+  }
+  .vitrine .confiance__assurance.in .confiance__assurance-texte path {
+    animation: trace 1.4s cubic-bezier(0.45, 0, 0.2, 1) 0.2s forwards;
+  }
+}
+@media (max-width: 900px) {
+  .vitrine .confiance__assurance {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .vitrine .confiance__assureurs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ══════════════════════════════════════════════════
    Avis
    ══════════════════════════════════════════════════ */
 .vitrine .references {
@@ -1212,6 +1434,143 @@
   }
   .vitrine .chiffre-carte:nth-child(n + 3) {
     border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* La carte de couverture : la France en points, des trajets d'exemple. */
+/* Les deux cartes ont la même hauteur : la colonne de droite répartit ses
+   barres plutôt que de laisser un vide sous elle. */
+.vitrine .chiffres-graphes {
+  align-items: stretch;
+}
+.vitrine .chiffres-graphes .graphe-carte {
+  display: flex;
+  flex-direction: column;
+}
+.vitrine .chiffres-graphes .repartition {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+}
+.vitrine .chiffres-graphes .graphe-note {
+  margin-top: auto;
+}
+.vitrine .carte__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 8px 0 4px;
+}
+.vitrine .carte__anneau circle {
+  fill: rgba(255, 255, 255, 0.3);
+}
+.vitrine .carte__trajet {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+.vitrine .carte__point {
+  fill: var(--amber);
+  stroke: var(--navy);
+  stroke-width: 3;
+}
+.vitrine .carte__pulse {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.vitrine .carte__nom {
+  fill: #fff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 24px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--navy);
+  stroke-width: 6px;
+  stroke-linejoin: round;
+}
+.vitrine .carte__vehicule {
+  fill: #fff;
+  stroke: var(--amber);
+  stroke-width: 4;
+}
+.vitrine .carte__trajets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.82);
+}
+.vitrine .carte__trajets li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vitrine .carte__trajets li::before {
+  content: "";
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--amber);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .carte__anneau {
+    opacity: 0;
+  }
+  .vitrine .carte--vue .carte__anneau {
+    animation: apparait 0.9s ease-out forwards;
+    animation-delay: calc(var(--b) * 0.17s);
+  }
+  .vitrine .carte__trajet {
+    stroke-dasharray: 1 1.02;
+    stroke-dashoffset: 1;
+  }
+  .vitrine .carte--vue .carte__trajet {
+    animation: trace 1.5s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+    animation-delay: calc(1.4s + var(--t) * 0.4s);
+  }
+  .vitrine .carte__ville {
+    opacity: 0;
+  }
+  .vitrine .carte--vue .carte__ville {
+    animation: apparait 0.6s ease-out forwards;
+    animation-delay: calc(0.8s + var(--v) * 0.15s);
+  }
+  .vitrine .carte--vue .carte__pulse {
+    animation: pulse-ville 2.8s ease-out infinite;
+    animation-delay: calc(2s + var(--v) * 0.3s);
+  }
+}
+@media (max-width: 700px) {
+  /* La carte rétrécit avec l'écran : les noms de villes grossissent pour
+     rester lisibles. */
+  .vitrine .carte__nom {
+    font-size: 34px;
+    stroke-width: 9px;
+  }
+}
+@keyframes apparait {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pulse-ville {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.2);
   }
 }
 
