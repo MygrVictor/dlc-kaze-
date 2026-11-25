@@ -25,11 +25,11 @@
   --line-light: rgba(255, 209, 26, 0.35);
   /* Hauteur de la barre de navigation publique. Centralisée ici pour que
      les pages qui calculent `100vh - navbar` restent synchronisées. */
-  --nav-h: 72px;
+  --nav-h: 68px;
 }
 @media (min-width: 768px) {
   :root {
-    --nav-h: 88px;
+    --nav-h: 80px;
   }
 }
 
@@ -419,26 +419,6 @@
   .btn-group-stack > * {
     width: 100%;
   }
-}
-
-.btn-account {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: white;
-  padding: 9px 18px;
-  border-radius: 100px;
-  font-size: 13.5px;
-  font-weight: 600;
-  transition: all 0.2s;
-  cursor: pointer;
-  font-family: "Inter", sans-serif;
-}
-.btn-account:hover {
-  border-color: var(--amber);
-  color: var(--amber);
 }
 
 /* ── Form fields ────────────────────────────────── */
@@ -863,46 +843,6 @@
   color: white;
   text-decoration: none;
 }
-/* Logo de la barre de navigation publique.
-   Le fichier fait 600 × 70 px, soit un rapport de 8,6:1 : c'est la LARGEUR
-   qui commande l'encombrement, pas la hauteur. Fixer une hauteur sans
-   ajuster `max-width` reste sans effet, l'image étant alors bridée par la
-   largeur et simplement centrée dans une boîte trop haute. */
-.nav-logo {
-  height: 26px;
-  max-width: 100%;
-}
-/* À partir de la tablette, la hauteur suit la largeur de la fenêtre : sur
-   un écran étroit, un logo fixe à 40 px mangeait la place nécessaire aux
-   sept liens, qui repassaient alors à la ligne. */
-@media (min-width: 768px) {
-  .nav-logo {
-    height: clamp(26px, 2.6vw, 40px);
-  }
-}
-
-/* ── Liens de navigation, à partir de la tablette ────────────────
-   Sept intitulés, dont « Qui sommes-nous » et « Devenez convoyeur »,
-   doivent tenir sur une seule ligne quelle que soit la largeur. On agit
-   sur trois leviers à la fois : interdiction du retour à la ligne,
-   espacement et corps de texte proportionnels à la fenêtre. Le menu
-   mobile, lui, n'est pas concerné : il s'affiche en colonne. */
-@media (min-width: 768px) {
-  .nav-desktop ul {
-    flex-wrap: nowrap;
-    gap: clamp(10px, 1.35vw, 22px);
-  }
-  .nav-desktop a {
-    white-space: nowrap;
-    font-size: clamp(12.5px, 1.02vw, 14.5px);
-  }
-  /* Le bouton de compte ne doit ni se comprimer ni se scinder. */
-  .btn-account {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-}
-
 /* ── Page « Faites-vous rappeler » ──────────────────────────
    Reprend la mise en page à deux colonnes qu'occupait la section en pied
    d'accueil, mais sur toute la hauteur : rien d'autre ne sollicite
@@ -1153,59 +1093,6 @@
   }
 }
 
-/* ── Lien de navigation : soulignement de la section courante ──────
-   Le trait est un pseudo-élément mis à l'échelle depuis le centre plutôt
-   qu'une bordure que l'on ferait apparaître : la transition porte alors
-   sur `transform`, que le navigateur compose sans recalculer la mise en
-   page. La réserve verticale est constante, donc les liens ne bougent pas
-   quand le soulignement apparaît. */
-.nav-lien {
-  position: relative;
-  display: inline-block;
-  padding-bottom: 6px;
-  color: rgba(255, 255, 255, 0.75);
-  font-weight: 500;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-.nav-lien::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--amber);
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.nav-lien:hover {
-  color: white;
-}
-.nav-lien:hover::after {
-  transform: scaleX(0.55);
-}
-.nav-lien--actif {
-  color: white;
-}
-.nav-lien--actif::after,
-.nav-lien--actif:hover::after {
-  transform: scaleX(1);
-}
-/* Le clavier doit signaler le lien visé aussi nettement que la souris. */
-.nav-lien:focus-visible {
-  color: white;
-  outline: 2px solid var(--amber);
-  outline-offset: 4px;
-  border-radius: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .nav-lien::after {
-    transition: none;
-  }
-}
 .logo-mark {
   width: 34px;
   height: 34px;

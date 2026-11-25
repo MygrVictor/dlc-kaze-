@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import GoogleAnalytics from "../components/GoogleAnalytics";
+import "./navbar.css";
 
 const LIENS = [
   { label: "Accueil", href: "/" },
@@ -89,6 +90,110 @@ function useDefilementRoutes() {
   }, [pathname, hash]);
 }
 
+const IconeCompte = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
+  </svg>
+);
+
+const IconeTelephone = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.7a2 2 0 01-.4 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.5 2.7.6a2 2 0 011.9 2.2z" />
+  </svg>
+);
+
+/**
+ * Liens de la barre de navigation, avec une pastille qui glisse.
+ *
+ * La pastille se pose sous le lien de la section en cours et suit la souris
+ * (ou le clavier) d'un lien à l'autre ; en la quittant, elle revient à la
+ * section en cours. Elle remplace le soulignement : on voit où l'on est, et
+ * où l'on va.
+ */
+function NavLiens({ sectionActive, surAccueil, allerA }) {
+  const liste = useRef(null);
+  const [survol, setSurvol] = useState(null);
+  const [pilule, setPilule] = useState({ x: 0, w: 0, visible: false });
+  const [pret, setPret] = useState(false);
+
+  const indexActif = LIENS.findIndex((item) => {
+    const cible = item.href.startsWith("#") ? item.href.slice(1) : "accueil";
+    return surAccueil && sectionActive === cible;
+  });
+  const cible = survol ?? (indexActif >= 0 ? indexActif : null);
+
+  useLayoutEffect(() => {
+    const mesurer = () => {
+      const li = cible === null ? null : liste.current?.children[cible];
+      setPilule((p) =>
+        li
+          ? { x: li.offsetLeft, w: li.offsetWidth, visible: true }
+          : { ...p, visible: false },
+      );
+    };
+    mesurer();
+    window.addEventListener("resize", mesurer);
+    // Les polices changent la largeur des liens après le premier rendu.
+    document.fonts?.ready.then(mesurer);
+    return () => window.removeEventListener("resize", mesurer);
+  }, [cible]);
+
+  // Au premier affichage, la pastille se pose sans glisser depuis la gauche.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setPret(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  return (
+    <div className="site-nav__rail" onMouseLeave={() => setSurvol(null)}>
+      <span
+        className={`nav-pilule${pilule.visible ? " nav-pilule--visible" : ""}${pret ? " nav-pilule--pret" : ""}`}
+        style={{ transform: `translateX(${pilule.x}px)`, width: pilule.w }}
+        aria-hidden="true"
+      />
+      <ul ref={liste} className="site-nav__liens">
+        {LIENS.map((item, i) => {
+          const estActif = i === indexActif;
+          return (
+            <li key={item.label}>
+              <a
+                href={item.href === "/" ? "/" : `/${item.href}`}
+                onClick={(e) => allerA(e, item.href)}
+                onMouseEnter={() => setSurvol(i)}
+                onFocus={() => setSurvol(i)}
+                onBlur={() => setSurvol(null)}
+                className={`nav-lien${cible === i ? " nav-lien--cible" : ""}${estActif ? " nav-lien--actif" : ""}`}
+                aria-current={estActif ? "true" : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export default function PublicLayout() {
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -96,7 +201,17 @@ export default function PublicLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const surAccueil = pathname === "/";
+  const [defile, setDefile] = useState(false);
   useDefilementRoutes();
+
+  // La barre s'opacifie dès que la page quitte le haut : elle reste lisible
+  // par-dessus n'importe quelle section, claire ou sombre.
+  useEffect(() => {
+    const maj = () => setDefile(window.scrollY > 8);
+    maj();
+    window.addEventListener("scroll", maj, { passive: true });
+    return () => window.removeEventListener("scroll", maj);
+  }, []);
 
   /**
    * Les liens de la navbar visent des sections de l'accueil. Depuis une
@@ -118,154 +233,89 @@ export default function PublicLayout() {
     <div className="min-h-screen flex flex-col">
       {/* ── Header ───────────────────────────────────── */}
       <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          background: "rgba(18,20,28,0.94)",
-          backdropFilter: "blur(10px)",
-          borderBottom: "1px solid rgba(255,209,26,0.15)",
-        }}
+        className={`site-nav${defile ? " site-nav--defile" : ""}${menuOpen ? " site-nav--ouvert" : ""}`}
       >
-        <div className="mx-auto flex h-[72px] w-full max-w-[1700px] items-center justify-between gap-4 px-4 sm:px-8 lg:px-10 xl:px-20 md:h-[88px]">
-          {/* Logo */}
+        <div className="site-nav__barre">
           <Link
             to="/"
-            className="logo"
+            className="site-nav__logo"
             aria-label="Accueil Drive Line Connect"
-            style={{ minWidth: 0 }}
           >
             <img
-              src="/logo.png"
-              alt="Drive Line Connect"
-              className="nav-logo"
-              style={{
-                width: "auto",
-                objectFit: "contain",
-                display: "block",
-              }}
+              src="/logo-mobilite.png"
+              alt="Drive Line Connect Mobilité"
+              width="1200"
+              height="165"
             />
           </Link>
 
-          {/* Nav desktop */}
-          <nav className="nav-desktop hidden md:block">
-            <ul
-              style={{
-                listStyle: "none",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              {LIENS.map((item) => {
-                const cible = item.href.startsWith("#")
-                  ? item.href.slice(1)
-                  : "accueil";
-                const estActif = surAccueil && sectionActive === cible;
-
-                return (
-                  <li key={item.label}>
-                    <a
-                      href={item.href === "/" ? "/" : `/${item.href}`}
-                      onClick={(e) => allerA(e, item.href)}
-                      className={`nav-lien${estActif ? " nav-lien--actif" : ""}`}
-                      aria-current={estActif ? "true" : undefined}
-                    >
-                      {item.label}
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
+          <nav className="site-nav__principale" aria-label="Navigation principale">
+            <NavLiens
+              sectionActive={sectionActive}
+              surAccueil={surAccueil}
+              allerA={allerA}
+            />
           </nav>
 
-          {/* Account button desktop */}
-          <div className="hidden md:flex items-center gap-3">
-            {user ? (
-              <Link to="/dashboard" className="btn-account">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
-                </svg>
-                Mon espace
-              </Link>
-            ) : (
-              <Link to="/login" className="btn-account">
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
-                </svg>
-                Mon compte
+          <div className="site-nav__droite">
+            {pathname !== "/etre-rappele" && (
+              <Link to="/etre-rappele" className="nav-cta">
+                <IconeTelephone />
+                Être rappelé
               </Link>
             )}
+            <Link to={user ? "/dashboard" : "/login"} className="nav-compte">
+              <IconeCompte />
+              {user ? "Mon espace" : "Mon compte"}
+            </Link>
           </div>
 
-          {/* Burger mobile */}
           <button
-            className="md:hidden"
+            type="button"
+            className="nav-burger"
             onClick={() => setMenuOpen((v) => !v)}
-            style={{
-              color: "white",
-              fontSize: 22,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
-            aria-label="Menu"
+            aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={menuOpen}
+            aria-controls="menu-mobile"
           >
-            {menuOpen ? "✕" : "☰"}
+            <span />
+            <span />
+            <span />
           </button>
         </div>
 
-        {/* Mobile menu */}
         {menuOpen && (
-          <div
-            style={{
-              background: "rgba(18,20,28,0.98)",
-              borderTop: "1px solid rgba(255,209,26,0.1)",
-              padding: "16px 32px 24px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-            }}
-          >
-            {LIENS.map((item) => (
+          <div className="site-nav__mobile" id="menu-mobile">
+            {LIENS.map((item, i) => (
               <a
                 key={item.label}
                 href={item.href === "/" ? "/" : `/${item.href}`}
                 onClick={(e) => allerA(e, item.href)}
-                style={{
-                  color: "rgba(255,255,255,0.75)",
-                  fontSize: 15,
-                  fontWeight: 500,
-                  padding: "10px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
-                }}
+                style={{ "--i": i }}
               >
                 {item.label}
               </a>
             ))}
-            <Link
-              to={user ? "/dashboard" : "/login"}
-              onClick={() => setMenuOpen(false)}
-              className="btn-primary"
-              style={{ marginTop: 12, justifyContent: "center" }}
-            >
-              {user ? "Mon espace" : "Connexion"}
-            </Link>
+            <div className="site-nav__mobile-actions" style={{ "--i": LIENS.length }}>
+              {pathname !== "/etre-rappele" && (
+                <Link
+                  to="/etre-rappele"
+                  onClick={() => setMenuOpen(false)}
+                  className="nav-cta"
+                >
+                  <IconeTelephone />
+                  Être rappelé
+                </Link>
+              )}
+              <Link
+                to={user ? "/dashboard" : "/login"}
+                onClick={() => setMenuOpen(false)}
+                className="nav-compte"
+              >
+                <IconeCompte />
+                {user ? "Mon espace" : "Connexion"}
+              </Link>
+            </div>
           </div>
         )}
       </header>
@@ -293,8 +343,10 @@ export default function PublicLayout() {
             }}
           >
             <img
-              src="/logo.png"
-              alt="Drive Line Connect"
+              src="/logo-mobilite.png"
+              alt="Drive Line Connect Mobilité"
+              width="1200"
+              height="165"
               style={{ height: 44, width: "auto", objectFit: "contain" }}
             />
           </div>

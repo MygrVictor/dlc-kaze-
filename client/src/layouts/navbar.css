@@ -1,0 +1,282 @@
+/* ══════════════════════════════════════════════════
+   Barre de navigation publique
+
+   Une barre sombre à peine translucide (le flou ne se voit qu'au
+   défilement), un logo plus lisible,
+   des liens avec une pastille qui glisse de l'un à l'autre, et deux
+   boutons : un appel à l'action (« Être rappelé ») et l'accès au compte.
+   Sous 1024 px, un menu plein écran remplace les liens.
+   ══════════════════════════════════════════════════ */
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(14, 16, 23, 0.97);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  transition:
+    background 0.3s,
+    box-shadow 0.3s;
+}
+.site-nav--defile {
+  background: rgba(14, 16, 23, 0.9);
+}
+.site-nav--ouvert {
+  background: rgba(14, 16, 23, 0.98);
+}
+.site-nav--defile {
+  box-shadow: 0 12px 32px -22px rgba(0, 0, 0, 0.7);
+}
+.site-nav__barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(14px, 2vw, 32px);
+  max-width: 1700px;
+  height: var(--nav-h);
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 80px);
+}
+.site-nav__logo {
+  display: block;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.site-nav__logo img {
+  display: block;
+  height: clamp(26px, 2.9vw, 46px);
+  width: auto;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.site-nav__logo:hover img {
+  transform: translateX(2px);
+}
+
+/* ── Liens et pastille ──────────────────────────── */
+.site-nav__principale {
+  display: none;
+}
+.site-nav__rail {
+  position: relative;
+}
+.site-nav__liens {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nav-lien {
+  position: relative;
+  z-index: 1;
+  display: block;
+  padding: 10px clamp(10px, 1.1vw, 16px);
+  border-radius: 999px;
+  font-size: clamp(13px, 1vw, 14.5px);
+  font-weight: 500;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.2s;
+}
+.nav-lien--cible {
+  color: #fff;
+}
+.nav-lien--actif {
+  color: var(--amber);
+}
+.nav-lien:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+.nav-pilule {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 38px;
+  margin-top: -19px;
+  border-radius: 999px;
+  background: rgba(255, 209, 26, 0.14);
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-pilule--visible {
+  opacity: 1;
+}
+.nav-pilule--pret {
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s;
+}
+
+/* ── Boutons de droite ──────────────────────────── */
+.site-nav__droite {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.nav-compte,
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+.nav-compte {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.nav-compte:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.nav-cta {
+  border: 1px solid var(--amber);
+  background: var(--amber);
+  color: var(--asphalt);
+}
+.nav-cta:hover {
+  background: #ffdd4d;
+  border-color: #ffdd4d;
+  transform: translateY(-1px);
+}
+.nav-compte:focus-visible,
+.nav-cta:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+/* Le bouton d'action n'apparaît que lorsque la barre a la place de le
+   porter sans serrer les liens. */
+.site-nav__droite .nav-cta {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .site-nav__principale {
+    display: block;
+  }
+  .site-nav__droite {
+    display: flex;
+  }
+  .nav-burger,
+  .site-nav__mobile {
+    display: none !important;
+  }
+}
+@media (min-width: 1280px) {
+  .site-nav__droite .nav-cta {
+    display: inline-flex;
+  }
+}
+
+/* ── Menu mobile ────────────────────────────────── */
+.nav-burger {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+.nav-burger span {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: #fff;
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s;
+}
+.nav-burger span:nth-child(1) {
+  top: 14px;
+}
+.nav-burger span:nth-child(2) {
+  top: 21px;
+}
+.nav-burger span:nth-child(3) {
+  top: 28px;
+}
+.nav-burger[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.nav-burger[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+.nav-burger[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+.nav-burger:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.site-nav__mobile {
+  display: flex;
+  flex-direction: column;
+  padding: 8px clamp(16px, 5vw, 32px) 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(14, 16, 23, 0.98);
+}
+.site-nav__mobile > a {
+  display: block;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.86);
+  transition:
+    color 0.2s,
+    padding-left 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.site-nav__mobile > a:hover {
+  color: var(--amber);
+  padding-left: 8px;
+}
+.site-nav__mobile-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+.site-nav__mobile-actions .nav-cta,
+.site-nav__mobile-actions .nav-compte {
+  display: inline-flex;
+  padding: 14px 18px;
+  font-size: 16px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .site-nav__mobile > a,
+  .site-nav__mobile-actions {
+    opacity: 0;
+    animation: menu-entre 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+}
+@keyframes menu-entre {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
