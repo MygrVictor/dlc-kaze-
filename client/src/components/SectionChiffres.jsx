@@ -1,4 +1,4 @@
-import Compteur from "./Compteur";
+import Odometre from "./Odometre";
 import { TrendingUp, MapPin, Clock, ShieldCheck } from "lucide-react";
 
 /**
@@ -86,8 +86,8 @@ export default function SectionChiffres() {
 
   return (
     <section id="chiffres" className="chiffres-section">
-      <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-        <div className="waypoint-label reveal">
+      <div className="chiffres__contenu">
+        <div className="waypoint-label reveal" data-km="180">
           <div
             className="waypoint"
             style={{ background: "var(--amber)", borderColor: "white" }}
@@ -109,15 +109,8 @@ export default function SectionChiffres() {
           </span>
         </div>
 
-        <div className="section-head reveal" style={{ maxWidth: 720 }}>
-          <h2
-            className="display"
-            style={{
-              fontSize: "clamp(36px,5vw,54px)",
-              textTransform: "uppercase",
-              color: "white",
-            }}
-          >
+        <div className="section-head section-head--gauche reveal">
+          <h2 className="display titre-geant titre-geant--moyen">
             Drive Line Connect en chiffres
           </h2>
           <div className="rule" />
@@ -141,10 +134,11 @@ export default function SectionChiffres() {
               <span className="chiffre-icone">
                 <Icone size={20} />
               </span>
-              <Compteur
+              <Odometre
                 className="chiffre-valeur"
                 valeur={valeur}
                 suffixe={suffixe}
+                tuiles
               />
               <div className="chiffre-label">{label}</div>
               <div className="chiffre-detail">{detail}</div>

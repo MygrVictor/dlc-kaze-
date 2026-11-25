@@ -1,20 +1,30 @@
 /* ══════════════════════════════════════════════════
-   Vitrine — mouvement
+   Vitrine — « au volant »
 
    Même charte (asphalte, marine, crème, ambre ; Bebas Neue, Inter,
-   JetBrains Mono). Une idée porte la page : un trajet. La route qui suit
-   le visiteur (RouteDefilement) relie les repères « KM … » déjà présents ;
-   le reste du mouvement reste discret et sert à lire :
+   JetBrains Mono) et mêmes formulaires. Ce qui change, c'est la mise en
+   scène : le visiteur est installé au poste de conduite.
 
-     - à l'ouverture, une seule séquence orchestrée (le titre, puis le reste) ;
-     - le fond du hero respire lentement et se décale à peine au défilement ;
-     - les icônes se tracent, les repères s'annoncent, les barres s'allongent.
+     - le hero se voit à travers un pare-brise, l'essuie-glace amène la
+       photo suivante, et le tableau de bord démarre au chargement ;
+     - un bandeau jaune file sous le doigt quand on défile ;
+     - les prestations se recouvrent comme des dossiers qu'on empile ;
+     - le recrutement se joue sur la route, vue de la place du conducteur.
+
+   Tout est à plat : pas de halo, pas de dégradé décoratif. Le mouvement
+   répond au visiteur, sauf la séquence d'ouverture du hero.
 
    Tout état de départ « caché » est déclaré sous `no-preference` : avec
    `prefers-reduced-motion`, la page s'affiche telle quelle, sans attente.
    ══════════════════════════════════════════════════ */
 
-/* ── La route ───────────────────────────────────── */
+@property --a {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 180deg;
+}
+
+/* ── La route qui suit le défilement ────────────── */
 .route {
   position: fixed;
   z-index: 90;
@@ -115,16 +125,12 @@
   .route__km {
     display: block;
   }
-  /* Le compteur reste dans la piste de la voiture : à gauche d'elle, il
-     ne sort jamais de l'écran en fin de page. */
-  .route__voiture {
-    transform: translate(-50%, -50%);
-  }
 }
 
-/* Grand écran : la route passe dans la marge gauche, sur toute la hauteur
-   visible. Sous 1440 px la marge est trop étroite pour porter le compteur. */
-@media (min-width: 1440px) {
+/* Très grand écran : la route passe dans la marge gauche, sur toute la
+   hauteur visible. En dessous de 1680 px, la marge est trop étroite pour
+   porter le compteur sans toucher le texte. */
+@media (min-width: 1680px) {
   .route {
     top: calc(var(--nav-h) + 32px);
     bottom: 32px;
@@ -164,32 +170,222 @@
   }
 }
 
-/* ── Hero : fond vivant ─────────────────────────── */
-.vitrine .hero-fond {
-  position: absolute;
-  inset: -20% 0 0 0;
-  z-index: 0;
-  transform: translate3d(0, calc(var(--sy, 0) * 0.18px), 0);
-  will-change: transform;
+/* ── Éléments communs ───────────────────────────── */
+.vitrine .titre-geant {
+  font-size: clamp(52px, 9.5vw, 156px);
+  line-height: 0.88;
+  text-transform: uppercase;
+  color: var(--navy);
+  text-wrap: balance;
+  margin: 0 0 clamp(28px, 4vw, 56px);
+  max-width: 11em;
 }
-.vitrine .hero-slide {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  transition: opacity 1.2s ease;
+.vitrine .titre-geant--moyen {
+  font-size: clamp(46px, 7.4vw, 118px);
 }
+.vitrine .solutions__contenu,
+.vitrine .references__contenu,
+.vitrine .about__contenu,
+.vitrine .chiffres__contenu {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 48px);
+}
+/* Les repères kilométriques se lisent depuis la marge gauche, comme les
+   titres : toute la page partage le même alignement. */
+.vitrine .waypoint-label {
+  justify-content: flex-start;
+  margin-bottom: clamp(14px, 2vw, 26px);
+}
+.vitrine .section-head--gauche {
+  text-align: left;
+  max-width: 52em;
+  margin: 0 0 clamp(28px, 4vw, 48px);
+}
+.vitrine .section-head--gauche .rule {
+  margin-left: 0;
+}
+
+.vitrine .btn-primary > svg,
+.vitrine .btn-outline > svg {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vitrine .btn-primary:hover > svg {
+  transform: translateX(5px);
+}
+.vitrine .btn-outline:hover > svg {
+  transform: rotate(-12deg) scale(1.08);
+}
+.vitrine .btn-primary--grand {
+  padding: 18px 30px;
+  font-size: 18px;
+}
+
+/* Le repère kilométrique s'annonce : un anneau part du cercle. */
 @media (prefers-reduced-motion: no-preference) {
-  .vitrine .hero-slide {
-    animation: souffle 16s ease-in-out infinite alternate;
+  .vitrine .waypoint-label.in .waypoint::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    border: 2px solid var(--amber);
+    animation: borne 1.5s ease-out 0.3s 1 both;
   }
 }
-@keyframes souffle {
+@keyframes borne {
   from {
+    opacity: 0.9;
     transform: scale(1);
   }
   to {
-    transform: scale(1.08);
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   Hero
+   ══════════════════════════════════════════════════ */
+.vitrine .hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  min-height: calc(100svh - var(--nav-h));
+  padding: clamp(56px, 10vh, 120px) 0 clamp(72px, 12vh, 140px);
+  background: var(--asphalt);
+  color: white;
+  text-align: left;
+}
+.vitrine .hero::before {
+  content: none;
+}
+.vitrine .hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    rgba(18, 20, 28, 0.86) 0%,
+    rgba(18, 20, 28, 0.58) 52%,
+    rgba(18, 20, 28, 0.44) 100%
+  );
+}
+.vitrine .hero-grille {
+  position: relative;
+  z-index: 4;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 48px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+  gap: clamp(32px, 5vw, 88px);
+  align-items: center;
+}
+@media (max-width: 960px) {
+  .vitrine .hero-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.vitrine .hero-sujet {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 clamp(14px, 2.4vh, 26px);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--amber);
+}
+.vitrine .hero-sujet::before {
+  content: "";
+  flex-shrink: 0;
+  width: 36px;
+  height: 3px;
+  background: var(--amber);
+}
+.vitrine .hero-titre {
+  font-size: clamp(46px, 7.2vw, 124px);
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: white;
+  margin: 0 0 clamp(18px, 3vh, 32px);
+}
+@media (max-width: 960px) {
+  .vitrine .hero-titre {
+    font-size: clamp(46px, 15vw, 112px);
+  }
+}
+/* Profondeur : en quittant le hero, le texte et le tableau de bord
+   remontent un peu plus lentement que la page et s'effacent. */
+.vitrine .hero-grille {
+  transform: translate3d(0, calc(var(--sy, 0) * -0.1px), 0);
+  opacity: max(0, calc(1 - var(--sy, 0) / 720));
+}
+.vitrine .hero-ligne {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  /* Les accents des capitales ne doivent pas être rognés par le masque
+     qui sert à faire monter la ligne. */
+  padding: 0.06em 0 0.07em;
+  margin: -0.06em 0 -0.07em;
+}
+.vitrine .hero-ligne--accent {
+  color: var(--amber);
+}
+.vitrine .lettre {
+  display: inline-block;
+}
+.vitrine .hero-sub {
+  max-width: 34em;
+  margin: 0 0 clamp(24px, 4vh, 36px);
+  font-size: clamp(17px, 1.5vw, 20.5px);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.86);
+}
+.vitrine .hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: flex-start;
+  margin: 0;
+}
+.vitrine .hero-note {
+  margin: 20px 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+/* Séquence d'ouverture : le texte monte, le tableau de bord démarre. */
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .lettre {
+    transform: translateY(115%);
+    animation: monte 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: var(--d, 0s);
+  }
+  .vitrine .entree {
+    opacity: 0;
+    animation: entree 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: var(--d, 0s);
+  }
+}
+@keyframes monte {
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes entree {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -227,106 +423,447 @@
   }
 }
 
-/* ── Hero : séquence d'ouverture ────────────────── */
-.vitrine .hero-ligne {
-  display: block;
-  overflow: hidden;
-  /* Les jambages et l'accent d'une capitale ne doivent pas être rognés
-     par le masque qui sert à faire monter la ligne. */
-  padding: 0.04em 0 0.08em;
-  margin: -0.04em 0 -0.08em;
+/* ── Pare-brise et essuie-glace ─────────────────── */
+.vitrine .pare-brise {
+  position: absolute;
+  inset: -20% 0 0 0;
+  z-index: 0;
+  /* Parallaxe : le fond se décale à peine plus lentement que la page. */
+  transform: translate3d(0, calc(var(--sy, 0) * 0.18px), 0);
+  will-change: transform;
 }
-.vitrine .hero-ligne > span {
-  display: block;
+.vitrine .pare-brise__scene,
+.vitrine .pare-brise__masque {
+  position: absolute;
+  inset: 0;
+}
+.vitrine .pare-brise__photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+/* La photo qui s'en va reste à l'échelle où sa respiration s'est arrêtée :
+   sans cela, elle sauterait au moment où le balai la quitte. */
+.vitrine .pare-brise__photo--fin {
+  transform: scale(1.08);
+}
+
+/* Le balayage : un masque conique dont l'angle est animé. Il pivote
+   depuis le milieu du bord bas, comme un essuie-glace. */
+.vitrine .pare-brise__scene--aller .pare-brise__masque {
+  -webkit-mask-image: conic-gradient(
+    from 270deg at 50% 100%,
+    #000 var(--a),
+    transparent calc(var(--a) + 0.4deg)
+  );
+  mask-image: conic-gradient(
+    from 270deg at 50% 100%,
+    #000 var(--a),
+    transparent calc(var(--a) + 0.4deg)
+  );
+}
+.vitrine .pare-brise__scene--retour .pare-brise__masque {
+  -webkit-mask-image: conic-gradient(
+    from 270deg at 50% 100%,
+    transparent calc(180deg - var(--a) - 0.4deg),
+    #000 calc(180deg - var(--a)),
+    #000 180deg,
+    transparent 180deg
+  );
+  mask-image: conic-gradient(
+    from 270deg at 50% 100%,
+    transparent calc(180deg - var(--a) - 0.4deg),
+    #000 calc(180deg - var(--a)),
+    #000 180deg,
+    transparent 180deg
+  );
+}
+.vitrine .pare-brise__balai {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 6px;
+  height: 135vmax;
+  margin-left: -3px;
+  border-radius: 3px;
+  background: var(--amber);
+  transform-origin: 50% 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+.vitrine .pare-brise__scene--aller .pare-brise__balai {
+  transform: rotate(calc(var(--a) - 90deg));
+}
+.vitrine .pare-brise__scene--retour .pare-brise__balai {
+  transform: rotate(calc(90deg - var(--a)));
 }
 @media (prefers-reduced-motion: no-preference) {
-  .vitrine .hero-ligne > span {
-    transform: translateY(108%);
-    animation: monte 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    animation-delay: var(--d, 0s);
+  .vitrine .pare-brise__scene {
+    animation: balayage 1.7s cubic-bezier(0.65, 0, 0.3, 1) both;
   }
-  .vitrine .entree {
-    opacity: 0;
-    animation: entree 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    animation-delay: var(--d, 0s);
+  .vitrine .pare-brise__photo:not(.pare-brise__photo--fin) {
+    animation: souffle var(--duree, 6500ms) ease-out forwards;
   }
-  .vitrine .eyebrow.entree {
-    animation-name: repere-entre;
-    animation-duration: 1.1s;
+  .vitrine .pare-brise__balai {
+    animation: balai-visible 1.7s linear both;
   }
 }
-@keyframes monte {
-  to {
-    transform: translateY(0);
-  }
-}
-@keyframes entree {
+@keyframes balayage {
   from {
-    opacity: 0;
-    transform: translateY(18px);
+    --a: 0deg;
   }
   to {
-    opacity: 1;
-    transform: none;
+    --a: 180deg;
   }
 }
-/* Le repère se resserre en apparaissant, comme une borne qui se met au
-   point. */
-@keyframes repere-entre {
+@keyframes souffle {
   from {
-    opacity: 0;
-    letter-spacing: 0.55em;
-  }
-  to {
-    opacity: 1;
-    letter-spacing: 0.3em;
-  }
-}
-
-/* ── Boutons ────────────────────────────────────── */
-.vitrine .btn-primary > svg,
-.vitrine .btn-outline > svg {
-  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.vitrine .btn-primary:hover > svg {
-  transform: translateX(5px);
-}
-.vitrine .btn-outline:hover > svg {
-  transform: rotate(-12deg) scale(1.08);
-}
-
-/* ── Titres de section : la barre s'allonge ─────── */
-@media (prefers-reduced-motion: no-preference) {
-  .vitrine .section-head .rule {
-    transform: scaleX(0);
-    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.25s;
-  }
-  .vitrine .section-head.in .rule {
-    transform: scaleX(1);
-  }
-
-  /* Le repère kilométrique s'annonce : un anneau part du cercle. */
-  .vitrine .waypoint-label.in .waypoint::after {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    border-radius: 50%;
-    border: 2px solid var(--amber);
-    animation: borne 1.5s ease-out 0.3s 1 both;
-  }
-}
-@keyframes borne {
-  from {
-    opacity: 0.9;
     transform: scale(1);
   }
   to {
+    transform: scale(1.08);
+  }
+}
+@keyframes balai-visible {
+  0% {
     opacity: 0;
-    transform: scale(2.1);
+  }
+  6% {
+    opacity: 1;
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 
-/* ── Les quatre repères : l'icône se trace ──────── */
+/* Repères de la photo affichée : une barre par photo, celle en cours se
+   remplit pendant que la photo est à l'écran. */
+.vitrine .pare-brise__reperes {
+  position: absolute;
+  z-index: 5;
+  left: max(
+    clamp(20px, 4vw, 48px),
+    calc((100% - 1280px) / 2 + clamp(20px, 4vw, 48px))
+  );
+  bottom: 34px;
+  display: flex;
+  gap: 10px;
+}
+.vitrine .pare-brise__repere {
+  position: relative;
+  width: 44px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.vitrine .pare-brise__repere::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.32);
+}
+.vitrine .pare-brise__repere:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+.vitrine .pare-brise__avance {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--amber);
+  transform-origin: left;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .pare-brise__avance {
+    animation: remplit var(--duree, 6500ms) linear both;
+  }
+}
+@keyframes remplit {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ── Le tableau de bord ─────────────────────────── */
+.vitrine .tableau {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(18px, 3vh, 30px);
+}
+@media (max-width: 960px) {
+  .vitrine .tableau {
+    max-width: 440px;
+    width: 100%;
+    margin: 8px auto 0;
+  }
+}
+.vitrine .cadran {
+  position: relative;
+  width: min(100%, 380px);
+  aspect-ratio: 1;
+}
+.vitrine .cadran__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.vitrine .cadran__piste {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 2;
+}
+.vitrine .cadran__jauge {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+}
+.vitrine .cadran__grad {
+  stroke: var(--amber);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.vitrine .cadran__grad--longue {
+  stroke-width: 3.2;
+}
+.vitrine .cadran__aiguille {
+  transform: rotate(135deg);
+}
+.vitrine .cadran__aiguille line {
+  stroke: white;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.vitrine .cadran__moyeu {
+  fill: #0c0e14;
+  stroke: var(--amber);
+  stroke-width: 3;
+}
+.vitrine .cadran__lecture {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.vitrine .cadran__lecture .odo {
+  font-size: clamp(46px, 5.4vw, 72px);
+  /* L'aiguille passe derrière le compteur, pas sur le « % ». */
+  padding: 0.05em 0.12em;
+  border-radius: 0.1em;
+  background: #0c0e14;
+}
+.vitrine .cadran__legende {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+}
+.vitrine .tableau__compteurs {
+  display: flex;
+  justify-content: center;
+  gap: clamp(22px, 3.4vw, 52px);
+  width: 100%;
+}
+.vitrine .tableau__compteur {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.vitrine .tableau__compteur .odo {
+  font-size: clamp(36px, 3.6vw, 52px);
+}
+.vitrine .tableau__compteur > span:last-child {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.76);
+  white-space: nowrap;
+}
+/* Le cadran démarre : l'aiguille balaie, les graduations s'allument sur
+   son passage, la jauge se remplit. */
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .cadran__grad {
+    animation: grad-allume 0.1s linear both;
+    animation-delay: calc(1.3s + var(--i, 0) * 0.027s);
+  }
+  .vitrine .cadran__jauge {
+    animation: jauge 1.5s cubic-bezier(0.3, 0.1, 0.25, 1) 1.3s both;
+  }
+  .vitrine .cadran__aiguille {
+    animation: aiguille 1.7s cubic-bezier(0.3, 0.1, 0.25, 1) 1.2s both;
+  }
+}
+@keyframes grad-allume {
+  from {
+    stroke: rgba(255, 255, 255, 0.28);
+  }
+  to {
+    stroke: var(--amber);
+  }
+}
+@keyframes jauge {
+  from {
+    stroke-dashoffset: var(--longueur);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes aiguille {
+  0% {
+    transform: rotate(-135deg);
+  }
+  70% {
+    transform: rotate(143deg);
+  }
+  85% {
+    transform: rotate(131deg);
+  }
+  100% {
+    transform: rotate(135deg);
+  }
+}
+
+/* ── Compteur kilométrique (Odometre) ───────────── */
+.odo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.04em;
+  font-family: "Bebas Neue", sans-serif;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--amber);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.odo__tambour {
+  position: relative;
+  display: block;
+  width: 0.48em;
+  height: 1em;
+  overflow: hidden;
+  text-align: center;
+}
+.odo__bande {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(0);
+}
+.odo__bande > span {
+  display: block;
+  height: 1em;
+  line-height: 1em;
+}
+.odo__sep {
+  display: inline-block;
+  width: 0.2em;
+}
+.odo__suffixe {
+  white-space: pre;
+  margin-left: 0.04em;
+}
+.odo--lance .odo__bande {
+  transform: translateY(calc(var(--cible) * -1em));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .odo__bande {
+    transition: transform 2.2s cubic-bezier(0.16, 1, 0.3, 1) var(--retard, 0s);
+  }
+}
+/* Chaque chiffre dans sa tuile, avec la charnière d'un compteur mécanique. */
+.odo--tuiles {
+  gap: 0.05em;
+}
+.odo--tuiles .odo__tambour {
+  background: #0c0e14;
+  border-radius: 0.08em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.odo--tuiles .odo__tambour::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ══════════════════════════════════════════════════
+   Bandeau jaune
+   ══════════════════════════════════════════════════ */
+.vitrine .slogan {
+  overflow: hidden;
+  padding: clamp(18px, 3vw, 34px) 0 clamp(14px, 2.6vw, 28px);
+  background: var(--amber);
+  color: var(--asphalt);
+}
+.vitrine .slogan__piste {
+  display: inline-flex;
+  white-space: nowrap;
+  margin-left: -420px;
+  transform: translateX(var(--x, 0px)) skewX(var(--inclinaison, 0deg));
+  will-change: transform;
+}
+.vitrine .slogan__unite {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding-right: 0.45em;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(60px, 9.5vw, 150px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.vitrine .slogan__tiret {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.13em;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* ══════════════════════════════════════════════════
+   Solutions : la pile de panneaux
+   ══════════════════════════════════════════════════ */
+.vitrine .solutions {
+  background: var(--cream);
+  padding: clamp(56px, 9vw, 110px) 0 clamp(72px, 10vw, 130px);
+}
+.vitrine .services-reperes {
+  max-width: none;
+  margin: 0 0 clamp(36px, 5vw, 64px);
+  padding: 28px 0 0;
+  border-top: 1px solid rgba(11, 29, 58, 0.16);
+}
+
+/* Les quatre repères : l'icône se trace. */
 @media (prefers-reduced-motion: no-preference) {
   .vitrine .services-repere__icone path {
     stroke-dasharray: 1 1.02;
@@ -351,35 +888,259 @@
   }
 }
 
-/* ── Cartes de prestation ───────────────────────── */
-.vitrine .service-card {
-  position: relative;
-  overflow: hidden;
+.vitrine .pile {
+  display: grid;
+  gap: 28px;
 }
-.vitrine .service-card::before {
+.vitrine .panneau {
+  --recul: 0;
+  --trait: var(--navy);
+  position: sticky;
+  /* Chaque panneau s'accroche 22 px plus bas que le précédent : on voit
+     le bord de ceux qu'il recouvre. Le pas doit rester égal à DECALAGE
+     dans usePile.js. */
+  top: calc(var(--nav-h) + 20px + var(--i, 0) * 22px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: stretch;
+  min-height: min(70vh, 560px);
+  padding: clamp(26px, 4.4vw, 64px);
+  border-radius: clamp(20px, 2.4vw, 32px);
+  overflow: hidden;
+  isolation: isolate;
+  transform-origin: 50% 0;
+  transform: scale(calc(1 - var(--recul) * 0.05));
+}
+/* Le panneau recouvert s'assombrit. */
+.vitrine .panneau::after {
   content: "";
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
+  inset: 0;
+  z-index: 5;
+  background: #000;
+  opacity: calc(var(--recul) * 0.4);
+  pointer-events: none;
+}
+.vitrine .panneau--clair {
+  --trait: var(--navy);
+  background: #fff;
+  color: var(--navy);
+  border: 1px solid rgba(11, 29, 58, 0.12);
+}
+.vitrine .panneau--marine {
+  --trait: var(--amber);
+  background: var(--navy);
+  color: #fff;
+}
+.vitrine .panneau--ambre {
+  --trait: var(--asphalt);
   background: var(--amber);
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--asphalt);
 }
-.vitrine .service-card:hover::before,
-.vitrine .service-card:focus-within::before {
-  transform: scaleY(1);
+.vitrine .panneau--asphalte {
+  --trait: var(--amber);
+  background: var(--asphalt);
+  color: #fff;
 }
-.vitrine .service-card .icon-roundel {
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+.vitrine .panneau__texte {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
 }
-.vitrine .service-card:hover .icon-roundel {
-  transform: rotate(-6deg) scale(1.07);
+.vitrine .panneau h3 {
+  margin: 0 0 clamp(14px, 2vw, 24px);
+  font-family: "Bebas Neue", sans-serif;
+  font-weight: 400;
+  font-size: clamp(44px, 6.2vw, 100px);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: inherit;
+}
+.vitrine .panneau__texte > p {
+  max-width: 36em;
+  margin: 0 0 clamp(18px, 2.4vw, 28px);
+  font-size: clamp(17px, 1.5vw, 20px);
+  line-height: 1.6;
+  color: color-mix(in srgb, currentColor 80%, transparent);
+}
+.vitrine .panneau__texte > p.panneau__sujet {
+  max-width: 28em;
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--amber);
+}
+.vitrine .panneau__puces,
+.vitrine .panneau__liste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+  font-weight: 600;
+}
+.vitrine .panneau__liste {
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+  font-size: 18px;
+  font-weight: 500;
+}
+.vitrine .panneau__puces li,
+.vitrine .panneau__liste li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* Le tiret de chaussée sert de puce. */
+.vitrine .panneau__puces li::before,
+.vitrine .panneau__liste li::before {
+  content: "";
+  flex-shrink: 0;
+  width: 22px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--trait);
+}
+.vitrine .panneau__texte > p.panneau__note {
+  margin: 16px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+.vitrine .panneau__visuel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  min-height: 220px;
+  color: var(--trait);
+}
+.vitrine .panneau__icone {
+  width: clamp(90px, 11vw, 160px);
+  height: auto;
+  color: var(--trait);
+}
+/* Le mot est un contour : il se lit en grand sans peser sur le texte. Il
+   dépasse volontairement du bord droit du panneau. */
+.vitrine .panneau__mot {
+  display: block;
+  margin-right: -4%;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(88px, 13vw, 210px);
+  line-height: 0.8;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--trait);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .panneau__mot {
+    opacity: 0;
+    transform: translateX(10%);
+    transition:
+      opacity 0.8s ease 0.2s,
+      transform 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.2s;
+  }
+  .vitrine .panneau--vu .panneau__mot {
+    opacity: 1;
+    transform: none;
+  }
+  .vitrine .panneau__icone path,
+  .vitrine .panneau__icone circle {
+    stroke-dasharray: 1 1.02;
+    stroke-dashoffset: 1;
+  }
+  .vitrine .panneau--vu .panneau__icone path,
+  .vitrine .panneau--vu .panneau__icone circle {
+    animation: trace 1.5s cubic-bezier(0.45, 0, 0.2, 1) 0.1s forwards;
+  }
+}
+@media (max-width: 900px) {
+  .vitrine .panneau {
+    position: relative;
+    top: auto;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    transform: none;
+  }
+  .vitrine .panneau::after {
+    display: none;
+  }
+  .vitrine .panneau__visuel {
+    min-height: 120px;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .vitrine .panneau__mot {
+    font-size: clamp(64px, 22vw, 120px);
+  }
 }
 
-/* ── Avis : les étoiles se remplissent ──────────── */
+/* ══════════════════════════════════════════════════
+   Avis
+   ══════════════════════════════════════════════════ */
+.vitrine .references {
+  background: #fff;
+  padding: clamp(64px, 9vw, 112px) 0;
+}
+.vitrine .temoignages {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 24px;
+}
+.vitrine .temoignage {
+  margin: 0;
+  padding: clamp(24px, 3vw, 34px);
+  border-radius: 20px;
+}
+.vitrine .temoignage--vedette {
+  grid-row: span 2;
+  position: relative;
+  padding: clamp(32px, 4.6vw, 64px);
+  border-left: 0;
+  background: var(--navy);
+  color: #fff;
+}
+/* Guillemet ouvrant : le grand signe typographique de la citation. */
+.vitrine .temoignage--vedette::before {
+  content: "\201C";
+  display: block;
+  height: 0.55em;
+  margin-bottom: 18px;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(120px, 14vw, 220px);
+  line-height: 0.85;
+  color: var(--amber);
+}
+.vitrine .temoignage--vedette blockquote {
+  margin: 0 0 28px;
+  font-size: clamp(20px, 2vw, 27px);
+  line-height: 1.5;
+  font-style: normal;
+  font-weight: 500;
+  color: #fff;
+}
+.vitrine .temoignage--vedette figcaption strong {
+  color: #fff;
+  font-size: 19px;
+}
+.vitrine .temoignage--vedette figcaption span {
+  color: rgba(255, 255, 255, 0.72);
+}
+.vitrine .temoignage:hover {
+  transform: none;
+}
 @media (prefers-reduced-motion: no-preference) {
   .vitrine .temoignage-etoiles {
     clip-path: inset(0 100% 0 0);
@@ -397,5 +1158,229 @@
 @keyframes etoiles {
   to {
     clip-path: inset(0 0 0 0);
+  }
+}
+@media (max-width: 900px) {
+  .vitrine .temoignages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vitrine .temoignage--vedette {
+    grid-row: auto;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   Chiffres
+   ══════════════════════════════════════════════════ */
+.vitrine .chiffres-section {
+  background: var(--navy);
+  padding: clamp(64px, 9vw, 112px) 0;
+}
+.vitrine .chiffres-section .titre-geant {
+  color: white;
+}
+/* Quatre instruments côte à côte, séparés par des filets : on les lit
+   comme un tableau de bord, pas comme quatre cartes. */
+.vitrine .chiffres-grid {
+  gap: 0;
+  margin: 8px 0 clamp(36px, 5vw, 64px);
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.vitrine .chiffre-carte {
+  padding: 32px 24px 28px;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0;
+  background: none;
+}
+.vitrine .chiffre-carte:last-child {
+  border-right: 0;
+}
+.vitrine .chiffre-carte:hover {
+  transform: none;
+}
+.vitrine .chiffre-icone {
+  display: none;
+}
+.vitrine .chiffre-valeur.odo {
+  display: flex;
+  font-size: clamp(52px, 5.6vw, 88px);
+}
+@media (max-width: 900px) {
+  .vitrine .chiffre-carte:nth-child(2n) {
+    border-right: 0;
+  }
+  .vitrine .chiffre-carte:nth-child(n + 3) {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   Qui sommes-nous
+   ══════════════════════════════════════════════════ */
+.vitrine .about {
+  background: var(--cream-2);
+  padding: clamp(56px, 9vw, 110px) 0 clamp(72px, 10vw, 130px);
+}
+.vitrine .about-grid {
+  max-width: none;
+  margin: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(36px, 6vw, 96px);
+}
+@media (max-width: 820px) {
+  .vitrine .about-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.vitrine .about-left p {
+  max-width: 34em;
+  margin: 0 0 20px;
+  font-size: 18px;
+  line-height: 1.65;
+  color: var(--graphite-soft);
+}
+.vitrine .feature-item h4 {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.vitrine .feature-item p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--graphite-soft);
+}
+.vitrine .about-signature {
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.45;
+}
+
+/* ══════════════════════════════════════════════════
+   Convoyeurs : la route
+   ══════════════════════════════════════════════════ */
+.vitrine .convoy {
+  /* Hauteur de la route : le contenu s'arrête juste au-dessus. */
+  --route-h: clamp(240px, 36vh, 400px);
+  position: relative;
+  overflow: hidden;
+  min-height: min(100svh, 980px);
+  background: var(--navy);
+  text-align: left;
+}
+.vitrine .convoy__contenu {
+  position: relative;
+  z-index: 2;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(64px, 10vh, 120px) clamp(20px, 4vw, 48px)
+    calc(var(--route-h) + 56px);
+}
+.vitrine .convoy__titre {
+  margin: 0 0 24px;
+  font-size: clamp(54px, 10.5vw, 176px);
+  line-height: 0.86;
+  text-transform: uppercase;
+  color: white;
+}
+.vitrine .convoy__desc {
+  max-width: 36em;
+  margin: 0 0 32px;
+  font-size: clamp(17px, 1.5vw, 20px);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.82);
+}
+.vitrine .convoy__atouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 0;
+  margin: 0 0 36px;
+  padding: 0;
+  list-style: none;
+}
+.vitrine .convoy__atouts li {
+  padding: 0 28px;
+  border-left: 2px solid rgba(255, 209, 26, 0.45);
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.vitrine .convoy__atouts li:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* La route vue du siège conducteur : un plan couché dont le bas est
+   devant le visiteur et le haut file vers l'horizon. Les bords
+   convergent, les tirets rapetissent. Seuls les tirets bougent, et par
+   `transform` : rien n'est repeint à chaque image. */
+.vitrine .route3d {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--route-h);
+  z-index: 1;
+  overflow: hidden;
+  background: #090b11;
+  perspective: 520px;
+  perspective-origin: 50% 0;
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+}
+.vitrine .route3d__plan {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 2000px;
+  height: 2400px;
+  margin-left: -1000px;
+  background: #0d0f17;
+  transform-origin: 50% 100%;
+  transform: rotateX(72deg);
+}
+/* Les rives : deux lignes blanches. */
+.vitrine .route3d__plan::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 29%;
+  right: 29%;
+  border-left: 12px solid rgba(255, 255, 255, 0.9);
+  border-right: 12px solid rgba(255, 255, 255, 0.9);
+}
+.vitrine .route3d__axe {
+  position: absolute;
+  top: -170px;
+  bottom: 0;
+  left: calc(50% - 8px);
+  width: 16px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--amber) 0 70px,
+    transparent 70px 170px
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .vitrine .route3d__axe {
+    animation: roule 0.8s linear infinite;
+  }
+}
+@keyframes roule {
+  to {
+    transform: translateY(170px);
+  }
+}
+@media (max-width: 700px) {
+  .vitrine .convoy__atouts {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .vitrine .convoy__atouts li {
+    padding: 0;
+    border-left: 0;
   }
 }
