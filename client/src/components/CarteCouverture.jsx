@@ -65,44 +65,91 @@ const dedans = ([x, y], poly) => {
 };
 
 // ── Villes et trajets d'exemple ──────────────────────────────
+// `nom` : décalage et ancrage de l'étiquette. Seules les grandes villes
+// sont nommées ; les autres sont de simples points, sinon la carte serait
+// illisible.
 const VILLES = {
-  Paris: { pos: [48.86, 2.35], nom: [14, -12, "start"] },
-  Lille: { pos: [50.63, 3.06], nom: [-14, -10, "end"] },
-  Lyon: { pos: [45.76, 4.84], nom: [16, 6, "start"] },
-  Bordeaux: { pos: [44.84, -0.58], nom: [-16, 6, "end"] },
-  Marseille: { pos: [43.3, 5.37], nom: [16, 8, "start"] },
-  Bruxelles: { pos: [50.85, 4.35], nom: [16, -8, "start"] },
+  Paris: { pos: [48.86, 2.35], nom: [16, -14, "start"] },
+  Lille: { pos: [50.63, 3.06], nom: [-16, -12, "end"] },
+  Strasbourg: { pos: [48.58, 7.75], nom: [-16, -12, "end"] },
+  Nantes: { pos: [47.22, -1.55], nom: [-16, 8, "end"] },
+  Bordeaux: { pos: [44.84, -0.58], nom: [-16, 8, "end"] },
+  Toulouse: { pos: [43.6, 1.44], nom: [-16, 10, "end"] },
+  Lyon: { pos: [45.76, 4.84], nom: [16, 8, "start"] },
+  Marseille: { pos: [43.3, 5.37], nom: [-14, 26, "end"] },
+  Bruxelles: { pos: [50.85, 4.35], nom: [16, -10, "start"] },
+  Barcelone: { pos: [41.39, 2.17], nom: [-16, -12, "end"] },
+  Amiens: { pos: [49.89, 2.3] },
+  Rouen: { pos: [49.44, 1.1] },
+  "Le Havre": { pos: [49.49, 0.11] },
+  Caen: { pos: [49.18, -0.37] },
+  Rennes: { pos: [48.11, -1.68] },
+  Brest: { pos: [48.39, -4.49] },
+  Angers: { pos: [47.47, -0.55] },
+  Tours: { pos: [47.39, 0.69] },
+  Orléans: { pos: [47.9, 1.91] },
+  "Le Mans": { pos: [48.0, 0.2] },
+  Reims: { pos: [49.26, 4.03] },
+  Metz: { pos: [49.12, 6.18] },
+  Mulhouse: { pos: [47.75, 7.34] },
+  Dijon: { pos: [47.32, 5.04] },
+  Besançon: { pos: [47.24, 6.02] },
+  Grenoble: { pos: [45.19, 5.72] },
+  "Saint-Étienne": { pos: [45.44, 4.39] },
+  "Clermont-Ferrand": { pos: [45.78, 3.08] },
+  Limoges: { pos: [45.83, 1.26] },
+  Poitiers: { pos: [46.58, 0.34] },
+  "La Rochelle": { pos: [46.16, -1.15] },
+  Bayonne: { pos: [43.49, -1.47] },
+  Montpellier: { pos: [43.61, 3.88] },
+  Perpignan: { pos: [42.7, 2.9] },
+  Avignon: { pos: [43.95, 4.81] },
+  Toulon: { pos: [43.12, 5.93] },
+  Nice: { pos: [43.7, 7.27] },
+  Ajaccio: { pos: [41.92, 8.74] },
+  Genève: { pos: [46.2, 6.14] },
+  Turin: { pos: [45.07, 7.69] },
+  Luxembourg: { pos: [49.61, 6.13] },
 };
-export const TRAJETS = [
-  ["Paris", "Lyon"],
-  ["Lille", "Bordeaux"],
-  ["Lyon", "Marseille"],
-  ["Paris", "Bruxelles"],
+
+/** Trajets d'exemple : un réseau, pas une liste de quatre lignes. */
+const TRAJETS = [
+  ["Paris", "Lille"], ["Paris", "Rouen"], ["Paris", "Le Havre"],
+  ["Paris", "Reims"], ["Paris", "Strasbourg"], ["Paris", "Dijon"],
+  ["Paris", "Lyon"], ["Paris", "Orléans"], ["Paris", "Nantes"],
+  ["Paris", "Rennes"], ["Paris", "Bordeaux"], ["Paris", "Bruxelles"],
+  ["Paris", "Clermont-Ferrand"], ["Paris", "Le Mans"], ["Lille", "Bordeaux"],
+  ["Lille", "Strasbourg"], ["Lille", "Amiens"], ["Rennes", "Brest"],
+  ["Nantes", "Bordeaux"], ["Nantes", "Toulouse"], ["Nantes", "Angers"],
+  ["Bordeaux", "Toulouse"], ["Bordeaux", "Bayonne"], ["Bordeaux", "Limoges"],
+  ["Toulouse", "Perpignan"], ["Toulouse", "Montpellier"],
+  ["Toulouse", "Barcelone"], ["Perpignan", "Barcelone"],
+  ["Montpellier", "Marseille"], ["Montpellier", "Lyon"],
+  ["Marseille", "Nice"], ["Marseille", "Lyon"], ["Marseille", "Ajaccio"],
+  ["Avignon", "Marseille"], ["Toulon", "Nice"], ["Lyon", "Grenoble"],
+  ["Lyon", "Genève"], ["Lyon", "Turin"], ["Lyon", "Clermont-Ferrand"],
+  ["Lyon", "Saint-Étienne"], ["Dijon", "Besançon"], ["Strasbourg", "Mulhouse"],
+  ["Strasbourg", "Metz"], ["Strasbourg", "Luxembourg"], ["Metz", "Reims"],
+  ["Limoges", "Clermont-Ferrand"], ["Poitiers", "La Rochelle"],
+  ["Tours", "Poitiers"], ["Caen", "Rouen"], ["Lille", "Bruxelles"],
 ];
 
-const centre = [LARGEUR * 0.5, HAUTEUR * 0.52];
-const arc = (a, b) => {
+const arc = (a, b, i) => {
   const [x1, y1] = projeter(VILLES[a].pos);
   const [x2, y2] = projeter(VILLES[b].pos);
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2;
   const dx = x2 - x1;
   const dy = y2 - y1;
-  const dist = Math.hypot(dx, dy);
-  // Le trajet s'écarte du centre du pays : il se lit comme un vol, pas
-  // comme un trait posé sur les points.
-  let nx = -dy / dist;
-  let ny = dx / dist;
-  if ((mx + nx - centre[0]) ** 2 + (my + ny - centre[1]) ** 2 <
-      (mx - nx - centre[0]) ** 2 + (my - ny - centre[1]) ** 2) {
-    nx = -nx;
-    ny = -ny;
-  }
-  const cx = mx + nx * dist * 0.22;
-  const cy = my + ny * dist * 0.22;
+  const dist = Math.hypot(dx, dy) || 1;
+  // Le sens de la courbure alterne d'un trajet à l'autre : les arcs
+  // s'écartent au lieu de se superposer, et le réseau se lit.
+  const sens = i % 2 ? 1 : -1;
+  const cx = mx + (-dy / dist) * dist * (0.16 + (i % 3) * 0.04) * sens;
+  const cy = my + (dx / dist) * dist * (0.16 + (i % 3) * 0.04) * sens;
   return `M ${x1.toFixed(1)} ${y1.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
 };
-const CHEMINS = TRAJETS.map(([a, b]) => arc(a, b));
+const CHEMINS = TRAJETS.map(([a, b], i) => arc(a, b, i));
 
 // ── Trame de points, rangée par rangée, regroupée en anneaux ──
 const PAS = 21;
@@ -139,7 +186,7 @@ export default function CarteCouverture() {
         if (entrees.some((e) => e.isIntersecting)) {
           setVue(true);
           // Les véhicules partent quand les trajets sont tracés.
-          t = setTimeout(() => setRoule(true), 3200);
+          t = setTimeout(() => setRoule(true), 4200);
           io.disconnect();
         }
       },
@@ -158,7 +205,7 @@ export default function CarteCouverture() {
         className="carte__svg"
         viewBox={`0 0 ${LARGEUR} ${HAUTEUR}`}
         role="img"
-        aria-label="Carte de France en points avec quatre trajets d'exemple : Paris–Lyon, Lille–Bordeaux, Lyon–Marseille et Paris–Bruxelles."
+        aria-label="Carte de France en points, avec une cinquantaine de trajets d'exemple entre les grandes villes de France et vers l'Europe."
       >
         {ANNEAUX.map((points, b) => (
           <g key={b} className="carte__anneau" style={{ "--b": b }}>
@@ -180,29 +227,42 @@ export default function CarteCouverture() {
 
         {Object.entries(VILLES).map(([nom, v], i) => {
           const [x, y] = projeter(v.pos);
-          const [dx, dy, ancre] = v.nom;
+          const grande = Boolean(v.nom);
           return (
-            <g key={nom} className="carte__ville" style={{ "--v": i }}>
-              <circle className="carte__pulse" cx={x} cy={y} r="9" />
-              <circle className="carte__point" cx={x} cy={y} r="7" />
-              <text x={x + dx} y={y + dy} textAnchor={ancre} className="carte__nom">
-                {nom}
-              </text>
+            <g
+              key={nom}
+              className={`carte__ville${grande ? "" : " carte__ville--petite"}`}
+              style={{ "--v": i }}
+            >
+              {grande && <circle className="carte__pulse" cx={x} cy={y} r="9" />}
+              <circle className="carte__point" cx={x} cy={y} r={grande ? 7 : 4.5} />
+              {grande && (
+                <text
+                  x={x + v.nom[0]}
+                  y={y + v.nom[1]}
+                  textAnchor={v.nom[2]}
+                  className="carte__nom"
+                >
+                  {nom}
+                </text>
+              )}
             </g>
           );
         })}
 
         {roule &&
-          CHEMINS.map((d, i) => (
-            <circle key={d} r="8" className="carte__vehicule">
-              <animateMotion
-                dur={`${4.2 + i * 0.8}s`}
-                repeatCount="indefinite"
-                path={d}
-                begin={`${i * 0.5}s`}
-              />
-            </circle>
-          ))}
+          CHEMINS.map((d, i) =>
+            i % 2 === 0 ? (
+              <circle key={d} r="7" className="carte__vehicule">
+                <animateMotion
+                  dur={`${4 + (i % 5) * 0.9}s`}
+                  repeatCount="indefinite"
+                  path={d}
+                  begin={`${(i % 7) * 0.45}s`}
+                />
+              </circle>
+            ) : null,
+          )}
       </svg>
     </div>
   );

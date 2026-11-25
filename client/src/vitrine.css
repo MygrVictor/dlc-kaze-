@@ -815,102 +815,6 @@
 }
 
 /* ══════════════════════════════════════════════════
-   La phrase, lue au rythme du défilement
-   ══════════════════════════════════════════════════ */
-.vitrine .slogan {
-  --p: 1; /* sans script : la phrase est entière */
-  background: var(--amber);
-  color: var(--asphalt);
-}
-.vitrine .slogan__scene {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: clamp(28px, 5vh, 56px);
-  max-width: 1280px;
-  min-height: min(70svh, 640px);
-  margin: 0 auto;
-  padding: clamp(56px, 9vw, 110px) clamp(20px, 4vw, 48px);
-}
-.vitrine .slogan__texte {
-  margin: 0;
-  max-width: 12em;
-  font-size: clamp(60px, 11.5vw, 190px);
-  line-height: 0.88;
-  text-transform: uppercase;
-  text-wrap: balance;
-}
-/* Avec le script : la scène se fige sous la barre de navigation pendant
-   que la phrase s'allume, puis se libère. */
-.vitrine .slogan--lie {
-  height: 230vh;
-}
-.vitrine .slogan--lie .slogan__scene {
-  position: sticky;
-  top: var(--nav-h);
-  height: calc(100svh - var(--nav-h));
-  min-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-/* Un mot s'allume quand vient son tour ; avant, il reste lisible. */
-.vitrine .slogan--lie .slogan__mot {
-  opacity: clamp(
-    0.22,
-    calc(var(--p) * var(--n) * 1.18 - var(--i)),
-    1
-  );
-}
-
-/* La route sous la phrase : la voiture avance avec la lecture. */
-.vitrine .slogan__route {
-  position: relative;
-  height: 30px;
-}
-.vitrine .slogan__piste,
-.vitrine .slogan__fait {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 13px;
-  height: 4px;
-}
-.vitrine .slogan__piste {
-  background: repeating-linear-gradient(
-    to right,
-    rgba(18, 20, 28, 0.45) 0 14px,
-    transparent 14px 28px
-  );
-}
-.vitrine .slogan__fait {
-  background: var(--asphalt);
-  transform-origin: left;
-  transform: scaleX(var(--p));
-}
-.vitrine .slogan__voiture {
-  position: absolute;
-  top: 0;
-  left: calc(var(--p) * (100% - 30px));
-  display: block;
-  width: 30px;
-  height: 30px;
-}
-.vitrine .slogan__voiture svg {
-  display: block;
-  margin: 0 auto;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-}
-@media (max-width: 700px) {
-  .vitrine .slogan--lie {
-    height: 200vh;
-  }
-  .vitrine .slogan__texte {
-    font-size: 18vw;
-  }
-}
-
-/* ══════════════════════════════════════════════════
    Solutions : la pile de panneaux
    ══════════════════════════════════════════════════ */
 .vitrine .solutions {
@@ -1182,12 +1086,7 @@
   padding: 14px 22px;
 }
 .vitrine .confiance__logos .logo-image {
-  filter: grayscale(1);
-  opacity: 0.72;
-  transition:
-    filter 0.35s,
-    opacity 0.35s,
-    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Un trait ambre monte depuis le bas de la case survolée. */
 .vitrine .confiance__logos li::after {
@@ -1206,16 +1105,7 @@
   transform: scaleX(1);
 }
 .vitrine .confiance__logos li:hover .logo-image {
-  filter: none;
-  opacity: 1;
   transform: scale(1.06);
-}
-/* Sans survol possible (téléphone), les logos gardent leurs couleurs. */
-@media (hover: none) {
-  .vitrine .confiance__logos .logo-image {
-    filter: none;
-    opacity: 1;
-  }
 }
 @media (prefers-reduced-motion: no-preference) {
   .vitrine .confiance__logos li {
@@ -1441,7 +1331,13 @@
 /* Les deux cartes ont la même hauteur : la colonne de droite répartit ses
    barres plutôt que de laisser un vide sous elle. */
 .vitrine .chiffres-graphes {
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
   align-items: stretch;
+}
+@media (max-width: 900px) {
+  .vitrine .chiffres-graphes {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .vitrine .chiffres-graphes .graphe-carte {
   display: flex;
@@ -1468,8 +1364,12 @@
 .vitrine .carte__trajet {
   fill: none;
   stroke: var(--amber);
-  stroke-width: 3.5;
+  stroke-width: 2.4;
+  stroke-opacity: 0.62;
   stroke-linecap: round;
+}
+.vitrine .carte__ville--petite .carte__point {
+  stroke-width: 2;
 }
 .vitrine .carte__point {
   fill: var(--amber);
@@ -1536,7 +1436,7 @@
   }
   .vitrine .carte--vue .carte__trajet {
     animation: trace 1.5s cubic-bezier(0.45, 0, 0.2, 1) forwards;
-    animation-delay: calc(1.4s + var(--t) * 0.4s);
+    animation-delay: calc(1.2s + var(--t) * 0.07s);
   }
   .vitrine .carte__ville {
     opacity: 0;

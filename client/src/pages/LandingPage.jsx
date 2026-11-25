@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import Confiance from "../components/Confiance";
-import BandeauSlogan from "../components/BandeauSlogan";
 import PareBrise from "../components/PareBrise";
 import TableauDeBord from "../components/TableauDeBord";
 import SectionChiffres from "../components/SectionChiffres";
@@ -190,7 +189,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <BandeauSlogan />
       <Confiance />
 
       {/* ── SOLUTIONS ─────────────────────────────── */}

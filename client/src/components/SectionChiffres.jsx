@@ -1,5 +1,5 @@
 import Odometre from "./Odometre";
-import CarteCouverture, { TRAJETS } from "./CarteCouverture";
+import CarteCouverture from "./CarteCouverture";
 import { TrendingUp, MapPin, Clock, ShieldCheck } from "lucide-react";
 
 /**
@@ -123,15 +123,8 @@ export default function SectionChiffres() {
 
             <CarteCouverture />
 
-            <ul className="carte__trajets" aria-label="Trajets d'exemple">
-              {TRAJETS.map(([a, b]) => (
-                <li key={a + b}>
-                  {a} – {b}
-                </li>
-              ))}
-            </ul>
             <p className="graphe-note">
-              France entière et Europe. Quatre trajets pris pour exemple.
+              France entière et Europe. Trajets donnés à titre d'exemple.
             </p>
           </div>
 
