@@ -468,30 +468,6 @@
 .vitrine .hero--clair .hero-stat > span:last-child {
   color: var(--graphite-soft);
 }
-.vitrine .hero--clair .plan__svg {
-  stroke: var(--navy);
-}
-.vitrine .hero--clair .plan__sol > path:first-child {
-  stroke: rgba(11, 29, 58, 0.45);
-}
-.vitrine .hero--clair .plan__tirets {
-  stroke: var(--amber-deep);
-  stroke-width: 4;
-}
-.vitrine .hero--clair .voiture--chargee {
-  stroke: rgba(11, 29, 58, 0.6);
-}
-/* La voiture conduite est pleine : un trait jaune ne se lirait pas sur
-   du crème. */
-.vitrine .hero--clair .voiture--conduite {
-  stroke: var(--asphalt);
-}
-.vitrine .hero--clair .voiture--conduite > path.t:first-of-type {
-  fill: var(--amber);
-}
-.vitrine .hero--clair .plan__svg .feu {
-  stroke: var(--amber-deep);
-}
 .vitrine .hero--clair .plan__legende {
   color: var(--graphite-soft);
 }
@@ -555,42 +531,128 @@
   }
 }
 
-/* ── Le plan : un porte-voitures et une voiture conduite ── */
+/* ── L'illustration : un porte-voitures et une voiture conduite ── */
 .vitrine .hero-plan {
-  /* Au défilement, les véhicules partent vers la droite. */
+  /* Au défilement, les véhicules repartent vers la droite. */
   transform: translate3d(calc(var(--sy, 0) * 0.55px), 0, 0);
 }
 .vitrine .plan__svg {
-  --trait: 2;
+  /* Fond sombre (marine) : acier clair, cabine claire. */
+  --acier: #9fb0c8;
+  --cab: #f4f2ec;
+  --cab-ombre: #cfcbc0;
+  --vitre: #1c3150;
+  --pneu: #12151d;
+  --jante: #d5d9e0;
+  --phare: #fff4b0;
+  --feu: #c0392b;
   display: block;
   width: 100%;
   height: auto;
   overflow: visible;
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.9);
-  stroke-width: var(--trait);
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
-.vitrine .plan__sol > path:first-child {
-  stroke: rgba(255, 255, 255, 0.4);
+/* Fond crème : acier et cabine sombres. */
+.vitrine .hero--clair .plan__svg {
+  --acier: #34445f;
+  --cab: #0b1d3a;
+  --cab-ombre: #07142a;
+}
+.vitrine .voiture {
+  --c: #f4f2ec;
+  --c-ombre: #cfcbc0;
+}
+.vitrine .v-blanc {
+  --c: #f4f2ec;
+  --c-ombre: #cfcbc0;
+}
+.vitrine .v-gris {
+  --c: #b7bec9;
+  --c-ombre: #8e97a5;
+}
+.vitrine .v-bleu {
+  --c: #3d6aa6;
+  --c-ombre: #2b4d7e;
+}
+.vitrine .v-anthracite {
+  --c: #4a5060;
+  --c-ombre: #2f3441;
+}
+.vitrine .v-ambre {
+  --c: var(--amber);
+  --c-ombre: var(--amber-deep);
+}
+.vitrine .f-acier {
+  fill: var(--acier);
+}
+.vitrine .f-cab {
+  fill: var(--cab);
+}
+.vitrine .f-vitre {
+  fill: var(--vitre);
+}
+.vitrine .f-pneu {
+  fill: var(--pneu);
+}
+.vitrine .f-jante {
+  fill: var(--jante);
+}
+.vitrine .f-ambre {
+  fill: var(--amber);
+}
+.vitrine .f-phare {
+  fill: var(--phare);
+}
+.vitrine .f-feu {
+  fill: var(--feu);
+}
+.vitrine .f-c {
+  fill: var(--c);
+}
+.vitrine .f-c-o {
+  fill: var(--c-ombre);
+}
+.vitrine .s-pneu {
+  stroke: var(--pneu);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  fill: none;
+}
+.vitrine .s-c-o {
+  stroke: var(--c-ombre);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  fill: none;
+}
+.vitrine .s-cab-o {
+  stroke: var(--cab-ombre);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  fill: none;
+}
+/* Une ligne fine autour de la carrosserie : une voiture blanche se
+   détacherait mal d'un fond crème sans elle. */
+.vitrine .carrosserie {
+  stroke: rgba(11, 29, 58, 0.28);
+  stroke-width: 0.9;
+}
+.vitrine .plan__ombre {
+  fill: rgba(0, 0, 0, 0.28);
+}
+.vitrine .plan__route {
+  fill: #232632;
+}
+.vitrine .plan__rive {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 2;
 }
 .vitrine .plan__tirets {
-  stroke: rgba(255, 209, 26, 0.7);
-  stroke-width: 3;
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 4;
   stroke-dasharray: 34 34;
-  stroke-linecap: butt;
 }
-.vitrine .voiture--chargee {
-  stroke: rgba(255, 255, 255, 0.55);
-}
-.vitrine .voiture--conduite {
-  stroke: var(--amber);
-}
-.vitrine .plan__svg .feu {
-  stroke: var(--amber);
-  stroke-width: calc(var(--trait) * 1.8);
-}
+
 .vitrine .plan__legendes {
   display: grid;
   grid-template-columns: 75fr 25fr;
@@ -627,9 +689,6 @@
   color: var(--amber);
 }
 @media (max-width: 700px) {
-  .vitrine .plan__svg {
-    --trait: 5;
-  }
   .vitrine .plan__legendes {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
@@ -639,23 +698,31 @@
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  /* Le dessin se trace, du sol vers les véhicules. */
-  .vitrine .plan__svg .t {
-    stroke-dasharray: 1 1.02;
-    stroke-dashoffset: 1;
-    animation: trace 1.1s cubic-bezier(0.45, 0, 0.2, 1) forwards;
-    animation-delay: var(--d, 0s);
+  /* Le camion entre dans la scène, puis la voiture le double. */
+  .vitrine .camion-anim {
+    animation: entre-camion 1.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-  /* Puis les roues tournent et la chaussée défile. */
+  .vitrine .voiture-anim {
+    animation: entre-voiture 2.1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+  }
+  /* Les roues tournent, la chaussée défile : le convoi est en route. */
   .vitrine .roue {
     transform-box: fill-box;
     transform-origin: center;
-  }
-  .vitrine .roue--tourne {
-    animation: roue-tourne 1.3s linear 2.6s infinite;
+    animation: roue-tourne 0.8s linear infinite;
   }
   .vitrine .plan__tirets {
     animation: chaussee 0.9s linear infinite;
+  }
+}
+@keyframes entre-camion {
+  from {
+    transform: translateX(-900px);
+  }
+}
+@keyframes entre-voiture {
+  from {
+    transform: translateX(-1250px);
   }
 }
 @keyframes roue-tourne {
