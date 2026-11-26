@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import Confiance from "../components/Confiance";
-import ScenePlan from "../components/ScenePlan";
+import ScenesHero from "../components/ScenesHero";
 import Odometre from "../components/Odometre";
 import SectionChiffres from "../components/SectionChiffres";
 import RouteDefilement from "../components/RouteDefilement";
@@ -196,18 +196,8 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="hero-plan">
-            <ScenePlan />
-            <div className="plan__legendes entree" style={{ "--d": "2.1s" }}>
-              <p className="plan__legende">
-                <strong>Transport et affrètement</strong>
-                <span>Porte-voitures, en lot ou à l'unité</span>
-              </p>
-              <p className="plan__legende plan__legende--convoyage">
-                <strong>Convoyage</strong>
-                <span>Un convoyeur au volant, porte à porte</span>
-              </p>
-            </div>
+          <div className="hero-plan entree" style={{ "--d": "1.4s" }}>
+            <ScenesHero />
           </div>
         </div>
       </section>
