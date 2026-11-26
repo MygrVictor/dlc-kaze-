@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import Confiance from "../components/Confiance";
-import PareBrise from "../components/PareBrise";
-import TableauDeBord from "../components/TableauDeBord";
+import ScenePlan from "../components/ScenePlan";
+import Odometre from "../components/Odometre";
 import SectionChiffres from "../components/SectionChiffres";
 import RouteDefilement from "../components/RouteDefilement";
 import usePile from "../lib/usePile";
@@ -33,13 +33,6 @@ function useReveal() {
     return () => io.disconnect();
   }, []);
 }
-
-const HERO_IMGS = [
-  "/images/hero/hero-1.webp",
-  "/images/hero/hero-2.webp",
-  "/images/hero/hero-3.webp",
-  "/images/hero/hero-4.webp",
-];
 
 const Fleche = () => (
   <svg
@@ -139,15 +132,15 @@ export default function LandingPage() {
       <RouteDefilement />
 
       {/* ── HERO ──────────────────────────────── */}
+      {/* Drive Line Connect déplace des véhicules de deux façons, au volant
+          (convoyage) et sur camion (transport, affrètement) : le dessin les
+          montre ensemble, à la même échelle. */}
       <section className="hero">
-        <PareBrise images={HERO_IMGS} />
-        <div className="hero-scrim" aria-hidden="true" />
-        <div className="hero-route" aria-hidden="true" />
-
         <div className="hero-grille">
           <div className="hero-texte">
             <p className="hero-sujet entree" style={{ "--d": "0.1s" }}>
-              Convoyage de véhicules en France et en Europe
+              Convoyage, transport et affrètement de véhicules en France et en
+              Europe
             </p>
             <h1 className="hero-titre display">
               <span className="sr-only">Votre mobilité. Notre priorité.</span>
@@ -185,7 +178,34 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <TableauDeBord />
+          <div className="hero-stats entree" style={{ "--d": "1.1s" }}>
+            <div className="hero-stat">
+              <Odometre valeur={4000} suffixe="+" declencheur="montage" delai={1.5} />
+              <span>véhicules convoyés</span>
+            </div>
+            <div className="hero-stat">
+              <Odometre valeur={50} suffixe="+" declencheur="montage" delai={1.7} />
+              <span>chauffeurs partenaires</span>
+            </div>
+            <div className="hero-stat">
+              <Odometre valeur={100} suffixe=" %" declencheur="montage" delai={1.9} />
+              <span>livrés dans les délais</span>
+            </div>
+          </div>
+
+          <div className="hero-plan">
+            <ScenePlan />
+            <div className="plan__legendes entree" style={{ "--d": "2.1s" }}>
+              <p className="plan__legende">
+                <strong>Transport et affrètement</strong>
+                <span>Porte-voitures, en lot ou à l'unité</span>
+              </p>
+              <p className="plan__legende plan__legende--convoyage">
+                <strong>Convoyage</strong>
+                <span>Un convoyeur au volant, porte à porte</span>
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

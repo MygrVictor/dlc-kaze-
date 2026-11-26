@@ -253,24 +253,23 @@
   display: flex;
   align-items: center;
   min-height: calc(100svh - var(--nav-h));
-  padding: clamp(56px, 10vh, 120px) 0 clamp(72px, 12vh, 140px);
+  padding: clamp(28px, 5vh, 64px) 0 clamp(28px, 5vh, 56px);
   background: var(--asphalt);
   color: white;
   text-align: left;
 }
+/* Trame de papier millimétré : le hero est un plan. */
 .vitrine .hero::before {
-  content: none;
-}
-.vitrine .hero-scrim {
+  content: "";
   position: absolute;
   inset: 0;
-  z-index: 2;
-  background: linear-gradient(
-    90deg,
-    rgba(18, 20, 28, 0.86) 0%,
-    rgba(18, 20, 28, 0.58) 52%,
-    rgba(18, 20, 28, 0.44) 100%
-  );
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
 }
 .vitrine .hero-grille {
   position: relative;
@@ -280,13 +279,30 @@
   margin: 0 auto;
   padding: 0 clamp(20px, 4vw, 48px);
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
-  gap: clamp(32px, 5vw, 88px);
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  grid-template-areas:
+    "texte stats"
+    "plan plan";
+  column-gap: clamp(32px, 5vw, 88px);
+  row-gap: clamp(20px, 3.5vh, 44px);
   align-items: center;
+}
+.vitrine .hero-texte {
+  grid-area: texte;
+}
+.vitrine .hero-stats {
+  grid-area: stats;
+}
+.vitrine .hero-plan {
+  grid-area: plan;
 }
 @media (max-width: 960px) {
   .vitrine .hero-grille {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "texte"
+      "stats"
+      "plan";
   }
 }
 
@@ -308,7 +324,7 @@
   background: var(--amber);
 }
 .vitrine .hero-titre {
-  font-size: clamp(46px, 7.2vw, 124px);
+  font-size: clamp(46px, 6.2vw, 104px);
   line-height: 0.9;
   text-transform: uppercase;
   color: white;
@@ -389,363 +405,164 @@
   }
 }
 
-/* Marquage au sol : les tirets défilent sous le hero. */
-.vitrine .hero-route {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 10px;
-  background: #0c0e14;
-  z-index: 3;
-}
-.vitrine .hero-route::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 4px;
-  height: 2px;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--amber) 0 26px,
-    transparent 26px 52px
-  );
-}
-@media (prefers-reduced-motion: no-preference) {
-  .vitrine .hero-route::before {
-    animation: defile-route 1.1s linear infinite;
-  }
-}
-@keyframes defile-route {
-  to {
-    background-position: -52px 0;
-  }
-}
-
-/* ── Pare-brise et essuie-glace ─────────────────── */
-.vitrine .pare-brise {
-  position: absolute;
-  inset: -20% 0 0 0;
-  z-index: 0;
-  /* Parallaxe : le fond se décale à peine plus lentement que la page. */
-  transform: translate3d(0, calc(var(--sy, 0) * 0.18px), 0);
-  will-change: transform;
-}
-.vitrine .pare-brise__scene,
-.vitrine .pare-brise__masque {
-  position: absolute;
-  inset: 0;
-}
-.vitrine .pare-brise__photo {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-}
-/* La photo qui s'en va reste à l'échelle où sa respiration s'est arrêtée :
-   sans cela, elle sauterait au moment où le balai la quitte. */
-.vitrine .pare-brise__photo--fin {
-  transform: scale(1.08);
-}
-
-/* Le balayage : un masque conique dont l'angle est animé. Il pivote
-   depuis le milieu du bord bas, comme un essuie-glace. */
-.vitrine .pare-brise__scene--aller .pare-brise__masque {
-  -webkit-mask-image: conic-gradient(
-    from 270deg at 50% 100%,
-    #000 var(--a),
-    transparent calc(var(--a) + 0.4deg)
-  );
-  mask-image: conic-gradient(
-    from 270deg at 50% 100%,
-    #000 var(--a),
-    transparent calc(var(--a) + 0.4deg)
-  );
-}
-.vitrine .pare-brise__scene--retour .pare-brise__masque {
-  -webkit-mask-image: conic-gradient(
-    from 270deg at 50% 100%,
-    transparent calc(180deg - var(--a) - 0.4deg),
-    #000 calc(180deg - var(--a)),
-    #000 180deg,
-    transparent 180deg
-  );
-  mask-image: conic-gradient(
-    from 270deg at 50% 100%,
-    transparent calc(180deg - var(--a) - 0.4deg),
-    #000 calc(180deg - var(--a)),
-    #000 180deg,
-    transparent 180deg
-  );
-}
-.vitrine .pare-brise__balai {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 6px;
-  height: 135vmax;
-  margin-left: -3px;
-  border-radius: 3px;
-  background: var(--amber);
-  transform-origin: 50% 100%;
-  opacity: 0;
-  pointer-events: none;
-}
-.vitrine .pare-brise__scene--aller .pare-brise__balai {
-  transform: rotate(calc(var(--a) - 90deg));
-}
-.vitrine .pare-brise__scene--retour .pare-brise__balai {
-  transform: rotate(calc(90deg - var(--a)));
-}
-@media (prefers-reduced-motion: no-preference) {
-  .vitrine .pare-brise__scene {
-    animation: balayage 1.7s cubic-bezier(0.65, 0, 0.3, 1) both;
-  }
-  .vitrine .pare-brise__photo:not(.pare-brise__photo--fin) {
-    animation: souffle var(--duree, 6500ms) ease-out forwards;
-  }
-  .vitrine .pare-brise__balai {
-    animation: balai-visible 1.7s linear both;
-  }
-}
-@keyframes balayage {
-  from {
-    --a: 0deg;
-  }
-  to {
-    --a: 180deg;
-  }
-}
-@keyframes souffle {
-  from {
-    transform: scale(1);
-  }
-  to {
-    transform: scale(1.08);
-  }
-}
-@keyframes balai-visible {
-  0% {
-    opacity: 0;
-  }
-  6% {
-    opacity: 1;
-  }
-  94% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/* Repères de la photo affichée : une barre par photo, celle en cours se
-   remplit pendant que la photo est à l'écran. */
-.vitrine .pare-brise__reperes {
-  position: absolute;
-  z-index: 5;
-  left: max(
-    clamp(20px, 4vw, 48px),
-    calc((100% - 1280px) / 2 + clamp(20px, 4vw, 48px))
-  );
-  bottom: 34px;
-  display: flex;
-  gap: 10px;
-}
-.vitrine .pare-brise__repere {
-  position: relative;
-  width: 44px;
-  height: 14px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-.vitrine .pare-brise__repere::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 5px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.32);
-}
-.vitrine .pare-brise__repere:focus-visible {
-  outline: 2px solid var(--amber);
-  outline-offset: 3px;
-}
-.vitrine .pare-brise__avance {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 5px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--amber);
-  transform-origin: left;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .vitrine .pare-brise__avance {
-    animation: remplit var(--duree, 6500ms) linear both;
-  }
-}
-@keyframes remplit {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
-/* ── Le tableau de bord ─────────────────────────── */
-.vitrine .tableau {
+/* ── Chiffres du hero ───────────────────────────── */
+.vitrine .hero-stats {
+  align-self: center;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: clamp(18px, 3vh, 30px);
+  padding-left: clamp(20px, 3vw, 44px);
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
 }
-@media (max-width: 960px) {
-  .vitrine .tableau {
-    max-width: 440px;
-    width: 100%;
-    margin: 8px auto 0;
-  }
+.vitrine .hero-stat {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-.vitrine .cadran {
-  position: relative;
-  width: min(100%, 380px);
-  aspect-ratio: 1;
+.vitrine .hero-stat:last-child {
+  border-bottom: 0;
 }
-.vitrine .cadran__svg {
+.vitrine .hero-stat .odo {
+  font-size: clamp(44px, 4.6vw, 68px);
+}
+.vitrine .hero-stat > span:last-child {
   display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-.vitrine .cadran__piste {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.16);
-  stroke-width: 2;
-}
-.vitrine .cadran__jauge {
-  fill: none;
-  stroke: var(--amber);
-  stroke-width: 7;
-  stroke-linecap: round;
-  stroke-dashoffset: 0;
-}
-.vitrine .cadran__grad {
-  stroke: var(--amber);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-.vitrine .cadran__grad--longue {
-  stroke-width: 3.2;
-}
-.vitrine .cadran__aiguille {
-  transform: rotate(135deg);
-}
-.vitrine .cadran__aiguille line {
-  stroke: white;
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-.vitrine .cadran__moyeu {
-  fill: #0c0e14;
-  stroke: var(--amber);
-  stroke-width: 3;
-}
-.vitrine .cadran__lecture {
-  position: absolute;
-  left: 50%;
-  top: 58%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-.vitrine .cadran__lecture .odo {
-  font-size: clamp(46px, 5.4vw, 72px);
-  /* L'aiguille passe derrière le compteur, pas sur le « % ». */
-  padding: 0.05em 0.12em;
-  border-radius: 0.1em;
-  background: #0c0e14;
-}
-.vitrine .cadran__legende {
+  margin-top: 6px;
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.78);
-  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.76);
 }
-.vitrine .tableau__compteurs {
-  display: flex;
-  justify-content: center;
-  gap: clamp(22px, 3.4vw, 52px);
+@media (max-width: 960px) {
+  .vitrine .hero-stats {
+    flex-direction: row;
+    gap: 16px;
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .vitrine .hero-stat {
+    flex: 1;
+    padding: 14px 0 0;
+    border-bottom: 0;
+  }
+  .vitrine .hero-stat .odo {
+    font-size: clamp(30px, 8vw, 44px);
+  }
+  .vitrine .hero-stat > span:last-child {
+    font-size: 10.5px;
+  }
+}
+
+/* ── Le plan : un porte-voitures et une voiture conduite ── */
+.vitrine .hero-plan {
+  /* Au défilement, les véhicules partent vers la droite. */
+  transform: translate3d(calc(var(--sy, 0) * 0.55px), 0, 0);
+}
+.vitrine .plan__svg {
+  --trait: 2;
+  display: block;
   width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: var(--trait);
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.vitrine .tableau__compteur {
+.vitrine .plan__sol > path:first-child {
+  stroke: rgba(255, 255, 255, 0.4);
+}
+.vitrine .plan__tirets {
+  stroke: rgba(255, 209, 26, 0.7);
+  stroke-width: 3;
+  stroke-dasharray: 34 34;
+  stroke-linecap: butt;
+}
+.vitrine .voiture--chargee {
+  stroke: rgba(255, 255, 255, 0.55);
+}
+.vitrine .voiture--conduite {
+  stroke: var(--amber);
+}
+.vitrine .plan__svg .feu {
+  stroke: var(--amber);
+  stroke-width: calc(var(--trait) * 1.8);
+}
+.vitrine .plan__legendes {
+  display: grid;
+  grid-template-columns: 75fr 25fr;
+  margin-top: 12px;
+}
+.vitrine .plan__legende {
+  margin: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.78);
 }
-.vitrine .tableau__compteur .odo {
-  font-size: clamp(36px, 3.6vw, 52px);
+.vitrine .plan__legende:first-child {
+  padding-left: 3%;
 }
-.vitrine .tableau__compteur > span:last-child {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11.5px;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.76);
-  white-space: nowrap;
+.vitrine .plan__legende::before {
+  content: "";
+  width: 28px;
+  height: 3px;
+  margin-bottom: 8px;
+  border-radius: 2px;
+  background: #fff;
 }
-/* Le cadran démarre : l'aiguille balaie, les graduations s'allument sur
-   son passage, la jauge se remplit. */
+.vitrine .plan__legende strong {
+  font-size: 15px;
+  color: #fff;
+}
+.vitrine .plan__legende--convoyage::before {
+  background: var(--amber);
+}
+.vitrine .plan__legende--convoyage strong {
+  color: var(--amber);
+}
+@media (max-width: 700px) {
+  .vitrine .plan__svg {
+    --trait: 5;
+  }
+  .vitrine .plan__legendes {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .vitrine .plan__legende:first-child {
+    padding-left: 0;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
-  .vitrine .cadran__grad {
-    animation: grad-allume 0.1s linear both;
-    animation-delay: calc(1.3s + var(--i, 0) * 0.027s);
+  /* Le dessin se trace, du sol vers les véhicules. */
+  .vitrine .plan__svg .t {
+    stroke-dasharray: 1 1.02;
+    stroke-dashoffset: 1;
+    animation: trace 1.1s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+    animation-delay: var(--d, 0s);
   }
-  .vitrine .cadran__jauge {
-    animation: jauge 1.5s cubic-bezier(0.3, 0.1, 0.25, 1) 1.3s both;
+  /* Puis les roues tournent et la chaussée défile. */
+  .vitrine .roue {
+    transform-box: fill-box;
+    transform-origin: center;
   }
-  .vitrine .cadran__aiguille {
-    animation: aiguille 1.7s cubic-bezier(0.3, 0.1, 0.25, 1) 1.2s both;
+  .vitrine .roue--tourne {
+    animation: roue-tourne 1.3s linear 2.6s infinite;
+  }
+  .vitrine .plan__tirets {
+    animation: chaussee 0.9s linear infinite;
   }
 }
-@keyframes grad-allume {
-  from {
-    stroke: rgba(255, 255, 255, 0.28);
-  }
+@keyframes roue-tourne {
   to {
-    stroke: var(--amber);
+    transform: rotate(360deg);
   }
 }
-@keyframes jauge {
-  from {
-    stroke-dashoffset: var(--longueur);
-  }
+@keyframes chaussee {
   to {
-    stroke-dashoffset: 0;
-  }
-}
-@keyframes aiguille {
-  0% {
-    transform: rotate(-135deg);
-  }
-  70% {
-    transform: rotate(143deg);
-  }
-  85% {
-    transform: rotate(131deg);
-  }
-  100% {
-    transform: rotate(135deg);
+    stroke-dashoffset: -68;
   }
 }
 
