@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import Confiance from "../components/Confiance";
 import ScenePlan from "../components/ScenePlan";
@@ -125,6 +125,9 @@ function IconePanneau({ children }) {
 
 export default function LandingPage() {
   useReveal();
+  // Essai de deux fonds de hero : /?hero=clair (crème) ou, par défaut, marine.
+  const [params] = useSearchParams();
+  const variante = params.get("hero") === "clair" ? "clair" : "marine";
   const pile = usePile();
 
   return (
@@ -135,7 +138,7 @@ export default function LandingPage() {
       {/* Drive Line Connect déplace des véhicules de deux façons, au volant
           (convoyage) et sur camion (transport, affrètement) : le dessin les
           montre ensemble, à la même échelle. */}
-      <section className="hero">
+      <section className={`hero hero--${variante}`}>
         <div className="hero-grille">
           <div className="hero-texte">
             <p className="hero-sujet entree" style={{ "--d": "0.1s" }}>

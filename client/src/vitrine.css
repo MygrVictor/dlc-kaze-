@@ -405,6 +405,109 @@
   }
 }
 
+/* ── Fonds du hero : marine (par défaut) et crème ───────────── */
+.vitrine .hero--marine {
+  background: var(--navy);
+}
+.vitrine .hero--marine::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+}
+
+.vitrine .hero--clair {
+  background: var(--cream);
+  color: var(--navy);
+}
+.vitrine .hero--clair::before {
+  background-image:
+    linear-gradient(rgba(11, 29, 58, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 29, 58, 0.07) 1px, transparent 1px);
+}
+.vitrine .hero--clair .hero-sujet {
+  color: var(--navy);
+}
+.vitrine .hero--clair .hero-sujet::before {
+  background: var(--amber);
+}
+.vitrine .hero--clair .hero-titre {
+  color: var(--navy);
+}
+/* « Notre priorité. » : surligné jaune, le jaune seul manquerait de
+   contraste sur le crème. */
+.vitrine .hero--clair .hero-ligne--accent {
+  width: fit-content;
+  padding-right: 0.14em;
+  padding-left: 0.1em;
+  background: var(--amber);
+  color: var(--asphalt);
+}
+.vitrine .hero--clair .hero-sub {
+  color: var(--graphite-soft);
+}
+.vitrine .hero--clair .hero-note {
+  color: var(--graphite-soft);
+}
+.vitrine .hero--clair .btn-outline {
+  color: var(--navy);
+  border-color: rgba(11, 29, 58, 0.45);
+}
+.vitrine .hero--clair .btn-outline:hover:not(:disabled) {
+  background: rgba(11, 29, 58, 0.06);
+  border-color: var(--navy);
+}
+.vitrine .hero--clair .hero-stats {
+  border-left-color: rgba(11, 29, 58, 0.2);
+}
+.vitrine .hero--clair .hero-stat {
+  border-bottom-color: rgba(11, 29, 58, 0.14);
+}
+.vitrine .hero--clair .hero-stat .odo {
+  color: var(--navy);
+}
+.vitrine .hero--clair .hero-stat > span:last-child {
+  color: var(--graphite-soft);
+}
+.vitrine .hero--clair .plan__svg {
+  stroke: var(--navy);
+}
+.vitrine .hero--clair .plan__sol > path:first-child {
+  stroke: rgba(11, 29, 58, 0.45);
+}
+.vitrine .hero--clair .plan__tirets {
+  stroke: var(--amber-deep);
+  stroke-width: 4;
+}
+.vitrine .hero--clair .voiture--chargee {
+  stroke: rgba(11, 29, 58, 0.6);
+}
+/* La voiture conduite est pleine : un trait jaune ne se lirait pas sur
+   du crème. */
+.vitrine .hero--clair .voiture--conduite {
+  stroke: var(--asphalt);
+}
+.vitrine .hero--clair .voiture--conduite > path.t:first-of-type {
+  fill: var(--amber);
+}
+.vitrine .hero--clair .plan__svg .feu {
+  stroke: var(--amber-deep);
+}
+.vitrine .hero--clair .plan__legende {
+  color: var(--graphite-soft);
+}
+.vitrine .hero--clair .plan__legende::before {
+  background: var(--navy);
+}
+.vitrine .hero--clair .plan__legende strong {
+  color: var(--navy);
+}
+.vitrine .hero--clair .plan__legende--convoyage::before {
+  background: var(--amber);
+}
+.vitrine .hero--clair .plan__legende--convoyage strong {
+  color: var(--navy);
+}
+
 /* ── Chiffres du hero ───────────────────────────── */
 .vitrine .hero-stats {
   align-self: center;
