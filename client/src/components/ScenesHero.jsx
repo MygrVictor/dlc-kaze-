@@ -1,9 +1,8 @@
 /**
  * Les trois scènes animées du hero : ce que fait Drive Line Connect.
  *
- *  1. Transport et affrètement : un porte-8 arrive chargé de six véhicules,
- *     deux autres montent la rampe et prennent leur place, la rampe se
- *     relève, le camion repart avec ses huit véhicules.
+ *  1. Transport et affrètement : un porte-8 chargé de huit véhicules roule,
+ *     le décor défile derrière lui.
  *  2. Convoyage : une voiture conduite par un convoyeur roule, le décor
  *     défile derrière.
  *  3. Remise des clés : le convoyeur tend les clés au client, qui les prend.
@@ -224,31 +223,17 @@ function Camion() {
       <rect x="0" y="-62" width="592" height="6" rx="3" fill="url(#dlc-vol)" />
       <rect x="0" y="-196" width="592" height="7" rx="3.5" fill="url(#dlc-vol)" />
 
-      {/* Plateau haut : quatre véhicules */}
+      {/* Huit véhicules chargés : quatre par plateau */}
       {["v-blanc", "v-gris", "v-bleu", "v-anthracite"].map((c, i) => (
         <g key={`h${i}`} transform={`translate(${X_PLACE(i)} ${Y_HAUT}) scale(0.8)`}>
           <Voiture couleur={c} />
         </g>
       ))}
-      {/* Plateau bas : deux véhicules à l'avant, les deux places arrière attendent */}
-      {["v-gris", "v-blanc"].map((c, i) => (
-        <g key={`b${i}`} transform={`translate(${X_PLACE(i + 2)} ${Y_BAS}) scale(0.8)`}>
+      {["v-bleu", "v-blanc", "v-gris", "v-blanc"].map((c, i) => (
+        <g key={`b${i}`} transform={`translate(${X_PLACE(i)} ${Y_BAS}) scale(0.8)`}>
           <Voiture couleur={c} />
         </g>
       ))}
-
-      {/* Les deux véhicules qui montent : leur place finale est celle de la
-          pose au repos, leur trajet est décrit en CSS (charge-7, charge-8). */}
-      <g className="charge-7">
-        <g transform={`translate(${X_PLACE(1)} ${Y_BAS}) scale(0.8)`}>
-          <Voiture couleur="v-bleu" classeRoue="roue--c7" />
-        </g>
-      </g>
-      <g className="charge-8">
-        <g transform={`translate(${X_PLACE(0)} ${Y_BAS}) scale(0.8)`}>
-          <Voiture couleur="v-blanc" classeRoue="roue--c8" />
-        </g>
-      </g>
 
       {/* La rampe : articulée à l'arrière du plateau bas */}
       <g transform={`translate(0 ${Y_BAS})`}>
@@ -311,14 +296,24 @@ function SceneTransport() {
           ))}
         </g>
         {/* Décor : zone d'activité, collines, arbres */}
-        <g className="p-loin-fixe">
-          <Decor base={292} k={1.1} tuiles={[0, 380, 760]} />
+        <g className="defile-camion">
+          <Decor base={292} k={1.1} tuiles={[0, 380, 760, 1140]} />
         </g>
       </Fond>
       <path className="p-tirets-fixes" d="M 0 316 L 800 316" />
+      <g className="defile-bord">
+        {[0, 380, 760].map((dec) => (
+          <g key={dec} transform={`translate(${dec} 0)`}>
+            <path d="M 70 292 L 70 232 Q 70 224 80 224 L 96 224" className="s-pres" />
+            <rect x="92" y="221" width="12" height="6" rx="3" className="p-pres" />
+            <path d="M 250 292 L 250 232 Q 250 224 260 224 L 276 224" className="s-pres" />
+            <rect x="272" y="221" width="12" height="6" rx="3" className="p-pres" />
+          </g>
+        ))}
+      </g>
 
-      <g className="camion-anim">
-        <g transform="translate(150 292) scale(0.86)">
+      <g transform="translate(150 292) scale(0.86)">
+        <g className="camion-roule">
           <Camion />
         </g>
       </g>

@@ -880,35 +880,26 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .vitrine .roue,
-  .vitrine .charge-7,
-  .vitrine .charge-8,
   .vitrine .cles-valide {
     transform-box: fill-box;
     transform-origin: center;
   }
 
-  /* 1. Le porte-8 : il arrive, deux véhicules montent, la rampe se relève,
-        il repart. Tout se joue sur le même cycle de 11 s. */
-  .vitrine .camion-anim {
-    animation: camion-a 11s infinite;
-  }
-  .vitrine .rampe {
-    animation: rampe 11s infinite;
-  }
-  .vitrine .charge-7 {
-    animation: charge-7 11s infinite;
-  }
-  .vitrine .charge-8 {
-    animation: charge-8 11s infinite;
+  /* 1. Le porte-8 roule : roues, léger tangage, décor qui défile. */
+  .vitrine .camion-roule {
+    animation: tangage 1.4s ease-in-out infinite alternate;
   }
   .vitrine .roue--camion {
-    animation: roue-camion 11s infinite;
+    animation: roue-tourne 0.7s linear infinite;
   }
-  .vitrine .roue--c7 {
-    animation: roue-c7 11s infinite;
+  .vitrine .defile-camion {
+    animation: defile 26s linear infinite;
   }
-  .vitrine .roue--c8 {
-    animation: roue-c8 11s infinite;
+  .vitrine .defile-bord {
+    animation: defile 4.5s linear infinite;
+  }
+  .vitrine .p-tirets-fixes {
+    animation: chaussee-f 0.7s linear infinite;
   }
 
   /* 2. La voiture roule : le décor défile à trois vitesses. */
@@ -968,125 +959,18 @@
 }
 
 /* ── Scène 1 ── */
-@keyframes camion-a {
-  0% {
-    transform: translateX(-1000px);
-    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-  12%,
-  70% {
-    transform: translateX(0);
-    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.5);
-  }
-  86%,
-  100% {
-    transform: translateX(1100px);
-  }
-}
-@keyframes roue-camion {
-  0% {
-    transform: rotate(0);
-    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-  12%,
-  70% {
-    transform: rotate(900deg);
-    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.5);
-  }
-  86%,
-  100% {
-    transform: rotate(3300deg);
-  }
-}
-@keyframes rampe {
-  0%,
-  60% {
-    transform: rotate(0);
-    animation-timing-function: ease-in-out;
-  }
-  68%,
-  90% {
-    transform: rotate(113deg);
-    animation-timing-function: ease-in-out;
-  }
-  100% {
-    transform: rotate(0);
-  }
-}
-@keyframes charge-7 {
-  0%,
-  14% {
-    transform: translate(-950px, 62px) rotate(0);
-    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
-  }
-  24%,
-  27% {
-    transform: translate(-298px, 62px) rotate(0);
-    animation-timing-function: ease-in;
-  }
-  33% {
-    transform: translate(-224px, 31px) rotate(-23deg);
-    animation-timing-function: ease-out;
-  }
-  38% {
-    transform: translate(-150px, 1px) rotate(-12deg);
-    animation-timing-function: ease-out;
-  }
-  41% {
-    transform: translate(-128px, 0) rotate(0);
-    animation-timing-function: ease-out;
-  }
-  47%,
-  100% {
-    transform: translate(0, 0) rotate(0);
-  }
-}
-@keyframes charge-8 {
-  0%,
-  26% {
-    transform: translate(-1100px, 62px) rotate(0);
-    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
-  }
-  42%,
-  44% {
-    transform: translate(-156px, 62px) rotate(0);
-    animation-timing-function: ease-in;
-  }
-  49% {
-    transform: translate(-82px, 31px) rotate(-23deg);
-    animation-timing-function: ease-out;
-  }
-  54% {
-    transform: translate(-20px, 1px) rotate(-8deg);
-    animation-timing-function: ease-out;
-  }
-  60%,
-  100% {
-    transform: translate(0, 0) rotate(0);
-  }
-}
-@keyframes roue-c7 {
-  0%,
-  14% {
-    transform: rotate(0);
-  }
-  47%,
-  100% {
-    transform: rotate(1800deg);
-  }
-}
-@keyframes roue-c8 {
-  0%,
-  26% {
-    transform: rotate(0);
-  }
-  60%,
-  100% {
-    transform: rotate(1800deg);
-  }
-}
 
 /* ── Scène 2 ── */
+@keyframes tangage {
+  to {
+    transform: translateY(-1.6px);
+  }
+}
+@keyframes chaussee-f {
+  to {
+    stroke-dashoffset: -60;
+  }
+}
 @keyframes defile {
   to {
     transform: translateX(-380px);
