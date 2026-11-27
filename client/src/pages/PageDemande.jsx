@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { compresserImage } from "../lib/compresserImage";
 import { Link } from "react-router-dom";
 import { MailCheck, AlertCircle } from "lucide-react";
 import api from "../lib/api";
@@ -142,7 +143,16 @@ export default function PageDemande({
             message: form.message.trim() || undefined,
           };
 
-      const joints = fichiers ? fichiers(form) : null;
+      let joints = fichiers ? fichiers(form) : null;
+      if (joints) {
+        // Les photos sont réduites sur le téléphone avant de partir : sept
+        // pièces de 5 Mo faisaient 35 Mo d'un seul envoi.
+        const reduits = {};
+        for (const [cle, fichier] of Object.entries(joints)) {
+          reduits[cle] = fichier ? await compresserImage(fichier) : fichier;
+        }
+        joints = reduits;
+      }
 
       if (joints && Object.keys(joints).length > 0) {
         // Les pièces partent avec le formulaire, en une seule requête :
