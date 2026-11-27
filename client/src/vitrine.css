@@ -253,7 +253,7 @@
   display: flex;
   align-items: center;
   min-height: calc(100svh - var(--nav-h));
-  padding: clamp(28px, 5vh, 64px) 0 clamp(28px, 5vh, 56px);
+  padding: clamp(18px, 3vh, 40px) 0 clamp(24px, 4vh, 48px);
   background: var(--asphalt);
   color: white;
   text-align: left;
@@ -284,7 +284,7 @@
     "texte stats"
     "plan plan";
   column-gap: clamp(32px, 5vw, 88px);
-  row-gap: clamp(20px, 3.5vh, 44px);
+  row-gap: clamp(14px, 2.4vh, 30px);
   align-items: center;
 }
 .vitrine .hero-texte {
@@ -324,7 +324,7 @@
   background: var(--amber);
 }
 .vitrine .hero-titre {
-  font-size: clamp(46px, 6.2vw, 104px);
+  font-size: clamp(46px, 5.6vw, 96px);
   line-height: 0.9;
   text-transform: uppercase;
   color: white;
@@ -358,8 +358,8 @@
 }
 .vitrine .hero-sub {
   max-width: 34em;
-  margin: 0 0 clamp(24px, 4vh, 36px);
-  font-size: clamp(17px, 1.5vw, 20.5px);
+  margin: 0 0 clamp(18px, 3vh, 28px);
+  font-size: clamp(17px, 1.4vw, 19.5px);
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.86);
 }
@@ -527,15 +527,19 @@
   --vitrage: #2c5897;
   --route: #12192b;
   --acier: #9fb0c8;
+  --marque: #0b1d3a;
   --vitre: #1c3150;
   --pneu: #12151d;
   --jante: #d5d9e0;
   --phare: #fff4b0;
   --feu: #c0392b;
   --fob: #1c2236;
+  --cab: #f4f2ec;
+  --cab-ombre: #cfcbc0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(14px, 1.8vw, 24px);
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: clamp(12px, 1.5vw, 18px);
 }
 /* Fond crème */
 .vitrine .hero--clair .scenes {
@@ -547,11 +551,18 @@
   --vitrage: #b9cde6;
   --route: #2b2e36;
   --acier: #34445f;
+  --cab: #0b1d3a;
+  --cab-ombre: #07142a;
 }
 .vitrine .scene {
+  position: relative;
   margin: 0;
 }
+.vitrine .scene--grande {
+  grid-row: 1 / span 2;
+}
 .vitrine .scene__cadre {
+  height: 100%;
   overflow: hidden;
   border: 1px solid var(--carte-bord);
   border-radius: clamp(16px, 1.6vw, 22px);
@@ -560,46 +571,38 @@
 .vitrine .scene__svg {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
 }
+/* Légende posée sur la scène : elle ne coûte pas de hauteur au hero. */
 .vitrine .scene figcaption {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 14px 4px 0;
-  font-size: 14px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.78);
-}
-.vitrine .scene figcaption::before {
-  content: "";
-  width: 28px;
-  height: 3px;
-  margin-bottom: 8px;
-  border-radius: 2px;
-  background: #fff;
+  gap: 1px;
+  padding: 7px 12px 8px;
+  border-radius: 10px;
+  background: rgba(11, 29, 58, 0.8);
+  font-size: 12px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.82);
+  pointer-events: none;
 }
 .vitrine .scene figcaption strong {
-  font-size: 15px;
+  font-size: 13.5px;
   color: #fff;
-}
-.vitrine .scene--convoyage figcaption::before {
-  background: var(--amber);
 }
 .vitrine .scene--convoyage figcaption strong {
   color: var(--amber);
 }
 .vitrine .hero--clair .scene figcaption {
+  background: rgba(255, 255, 255, 0.9);
   color: var(--graphite-soft);
-}
-.vitrine .hero--clair .scene figcaption::before {
-  background: var(--navy);
 }
 .vitrine .hero--clair .scene figcaption strong {
   color: var(--navy);
-}
-.vitrine .hero--clair .scene--convoyage figcaption::before {
-  background: var(--amber);
 }
 /* Sur téléphone : les scènes se font défiler d'un geste du doigt. */
 @media (max-width: 800px) {
@@ -616,7 +619,7 @@
     display: none;
   }
   .vitrine .scene {
-    flex: 0 0 82%;
+    flex: 0 0 86%;
     scroll-snap-align: center;
   }
 }
@@ -655,6 +658,10 @@
 .vitrine .p-pres {
   fill: var(--pres);
 }
+.vitrine .p-nuage {
+  fill: var(--loin);
+  opacity: 0.55;
+}
 .vitrine .s-pres {
   stroke: var(--pres);
   stroke-width: 3;
@@ -680,8 +687,20 @@
   stroke-width: 4;
   stroke-dasharray: 34 34;
 }
+.vitrine .p-tirets-fixes {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 3;
+  stroke-dasharray: 30 30;
+}
 .vitrine .f-acier {
   fill: var(--acier);
+}
+.vitrine .f-marque {
+  fill: var(--marque);
+}
+.vitrine .f-cab {
+  fill: var(--cab);
 }
 .vitrine .f-vitre {
   fill: var(--vitre);
@@ -710,11 +729,14 @@
 .vitrine .f-peau {
   fill: #f2c9a5;
 }
-.vitrine .f-blanc {
-  fill: #fff;
-}
 .vitrine .f-fob {
   fill: var(--fob);
+}
+.vitrine .f-chemise {
+  fill: #f4f2ec;
+}
+.vitrine .f-cravate {
+  fill: #12151d;
 }
 .vitrine .s-pneu {
   stroke: var(--pneu);
@@ -728,9 +750,31 @@
   stroke-linecap: round;
   fill: none;
 }
+.vitrine .s-cab-o {
+  stroke: var(--cab-ombre);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  fill: none;
+}
 .vitrine .s-ambre {
   stroke: var(--amber);
   stroke-width: 2.4;
+  stroke-linecap: round;
+  fill: none;
+}
+.vitrine .s-blanc {
+  stroke: #fff;
+  stroke-width: 3.4;
+  fill: none;
+}
+.vitrine .s-gilet {
+  stroke: rgba(0, 0, 0, 0.25);
+  stroke-width: 1.2;
+  fill: none;
+}
+.vitrine .s-reflet {
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1.2;
   stroke-linecap: round;
   fill: none;
 }
@@ -748,33 +792,59 @@
   opacity: 0;
 }
 
-/* Pose finale, sans mouvement : clés remises, voiture chargée, voiture en
+/* Pose finale, sans mouvement : camion chargé, clés remises, voiture en
    route. C'est ce que voit qui a réduit les animations. */
-.vitrine .bras-a {
-  transform: rotate(-90deg);
+.vitrine .epaule-a {
+  transform: rotate(-60deg);
 }
-.vitrine .bras-b {
-  transform: rotate(-115deg);
+.vitrine .coude-a {
+  transform: rotate(-30deg);
+}
+.vitrine .epaule-b {
+  transform: rotate(-35deg);
+}
+.vitrine .coude-b {
+  transform: rotate(-105deg);
 }
 .vitrine .cle--a,
 .vitrine .cle-vol {
   opacity: 0;
 }
+.vitrine .rampe {
+  transform: rotate(113deg);
+}
 
 @media (prefers-reduced-motion: no-preference) {
-  .vitrine .roue {
+  .vitrine .roue,
+  .vitrine .charge-7,
+  .vitrine .charge-8,
+  .vitrine .cles-valide {
     transform-box: fill-box;
     transform-origin: center;
   }
 
-  /* 1. La voiture monte la rampe et prend sa place. */
-  .vitrine .charge-anim {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: charge 8s infinite;
+  /* 1. Le porte-8 : il arrive, deux véhicules montent, la rampe se relève,
+        il repart. Tout se joue sur le même cycle de 11 s. */
+  .vitrine .camion-anim {
+    animation: camion-a 11s infinite;
   }
-  .vitrine .roue--charge {
-    animation: roue-charge 8s linear infinite;
+  .vitrine .rampe {
+    animation: rampe 11s infinite;
+  }
+  .vitrine .charge-7 {
+    animation: charge-7 11s infinite;
+  }
+  .vitrine .charge-8 {
+    animation: charge-8 11s infinite;
+  }
+  .vitrine .roue--camion {
+    animation: roue-camion 11s infinite;
+  }
+  .vitrine .roue--c7 {
+    animation: roue-c7 11s infinite;
+  }
+  .vitrine .roue--c8 {
+    animation: roue-c8 11s infinite;
   }
 
   /* 2. La voiture roule : le décor défile à trois vitesses. */
@@ -783,6 +853,9 @@
   }
   .vitrine .defile-pres {
     animation: defile 6s linear infinite;
+  }
+  .vitrine .nuages {
+    animation: defile-nuages 90s linear infinite;
   }
   .vitrine .p-tirets {
     animation: chaussee 0.9s linear infinite;
@@ -804,11 +877,17 @@
   }
 
   /* 3. Les clés passent d'une main à l'autre. */
-  .vitrine .bras-a {
-    animation: bras-a 6s infinite;
+  .vitrine .epaule-a {
+    animation: epaule-a 6s infinite;
   }
-  .vitrine .bras-b {
-    animation: bras-b 6s infinite;
+  .vitrine .coude-a {
+    animation: coude-a 6s infinite;
+  }
+  .vitrine .epaule-b {
+    animation: epaule-b 6s infinite;
+  }
+  .vitrine .coude-b {
+    animation: coude-b 6s infinite;
   }
   .vitrine .cle--a {
     animation: cle-a 6s infinite;
@@ -820,56 +899,138 @@
     animation: cle-vol 6s infinite;
   }
   .vitrine .cles-valide {
-    transform-box: fill-box;
-    transform-origin: center;
     animation: valide 6s infinite;
   }
 }
 
-@keyframes charge {
+/* ── Scène 1 ── */
+@keyframes camion-a {
   0% {
-    transform: translate(-300px, 60px) rotate(0);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
+    transform: translateX(-1000px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
   }
-  24% {
-    transform: translate(-130px, 60px) rotate(0);
-    animation-timing-function: ease-in-out;
+  12%,
+  70% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.5);
   }
-  46% {
-    transform: translate(-8px, 3px) rotate(-26deg);
-    animation-timing-function: ease-out;
-  }
-  53% {
-    transform: translate(0, 0) rotate(0);
-  }
-  88% {
-    transform: translate(0, 0) rotate(0);
-    opacity: 1;
-  }
-  95% {
-    transform: translate(0, 0) rotate(0);
-    opacity: 0;
-  }
+  86%,
   100% {
-    transform: translate(-300px, 60px) rotate(0);
-    opacity: 0;
+    transform: translateX(1100px);
   }
 }
-@keyframes roue-charge {
+@keyframes roue-camion {
   0% {
     transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
   }
-  53% {
-    transform: rotate(1000deg);
+  12%,
+  70% {
+    transform: rotate(900deg);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.5);
   }
+  86%,
   100% {
-    transform: rotate(1000deg);
+    transform: rotate(3300deg);
   }
 }
+@keyframes rampe {
+  0%,
+  60% {
+    transform: rotate(0);
+    animation-timing-function: ease-in-out;
+  }
+  68%,
+  90% {
+    transform: rotate(113deg);
+    animation-timing-function: ease-in-out;
+  }
+  100% {
+    transform: rotate(0);
+  }
+}
+@keyframes charge-7 {
+  0%,
+  14% {
+    transform: translate(-950px, 62px) rotate(0);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
+  }
+  24%,
+  27% {
+    transform: translate(-298px, 62px) rotate(0);
+    animation-timing-function: ease-in;
+  }
+  33% {
+    transform: translate(-224px, 31px) rotate(-23deg);
+    animation-timing-function: ease-out;
+  }
+  38% {
+    transform: translate(-150px, 1px) rotate(-12deg);
+    animation-timing-function: ease-out;
+  }
+  41% {
+    transform: translate(-128px, 0) rotate(0);
+    animation-timing-function: ease-out;
+  }
+  47%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+}
+@keyframes charge-8 {
+  0%,
+  26% {
+    transform: translate(-1100px, 62px) rotate(0);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
+  }
+  42%,
+  44% {
+    transform: translate(-156px, 62px) rotate(0);
+    animation-timing-function: ease-in;
+  }
+  49% {
+    transform: translate(-82px, 31px) rotate(-23deg);
+    animation-timing-function: ease-out;
+  }
+  54% {
+    transform: translate(-20px, 1px) rotate(-8deg);
+    animation-timing-function: ease-out;
+  }
+  60%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+}
+@keyframes roue-c7 {
+  0%,
+  14% {
+    transform: rotate(0);
+  }
+  47%,
+  100% {
+    transform: rotate(1800deg);
+  }
+}
+@keyframes roue-c8 {
+  0%,
+  26% {
+    transform: rotate(0);
+  }
+  60%,
+  100% {
+    transform: rotate(1800deg);
+  }
+}
+
+/* ── Scène 2 ── */
 @keyframes defile {
   to {
     transform: translateX(-380px);
+  }
+}
+@keyframes defile-nuages {
+  to {
+    transform: translateX(-800px);
   }
 }
 @keyframes chaussee {
@@ -879,7 +1040,7 @@
 }
 @keyframes bob {
   to {
-    transform: translateY(-1.6px);
+    transform: translateY(-1.4px);
   }
 }
 @keyframes roue-tourne {
@@ -900,30 +1061,62 @@
     transform: translateX(-26px);
   }
 }
-@keyframes bras-a {
+
+/* ── Scène 3 ── */
+@keyframes epaule-a {
   0% {
     transform: rotate(0);
   }
   12%,
   36% {
-    transform: rotate(-90deg);
+    transform: rotate(-60deg);
   }
-  50%,
+  52%,
   100% {
     transform: rotate(0);
   }
 }
-@keyframes bras-b {
+@keyframes coude-a {
   0% {
     transform: rotate(0);
   }
   12%,
-  40% {
-    transform: rotate(-90deg);
+  36% {
+    transform: rotate(-30deg);
   }
   52%,
+  100% {
+    transform: rotate(0);
+  }
+}
+@keyframes epaule-b {
+  0% {
+    transform: rotate(0);
+  }
+  14%,
+  40% {
+    transform: rotate(-55deg);
+  }
+  54%,
   90% {
-    transform: rotate(-115deg);
+    transform: rotate(-35deg);
+  }
+  98%,
+  100% {
+    transform: rotate(0);
+  }
+}
+@keyframes coude-b {
+  0% {
+    transform: rotate(0);
+  }
+  14%,
+  40% {
+    transform: rotate(-35deg);
+  }
+  54%,
+  90% {
+    transform: rotate(-105deg);
   }
   98%,
   100% {
@@ -948,25 +1141,25 @@
   0%,
   30% {
     opacity: 0;
-    transform: translate(176px, 118px);
+    transform: translate(219px, 49px);
   }
   30.5% {
     opacity: 1;
-    transform: translate(176px, 118px);
+    transform: translate(219px, 49px);
     animation-timing-function: ease-out;
   }
   36% {
-    transform: translate(191px, 102px);
+    transform: translate(242px, 36px);
     animation-timing-function: ease-in;
   }
   41% {
     opacity: 1;
-    transform: translate(206px, 118px);
+    transform: translate(264px, 51px);
   }
   41.5%,
   100% {
     opacity: 0;
-    transform: translate(206px, 118px);
+    transform: translate(264px, 51px);
   }
 }
 @keyframes cle-b {
