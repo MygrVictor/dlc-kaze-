@@ -463,6 +463,23 @@ router.post(
 // est donc en multipart, et l'écriture se fait en transaction — soit la
 // candidature et ses pièces entrent ensemble, soit rien n'entre.
 // ══════════════════════════════════════════════════════════════
+/**
+ * Limite l'attente d'une promesse. Un fournisseur d'email qui ne répond pas
+ * ne doit jamais retenir quoi que ce soit : au-delà du délai, on abandonne.
+ */
+const DELAI_EMAIL_MS = 15_000;
+const avecDelai = (promesse, ms, nom) => {
+  let minuteur;
+  const abandon = new Promise((_, rejeter) => {
+    minuteur = setTimeout(
+      () => rejeter(new Error(`${nom} : pas de réponse après ${ms / 1000} s`)),
+      ms,
+    );
+    if (minuteur.unref) minuteur.unref();
+  });
+  return Promise.race([promesse, abandon]).finally(() => clearTimeout(minuteur));
+};
+
 router.post(
   "/demande",
   candidatureLimiter,
@@ -703,36 +720,48 @@ router.post(
             : 0,
       };
 
-      try {
-        await emailService.notifyNouvelleDemande(contexte);
-      } catch (emailErr) {
-        console.error(
-          "⚠️ Email admin (nouvelle demande) non envoyé :",
-          emailErr.message,
-        );
-      }
-
-      if (mail) {
-        try {
-          await emailService.notifyDemandeRecue(
-            mail,
-            firstName || company,
-            type,
-          );
-        } catch (emailErr) {
-          console.error(
-            "⚠️ Accusé de réception non envoyé :",
-            emailErr.message,
-          );
-        }
-      }
-
+      // On répond tout de suite : la demande est enregistrée, c'est ce que le
+      // visiteur attend. Les emails partent ensuite, sans l'attendre. Avant,
+      // la réponse patientait jusqu'à la fin des deux envois : quand le
+      // fournisseur d'email traînait, le navigateur abandonnait au bout de
+      // 30 s, affichait « Envoi impossible » alors que la demande était
+      // bien en base, et le visiteur recommençait (doublons).
       res.status(201).json({
         message:
           type === "convoyeur"
             ? "Votre candidature et vos justificatifs ont bien été reçus. Notre équipe étudie votre dossier et vous recontacte rapidement."
             : "Votre demande a bien été enregistrée. Notre équipe vous recontacte rapidement.",
       });
+
+      // Les deux envois partent ensemble, chacun avec son délai : l'échec
+      // de l'un n'empêche pas l'autre, et aucun ne fait échouer la demande.
+      const envois = [
+        avecDelai(
+          emailService.notifyNouvelleDemande(contexte),
+          DELAI_EMAIL_MS,
+          "Email admin (nouvelle demande)",
+        ).catch((emailErr) =>
+          console.error(
+            "⚠️ Email admin (nouvelle demande) non envoyé :",
+            emailErr.message,
+          ),
+        ),
+      ];
+      if (mail) {
+        envois.push(
+          avecDelai(
+            emailService.notifyDemandeRecue(mail, firstName || company, type),
+            DELAI_EMAIL_MS,
+            "Accusé de réception",
+          ).catch((emailErr) =>
+            console.error(
+              "⚠️ Accusé de réception non envoyé :",
+              emailErr.message,
+            ),
+          ),
+        );
+      }
+      await Promise.all(envois);
     } catch (err) {
       // L'écriture a échoué : les fichiers déjà sur le disque ne se
       // rattachent plus à rien et doivent partir avec elle.

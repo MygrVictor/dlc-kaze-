@@ -600,6 +600,18 @@ describe("Routes publiques — cas résiduels", () => {
     expect(res.body.error).toMatch(/2000/);
   });
 
+  // Régression du 27/11/2026 : la réponse attendait les deux emails. Un
+  // fournisseur lent faisait expirer le navigateur (30 s) alors que la
+  // demande était déjà en base. La réponse ne doit plus dépendre d'eux.
+  it("répond 201 sans attendre des emails qui ne reviennent jamais", async () => {
+    emailService.notifyNouvelleDemande.mockReturnValue(new Promise(() => {}));
+    emailService.notifyDemandeRecue.mockReturnValue(new Promise(() => {}));
+    const res = await demander(CORPS_CLIENT);
+    expect(res.status).toBe(201);
+    expect(emailService.notifyNouvelleDemande).toHaveBeenCalled();
+    expect(emailService.notifyDemandeRecue).toHaveBeenCalled();
+  });
+
   it("enregistre la demande malgré l'échec de l'email admin", async () => {
     emailService.notifyNouvelleDemande.mockRejectedValue(new Error("SMTP HS"));
     const res = await demander(CORPS_CLIENT);

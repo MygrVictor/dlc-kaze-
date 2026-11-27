@@ -441,6 +441,14 @@
     transition: border-color 0.2s;
     outline: none;
   }
+  /* Sur iPhone, Safari zoome sur tout champ dont le texte fait moins de
+     16 px, et ne dézoome pas ensuite : le formulaire restait agrandi et
+     décalé après la saisie. À 16 px, il ne zoome plus. */
+  @media (max-width: 767px) {
+    .input-field {
+      font-size: 16px;
+    }
+  }
   .input-field:focus {
     border-color: var(--teal);
   }

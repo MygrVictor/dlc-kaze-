@@ -90,6 +90,10 @@ describe("Configuration du transporteur", () => {
       port: 587,
       secure: false,
       auth: { user: "utilisateur", pass: "secret" },
+      // Délais courts : un serveur SMTP muet ne doit pas retenir l'appelant.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   });
 

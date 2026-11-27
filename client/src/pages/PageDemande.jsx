@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { compresserImage } from "../lib/compresserImage";
 import { Link } from "react-router-dom";
 import { MailCheck, AlertCircle } from "lucide-react";
 import api from "../lib/api";
@@ -64,6 +65,27 @@ export function Requis({ couleur }) {
  * @param {Function} [props.bloque]              (form) => bool, désactive l'envoi
  * @param {Function} [props.fichiers]            (form) => { champ: File }, joints à l'envoi
  */
+/**
+ * Message affiché quand l'envoi échoue. Le serveur répond le plus souvent
+ * par un message précis ; sans réponse, on distingue au moins le délai
+ * dépassé (connexion lente, pièces lourdes) de l'absence de réseau, au lieu
+ * d'accuser la connexion dans tous les cas.
+ */
+function messageEnvoi(err) {
+  const serveur = err.response?.data?.error;
+  if (serveur) return serveur;
+  if (err.response?.status === 413) {
+    return "Les fichiers sont trop volumineux. Réduisez leur taille (8 Mo maximum par pièce) puis réessayez.";
+  }
+  if (err.code === "ECONNABORTED") {
+    return "L'envoi prend trop de temps (connexion lente ou pièces volumineuses). Vos informations sont conservées : réessayez, de préférence avec une meilleure connexion.";
+  }
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return "Vous semblez hors connexion. Reconnectez-vous puis réessayez.";
+  }
+  return "Envoi impossible. Vérifiez votre connexion et réessayez.";
+}
+
 export default function PageDemande({
   type,
   accent,
@@ -86,6 +108,7 @@ export default function PageDemande({
   const [loading, setLoading] = useState(false);
   const [envoye, setEnvoye] = useState(false);
   const [erreur, setErreur] = useState(null);
+  const [progres, setProgres] = useState(null);
 
   // Certaines réponses rendent la demande sans objet — une assurance
   // obligatoire déclarée absente, par exemple. On désactive alors l'envoi
@@ -120,7 +143,16 @@ export default function PageDemande({
             message: form.message.trim() || undefined,
           };
 
-      const joints = fichiers ? fichiers(form) : null;
+      let joints = fichiers ? fichiers(form) : null;
+      if (joints) {
+        // Les photos sont réduites sur le téléphone avant de partir : sept
+        // pièces de 5 Mo faisaient 35 Mo d'un seul envoi.
+        const reduits = {};
+        for (const [cle, fichier] of Object.entries(joints)) {
+          reduits[cle] = fichier ? await compresserImage(fichier) : fichier;
+        }
+        joints = reduits;
+      }
 
       if (joints && Object.keys(joints).length > 0) {
         // Les pièces partent avec le formulaire, en une seule requête :
@@ -136,8 +168,16 @@ export default function PageDemande({
         for (const [cle, fichier] of Object.entries(joints)) {
           if (fichier) paquet.append(cle, fichier);
         }
+        setProgres(0);
         await api.post("/auth/demande", paquet, {
           headers: { "Content-Type": "multipart/form-data" },
+          // Sept pièces envoyées depuis un téléphone prennent plus de
+          // 30 s (le délai général) : trois minutes, avec un pourcentage
+          // affiché pour que l'attente se voie.
+          timeout: 180_000,
+          onUploadProgress: (e) => {
+            if (e.total) setProgres(Math.round((e.loaded * 100) / e.total));
+          },
         });
       } else {
         await api.post("/auth/demande", { type, ...corps });
@@ -145,13 +185,12 @@ export default function PageDemande({
 
       setEnvoye(true);
     } catch (err) {
-      const message =
-        err.response?.data?.error ||
-        "Envoi impossible. Vérifiez votre connexion et réessayez.";
+      const message = messageEnvoi(err);
       setErreur(message);
       toast.error(message);
     } finally {
       setLoading(false);
+      setProgres(null);
     }
   };
 
@@ -310,7 +349,11 @@ export default function PageDemande({
                 cursor: inaccessible ? "not-allowed" : undefined,
               }}
             >
-              {loading ? "Envoi en cours…" : "Envoyer ma demande"}
+              {loading
+                ? progres !== null && progres < 100
+                  ? `Envoi des documents… ${progres} %`
+                  : "Envoi en cours…"
+                : "Envoyer ma demande"}
             </button>
           </form>
 
