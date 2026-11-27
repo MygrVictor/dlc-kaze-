@@ -522,6 +522,13 @@
   --carte: #102a52;
   --carte-bord: rgba(255, 255, 255, 0.1);
   --ciel: #17335f;
+  --ciel-haut: #0d2145;
+  --ciel-bas: #34649f;
+  --brume: #5a8ac4;
+  --colline: #1d4a86;
+  --colline-pres: #26579a;
+  --feuillage: #2f6aa8;
+  --tronc: #1a3a69;
   --loin: #21457d;
   --pres: #2c5897;
   --vitrage: #2c5897;
@@ -546,6 +553,13 @@
   --carte: #ffffff;
   --carte-bord: rgba(11, 29, 58, 0.12);
   --ciel: #e8edf5;
+  --ciel-haut: #bcd3ee;
+  --ciel-bas: #f6f1e4;
+  --brume: #ffffff;
+  --colline: #b9cde6;
+  --colline-pres: #a3bbd9;
+  --feuillage: #8fb0a0;
+  --tronc: #8397b3;
   --loin: #cdd8e8;
   --pres: #b6c5dc;
   --vitrage: #b9cde6;
@@ -604,6 +618,10 @@
 .vitrine .hero--clair .scene figcaption strong {
   color: var(--navy);
 }
+/* Les petites scènes n'affichent que le titre : la légende ne cache pas les personnages. */
+.vitrine .scene:not(.scene--grande) figcaption span {
+  display: none;
+}
 /* Sur téléphone : les scènes se font défiler d'un geste du doigt. */
 @media (max-width: 800px) {
   .vitrine .scenes {
@@ -650,7 +668,53 @@
   --c-ombre: var(--amber-deep);
 }
 .vitrine .p-ciel {
-  fill: var(--ciel);
+  fill: url(#dlc-ciel);
+}
+.vitrine .p-colline {
+  fill: var(--colline);
+}
+.vitrine .p-colline-pres {
+  fill: var(--colline-pres);
+}
+.vitrine .p-feuillage {
+  fill: var(--feuillage);
+}
+.vitrine .p-tronc {
+  fill: var(--tronc);
+}
+.vitrine .v-verre {
+  fill: url(#dlc-verre);
+}
+.vitrine .f-gilet-v {
+  fill: var(--amber);
+}
+.vitrine .f-cab-o {
+  fill: var(--cab-ombre);
+}
+.vitrine .s-flanc {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1.2;
+}
+.vitrine .s-grille {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.vitrine .s-treillis {
+  stroke: var(--acier);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: 0.55;
+  fill: none;
+}
+.vitrine .s-revers {
+  fill: rgba(255, 255, 255, 0.12);
+}
+.vitrine .s-ceinture {
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 3;
+  fill: none;
 }
 .vitrine .p-loin {
   fill: var(--loin);
@@ -659,8 +723,8 @@
   fill: var(--pres);
 }
 .vitrine .p-nuage {
-  fill: var(--loin);
-  opacity: 0.55;
+  fill: #fff;
+  opacity: 0.5;
 }
 .vitrine .s-pres {
   stroke: var(--pres);
