@@ -996,7 +996,7 @@
 }
 @keyframes chaussee-f {
   to {
-    stroke-dashoffset: -60;
+    stroke-dashoffset: 60;
   }
 }
 @keyframes defile {
@@ -1011,7 +1011,7 @@
 }
 @keyframes chaussee {
   to {
-    stroke-dashoffset: -68;
+    stroke-dashoffset: 68;
   }
 }
 @keyframes bob {
