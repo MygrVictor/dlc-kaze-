@@ -859,10 +859,10 @@
 /* Pose finale, sans mouvement : camion chargé, clés remises, voiture en
    route. C'est ce que voit qui a réduit les animations. */
 .vitrine .epaule-a {
-  transform: rotate(-60deg);
+  transform: rotate(0);
 }
 .vitrine .coude-a {
-  transform: rotate(-30deg);
+  transform: rotate(0);
 }
 .vitrine .epaule-b {
   transform: rotate(-35deg);
@@ -870,8 +870,7 @@
 .vitrine .coude-b {
   transform: rotate(-105deg);
 }
-.vitrine .cle--a,
-.vitrine .cle-vol {
+.vitrine .cle--a {
   opacity: 0;
 }
 .vitrine .rampe {
@@ -950,9 +949,6 @@
   .vitrine .cle--b {
     animation: cle-b 6s infinite;
   }
-  .vitrine .cle-vol {
-    animation: cle-vol 6s infinite;
-  }
   .vitrine .cles-valide {
     animation: valide 6s infinite;
   }
@@ -1011,41 +1007,52 @@
 }
 
 /* ── Scène 3 ── */
+/* Remise des clés (6 s) : les deux bras s'avancent, les mains se rejoignent
+   et la clé change de main à 34 %, puis le client la lève. */
 @keyframes epaule-a {
-  0% {
+  0%,
+  10% {
     transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.3, 0.1, 0.2, 1);
   }
-  12%,
-  36% {
-    transform: rotate(-60deg);
+  30%,
+  44% {
+    transform: rotate(-45deg);
+    animation-timing-function: ease-in-out;
   }
-  52%,
+  58%,
   100% {
     transform: rotate(0);
   }
 }
 @keyframes coude-a {
-  0% {
+  0%,
+  10% {
     transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.3, 0.1, 0.2, 1);
   }
-  12%,
-  36% {
-    transform: rotate(-30deg);
+  30%,
+  44% {
+    transform: rotate(-50deg);
+    animation-timing-function: ease-in-out;
   }
-  52%,
+  58%,
   100% {
     transform: rotate(0);
   }
 }
 @keyframes epaule-b {
-  0% {
+  0%,
+  12% {
     transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.3, 0.1, 0.2, 1);
   }
-  14%,
-  40% {
-    transform: rotate(-55deg);
+  30%,
+  44% {
+    transform: rotate(-45deg);
+    animation-timing-function: ease-in-out;
   }
-  54%,
+  60%,
   90% {
     transform: rotate(-35deg);
   }
@@ -1055,14 +1062,17 @@
   }
 }
 @keyframes coude-b {
-  0% {
+  0%,
+  12% {
     transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.3, 0.1, 0.2, 1);
   }
-  14%,
-  40% {
-    transform: rotate(-35deg);
+  30%,
+  44% {
+    transform: rotate(-50deg);
+    animation-timing-function: ease-in-out;
   }
-  54%,
+  60%,
   90% {
     transform: rotate(-105deg);
   }
@@ -1073,10 +1083,10 @@
 }
 @keyframes cle-a {
   0%,
-  30% {
+  35% {
     opacity: 1;
   }
-  30.5%,
+  35.5%,
   97% {
     opacity: 0;
   }
@@ -1085,37 +1095,12 @@
     opacity: 1;
   }
 }
-@keyframes cle-vol {
-  0%,
-  30% {
-    opacity: 0;
-    transform: translate(219px, 49px);
-  }
-  30.5% {
-    opacity: 1;
-    transform: translate(219px, 49px);
-    animation-timing-function: ease-out;
-  }
-  36% {
-    transform: translate(242px, 36px);
-    animation-timing-function: ease-in;
-  }
-  41% {
-    opacity: 1;
-    transform: translate(264px, 51px);
-  }
-  41.5%,
-  100% {
-    opacity: 0;
-    transform: translate(264px, 51px);
-  }
-}
 @keyframes cle-b {
   0%,
-  41% {
+  35% {
     opacity: 0;
   }
-  41.5%,
+  35.5%,
   90% {
     opacity: 1;
   }
@@ -1126,15 +1111,15 @@
 }
 @keyframes valide {
   0%,
-  56% {
+  40% {
     transform: scale(0);
     opacity: 0;
   }
-  62% {
+  46% {
     transform: scale(1.18);
     opacity: 1;
   }
-  66%,
+  50%,
   88% {
     transform: scale(1);
     opacity: 1;

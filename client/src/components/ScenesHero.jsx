@@ -422,6 +422,11 @@ function Personne({ peau, cheveux, veste, manches, pantalon, gilet = false, casq
       <ellipse cx="-8.6" cy="-120" rx="2.2" ry="3.2" fill={peau} />
       <path d="M -11 -121 C -12 -134 10 -137 12 -122 C 6 -128 -3 -127 -11 -121 Z" fill={cheveux} />
       <ellipse cx="1" cy="-121" rx="10.5" ry="12" fill="url(#dlc-vol)" opacity="0.5" />
+      {/* Visage de trois quarts : œil, sourcil, nez, sourire */}
+      <circle cx="6" cy="-122" r="1.3" fill="#1b1d25" />
+      <path d="M 3.2 -125.4 Q 6 -126.8 8.8 -125.6" stroke={cheveux} strokeWidth="1.1" strokeLinecap="round" fill="none" />
+      <path d="M 9.6 -121 Q 11.4 -118.8 9.4 -118.2" stroke="rgba(0,0,0,0.25)" strokeWidth="1" strokeLinecap="round" fill="none" />
+      <path d="M 4.6 -115.6 Q 7.4 -113.6 10 -116" stroke="#8a4a3a" strokeWidth="1.2" strokeLinecap="round" fill="none" />
       {casquette && (
         <>
           <path d="M -11 -123 A 11.5 11.5 0 0 1 12 -123 Z" className="f-ambre" />
@@ -466,27 +471,27 @@ function SceneCles() {
         </g>
       </Fond>
 
-      <g transform="translate(168 132) scale(0.92)">
+      {/* Le véhicule livré, garé derrière le convoyeur */}
+      <g transform="translate(6 132) scale(0.56)">
+        <Voiture couleur="v-ambre" />
+      </g>
+
+      <g transform="translate(160 132) scale(0.92)">
         <Personne
           peau="#f2c9a5" cheveux="#2b2e36" veste="#0b1d3a" manches="#0b1d3a"
           pantalon="#232632" gilet casquette bras={["epaule-a", "coude-a"]} cle={<Cle classe="cle--a" />}
         />
       </g>
-      <g transform="translate(320 132) scale(-0.92 0.92)">
+      <g transform="translate(250 132) scale(-0.92 0.92)">
         <Personne
           peau="#c58c63" cheveux="#4a3524" veste="#0b5c73" manches="#0b5c73"
           pantalon="#3a3f4b" bras={["epaule-b", "coude-b"]} cle={<Cle classe="cle--b" />}
         />
       </g>
 
-      {/* La clé qui passe d'une main à l'autre */}
-      <g className="cle-vol">
-        <Cle />
-      </g>
-
       <g className="cles-valide">
-        <circle cx="244" cy="18" r="11" className="f-ambre" />
-        <path d="M 238 18 L 242.5 22.5 L 250.5 13.5" stroke="#12141c" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <circle cx="205" cy="20" r="11" className="f-ambre" stroke="#fff" strokeWidth="2.5" />
+        <path d="M 199 20 L 203.5 24.5 L 211.5 15.5" stroke="#12141c" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </g>
     </svg>
   );
