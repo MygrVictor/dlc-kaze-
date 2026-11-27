@@ -405,16 +405,7 @@
   }
 }
 
-/* ── Fonds du hero : marine (par défaut) et crème ───────────── */
-.vitrine .hero--marine {
-  background: var(--navy);
-}
-.vitrine .hero--marine::before {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-}
-
+/* ── Fond du hero : crème ───────────────────────────────────── */
 .vitrine .hero--clair {
   background: var(--cream);
   color: var(--navy);
