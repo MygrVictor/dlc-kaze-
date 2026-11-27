@@ -628,8 +628,49 @@
     display: none;
   }
   .vitrine .scene {
-    flex: 0 0 86%;
+    flex: 0 0 88%;
+    min-width: 0;
     scroll-snap-align: center;
+  }
+  /* Le dessin garde sa hauteur et se recadre sur les côtés (au lieu de
+     rétrécir) : le camion reste lisible. Le porte-8 est cadré à droite, sur
+     la cabine et les huit véhicules ; les petites scènes, au centre. */
+  .vitrine .scene__cadre {
+    display: flex;
+    justify-content: center;
+    height: 190px;
+  }
+  .vitrine .scene--grande .scene__cadre {
+    justify-content: flex-end;
+    height: 220px;
+  }
+  .vitrine .scene__svg {
+    flex: none;
+    width: auto;
+    height: 100%;
+  }
+  /* La légende passe sous l'image : elle ne cache plus les véhicules. */
+  .vitrine .scene figcaption,
+  .vitrine .hero--clair .scene figcaption {
+    position: static;
+    padding: 9px 2px 0;
+    background: none;
+    color: var(--graphite-soft);
+  }
+  .vitrine .scene figcaption strong,
+  .vitrine .scene--convoyage figcaption strong,
+  .vitrine .hero--clair .scene figcaption strong {
+    color: var(--navy);
+  }
+  .vitrine .scene:not(.scene--grande) figcaption span {
+    display: block;
+  }
+  /* Les scènes avant les chiffres : c'est ce qu'on veut voir en premier. */
+  .vitrine .hero-grille {
+    grid-template-areas:
+      "texte"
+      "plan"
+      "stats";
   }
 }
 
