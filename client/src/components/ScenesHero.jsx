@@ -210,7 +210,7 @@ function Camion() {
       <rect x="0" y="-41" width="592" height="2.5" className="f-ambre" />
       <rect x="158" y="-34" width="400" height="26" rx="8" className="f-marque" />
       <rect x="158" y="-34" width="400" height="26" rx="8" fill="url(#dlc-vol)" />
-      <image href="/logo-mobilite.png" x="248" y="-32" width="160" height="22" preserveAspectRatio="xMidYMid meet" />
+      <image href="/logo-mobilite.webp" x="248" y="-32" width="160" height="22" preserveAspectRatio="xMidYMid meet" />
       <rect x="2" y="-62" width="588" height="6" rx="3" className="f-acier" />
       <rect x="2" y="-130" width="560" height="6" rx="3" className="f-acier" />
       {[0, 296, 586].map((px) => (

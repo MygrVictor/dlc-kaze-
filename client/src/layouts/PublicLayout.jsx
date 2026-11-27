@@ -242,10 +242,10 @@ export default function PublicLayout() {
             aria-label="Accueil Drive Line Connect"
           >
             <img
-              src="/logo-mobilite.png"
+              src="/logo-mobilite.webp"
               alt="Drive Line Connect Mobilité"
-              width="1200"
-              height="165"
+              width="640"
+              height="88"
             />
           </Link>
 
@@ -343,10 +343,10 @@ export default function PublicLayout() {
             }}
           >
             <img
-              src="/logo-mobilite.png"
+              src="/logo-mobilite.webp"
               alt="Drive Line Connect Mobilité"
-              width="1200"
-              height="165"
+              width="640"
+              height="88"
               style={{ height: 44, width: "auto", objectFit: "contain" }}
             />
           </div>
@@ -400,7 +400,7 @@ export default function PublicLayout() {
             style={{
               fontSize: 12,
               letterSpacing: "0.05em",
-              color: "rgba(255,255,255,0.35)",
+              color: "rgba(255,255,255,0.6)",
             }}
           >
             © {new Date().getFullYear()} Drive Line Connect — Tous droits

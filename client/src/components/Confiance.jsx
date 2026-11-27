@@ -17,20 +17,20 @@ import LogoClient from "./LogoClient";
  * petits à emprise égale, faute d'une marge blanche intégrée au fichier.
  */
 const CLIENTS = [
-  { nom: "GRDF", src: "/images/clients/grdf.webp" },
-  { nom: "EQUANS", src: "/images/clients/equans.webp" },
-  { nom: "Groupe GCA", src: "/images/clients/gca.webp" },
-  { nom: "Groupe 2L Logistics", src: "/images/clients/2l-logistics.webp" },
-  { nom: "La Coopérative Welcoop", src: "/images/clients/welcoop.webp" },
-  { nom: "Land Rover", src: "/images/clients/land-rover.webp" },
-  { nom: "Altacama", src: "/images/clients/altacama.webp" },
+  { nom: "GRDF", src: "/images/clients/grdf.webp", largeur: 600, hauteur: 306 },
+  { nom: "EQUANS", src: "/images/clients/equans.webp", largeur: 600, hauteur: 227 },
+  { nom: "Groupe GCA", src: "/images/clients/gca.webp", largeur: 600, hauteur: 315 },
+  { nom: "Groupe 2L Logistics", src: "/images/clients/2l-logistics.webp", largeur: 230, hauteur: 230 },
+  { nom: "La Coopérative Welcoop", src: "/images/clients/welcoop.webp", largeur: 821, hauteur: 437 },
+  { nom: "Land Rover", src: "/images/clients/land-rover.webp", largeur: 408, hauteur: 265 },
+  { nom: "Altacama", src: "/images/clients/altacama.webp", largeur: 353, hauteur: 181 },
   {
     nom: "Saga Mercedes",
-    src: "/images/clients/saga-mercedes.webp",
+    src: "/images/clients/saga-mercedes.webp", largeur: 600, hauteur: 400,
     echelle: 1.25,
   },
-  { nom: "By My Car", src: "/images/clients/by-my-car.webp" },
-  { nom: "Cristalens", src: "/images/clients/cristalens.webp" },
+  { nom: "By My Car", src: "/images/clients/by-my-car.webp", largeur: 600, hauteur: 212 },
+  { nom: "Cristalens", src: "/images/clients/cristalens.webp", largeur: 600, hauteur: 107 },
 ];
 
 /**
@@ -39,9 +39,9 @@ const CLIENTS = [
  * par des noms connus, lève l'objection avant qu'elle ne se formule.
  */
 const ASSUREURS = [
-  { nom: "Areas Assurances", src: "/images/assurance/areas.webp" },
-  { nom: "Tetris Assurance", src: "/images/assurance/tetris.webp" },
-  { nom: "Generali", src: "/images/assurance/generali.webp" },
+  { nom: "Areas Assurances", src: "/images/assurance/areas.webp", largeur: 162, hauteur: 150 },
+  { nom: "Tetris Assurance", src: "/images/assurance/tetris.webp", largeur: 564, hauteur: 150 },
+  { nom: "Generali", src: "/images/assurance/generali.webp", largeur: 184, hauteur: 150 },
 ];
 
 export default function Confiance() {
@@ -62,6 +62,8 @@ export default function Confiance() {
                 src={client.src}
                 nom={client.nom}
                 echelle={client.echelle}
+                largeur={client.largeur}
+                hauteur={client.hauteur}
               />
             </li>
           ))}
@@ -89,7 +91,7 @@ export default function Confiance() {
           <ul className="confiance__assureurs">
             {ASSUREURS.map((assureur) => (
               <li key={assureur.nom}>
-                <LogoClient src={assureur.src} nom={assureur.nom} />
+                <LogoClient src={assureur.src} nom={assureur.nom} largeur={assureur.largeur} hauteur={assureur.hauteur} />
               </li>
             ))}
           </ul>

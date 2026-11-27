@@ -18,7 +18,7 @@ import { useState } from "react";
  * marge blanche généreuse et paraissent alors plus petits que leurs voisins
  * à emprise égale. Un léger agrandissement rétablit l'équilibre optique.
  */
-export default function LogoClient({ src, nom, echelle = 1 }) {
+export default function LogoClient({ src, nom, echelle = 1, largeur, hauteur }) {
   const [echec, setEchec] = useState(!src);
 
   return (
@@ -30,6 +30,8 @@ export default function LogoClient({ src, nom, echelle = 1 }) {
           className="logo-image"
           src={src}
           alt={nom}
+          width={largeur}
+          height={hauteur}
           loading="lazy"
           onError={() => setEchec(true)}
           style={echelle === 1 ? undefined : { transform: `scale(${echelle})` }}
