@@ -56,7 +56,19 @@ if (process.env.RESEND_API_KEY) {
         }));
       }
 
-      const { data, error } = await resend.emails.send(payload);
+      // L'API de Resend n'a pas de délai propre : sans celui-ci, un envoi
+      // qui traîne retient l'appelant indéfiniment.
+      let minuteur;
+      const { data, error } = await Promise.race([
+        resend.emails.send(payload),
+        new Promise((_, rejeter) => {
+          minuteur = setTimeout(
+            () => rejeter(new Error("Resend : pas de réponse après 15 s")),
+            15_000,
+          );
+          if (minuteur.unref) minuteur.unref();
+        }),
+      ]).finally(() => clearTimeout(minuteur));
       if (error) {
         throw new Error(`Resend : ${error.message || JSON.stringify(error)}`);
       }
@@ -73,6 +85,11 @@ if (process.env.RESEND_API_KEY) {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Sans ces délais, Nodemailer attend jusqu'à deux minutes une
+    // connexion qui ne vient pas.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
   });
   console.log(`Email configuré via ${process.env.SMTP_HOST}`);
 } else {
