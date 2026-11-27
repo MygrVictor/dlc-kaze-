@@ -87,47 +87,52 @@ function Roue({ cx, cy, r, classe = "" }) {
   );
 }
 
+/* Profil de crossover compact, vu de côté, vers la droite. Le sol est à
+   y = 0, la longueur est de 190. Les roues sont logées dans des passages de
+   roue découpés dans la caisse (centres en x = 46 et 146). */
 const CARROSSERIE =
-  "M 8 -21 C 5 -25 5 -32 8 -38 C 10 -42 15 -44 24 -45 L 46 -48 C 52 -58 62 -64 76 -64 L 110 -64 C 124 -64 133 -57 143 -49 L 170 -45 C 184 -43 190 -38 190 -29 L 189 -21 L 166 -21 A 20 20 0 0 0 126 -21 L 66 -21 A 20 20 0 0 0 26 -21 Z";
-const VITRE_AV = "M 50 -49 C 55 -57 63 -61 75 -61 L 93 -61 L 93 -49 Z";
-const VITRE_AR = "M 97 -61 L 109 -61 C 120 -61 127 -56 135 -49 L 97 -49 Z";
+  "M 4 -10 L 3 -26 C 3 -33 6 -36 12 -37 L 22 -38 C 28 -50 36 -58 48 -61 L 108 -61 C 118 -61 124 -58 132 -49 L 144 -39 C 160 -38 176 -37 184 -34 C 189 -32 191 -27 190 -20 L 190 -10 L 162 -10 A 16 16 0 0 0 130 -10 L 62 -10 A 16 16 0 0 0 30 -10 Z";
+const VITRE_AR = "M 36 -44 C 39 -52 44 -57 52 -58 L 87 -58 L 87 -44 Z";
+const VITRE_AV = "M 92 -58 L 108 -58 C 115 -58 120 -55 126 -46 L 128 -44 L 92 -44 Z";
 
-/** Une voiture compacte de côté, vers la droite. Sol à y = 0, 190 de large. */
+/** Une voiture compacte de côté, vers la droite. Sol à y = 0, 190 de long. */
 function Voiture({ couleur, classeRoue = "", conducteur = false }) {
   return (
     <g className={`voiture ${couleur}`}>
-      <ellipse cx="98" cy="2" rx="96" ry="4" className="p-ombre" />
+      <ellipse cx="97" cy="1" rx="93" ry="3.6" className="p-ombre" />
       <path className="f-c carrosserie" d={CARROSSERIE} />
-      {/* Bas de caisse */}
-      <path
-        className="f-c-o"
-        d="M 8.5 -27 L 190 -27 L 189 -21 L 166 -21 A 20 20 0 0 0 126 -21 L 66 -21 A 20 20 0 0 0 26 -21 L 8 -21 Z"
-      />
+      {/* Bas de caisse et bouclier avant, plus sombres */}
+      <path className="f-c-o" d="M 4 -16 L 62 -16 L 62 -10 L 30 -10 L 4 -10 Z M 130 -16 L 190 -16 L 190 -10 L 162 -10 L 130 -10 Z" />
+      <path className="f-c-o" d="M 62 -17 L 130 -17 L 130 -10 L 62 -10 Z" opacity="0.7" />
       {/* Vitres */}
-      <path className="f-vitre" d={VITRE_AV} />
       <path className="f-vitre" d={VITRE_AR} />
+      <path className="f-vitre" d={VITRE_AV} />
       {conducteur && (
         <g>
-          {/* Le convoyeur au volant : épaule, tête et casquette jaune */}
-          <path d="M 100 -49 C 101 -54 105 -56 110 -56 C 115 -56 119 -54 120 -49 Z" className="f-gilet-v" />
-          <circle cx="110" cy="-55" r="5" className="f-peau" />
-          <path d="M 104.6 -56.5 A 5.4 5.4 0 0 1 115.4 -56.5 Z" className="f-ambre" />
-          <path d="M 114 -57 L 119.5 -55.8" className="s-ambre" />
+          {/* Le convoyeur au volant : épaule en gilet jaune, tête, casquette */}
+          <path d="M 98 -44 C 99 -49 103 -51 108 -51 C 113 -51 117 -49 118 -44 Z" className="f-gilet-v" />
+          <circle cx="108" cy="-52.5" r="4.6" className="f-peau" />
+          <path d="M 103.2 -54 A 5 5 0 0 1 112.8 -54 Z" className="f-ambre" />
+          <path d="M 112 -54.4 L 117.5 -53.4" className="s-ambre" />
         </g>
       )}
-      <path className="v-verre" d={VITRE_AV} />
       <path className="v-verre" d={VITRE_AR} />
-      <path d="M 78 -63.2 L 108 -63.2" className="s-reflet" />
-      {/* Ligne de caisse, porte, poignée, rétroviseur */}
-      <path d="M 12 -35 C 60 -39 130 -38 186 -34" className="s-reflet" />
-      <path className="s-c-o" d="M 95 -48 L 95 -24 M 103 -41 L 112 -41" />
-      <path className="f-c-o" d="M 133 -49 L 140 -53 C 142 -52 142 -48 140 -47 Z" />
-      <path className="f-phare" d="M 176 -41 C 183 -41 189 -38 190 -33 L 179 -33 Z" />
-      <path className="f-feu" d="M 7 -40 L 12 -41 L 12 -32 L 6 -33 Z" />
+      <path className="v-verre" d={VITRE_AV} />
+      {/* Montants, portes, poignées, rétroviseur */}
+      <path d="M 87 -58 L 92 -58 L 92 -44 L 87 -44 Z" className="f-c-o" />
+      <path className="s-c-o" d="M 92 -44 L 91 -12 M 46 -44 L 45 -14 M 130 -44 L 129 -22" />
+      <path className="s-c-o" d="M 97 -37 L 106 -37 M 55 -37 L 64 -37" />
+      <path className="f-c-o" d="M 124 -46 L 132 -48 C 134 -47 134 -43 132 -42 L 125 -43 Z" />
+      {/* Optiques */}
+      <path className="f-phare" d="M 178 -37 L 188 -34 C 190 -33 190 -30 189 -29 L 180 -31 Z" />
+      <path className="f-feu" d="M 3 -35 L 9 -36.5 L 9 -29 L 3 -29 Z" />
+      {/* Reflets : ligne de caisse et arête de toit */}
+      <path d="M 14 -39 C 70 -43 130 -42 182 -36" className="s-reflet" />
+      <path d="M 54 -60 L 106 -60" className="s-reflet" />
       {/* Relief : voile de lumière sur toute la caisse */}
       <path d={CARROSSERIE} fill="url(#dlc-vol)" />
-      <Roue cx={46} cy={-15} r={15} classe={classeRoue} />
-      <Roue cx={146} cy={-15} r={15} classe={classeRoue} />
+      <Roue cx={46} cy={-13} r={12.6} classe={classeRoue} />
+      <Roue cx={146} cy={-13} r={12.6} classe={classeRoue} />
     </g>
   );
 }
@@ -225,12 +230,12 @@ function Camion() {
 
       {/* Huit véhicules chargés : quatre par plateau */}
       {["v-blanc", "v-gris", "v-bleu", "v-anthracite"].map((c, i) => (
-        <g key={`h${i}`} transform={`translate(${X_PLACE(i)} ${Y_HAUT}) scale(0.8)`}>
+        <g key={`h${i}`} transform={`translate(${X_PLACE(i)} ${Y_HAUT}) scale(0.74)`}>
           <Voiture couleur={c} />
         </g>
       ))}
       {["v-bleu", "v-blanc", "v-gris", "v-blanc"].map((c, i) => (
-        <g key={`b${i}`} transform={`translate(${X_PLACE(i)} ${Y_BAS}) scale(0.8)`}>
+        <g key={`b${i}`} transform={`translate(${X_PLACE(i)} ${Y_BAS}) scale(0.74)`}>
           <Voiture couleur={c} />
         </g>
       ))}
